@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Dog, Cat, Loader2, Mail, Lock, User, Phone, FileText,
-  X, Heart, Shield, CheckCircle2, ArrowRight
+  Home, Loader2, Mail, Lock, User, Phone, FileText,
+  X, Shield, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import './Login.css';
 
 const Login = () => {
   const { user, loginWithGoogle, loginWithEmail, registerWithEmail, loading: authLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
   const [role, setRole] = useState('user'); // 'user' or 'foundation'
-  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -121,105 +121,40 @@ const Login = () => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100dvh',
-      backgroundColor: '#FAF8F5',
-      fontFamily: 'Prompt, sans-serif'
-    }}>
+    <div className="login-page-container">
 
       {/* Left Panel - Brand Showcase (Desktop) */}
-      <div className="hidden md:flex" style={{
-        flex: 1,
-        background: 'linear-gradient(145deg, #FAF8F5 0%, #F5F0E6 100%)',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '60px 48px',
-        borderRight: '1px solid #E5E7EB',
-        position: 'relative'
-      }}>
-        <div style={{ maxWidth: '440px', width: '100%' }}>
+      <div className="login-desktop-showcase">
+        <div className="login-showcase-inner">
           
           {/* Logo Badge */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            backgroundColor: '#FFFFFF',
-            borderRadius: '10px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            marginBottom: '32px'
-          }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              backgroundColor: '#D97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF'
-            }}>
-              <Heart size={16} fill="currentColor" />
+          <Link to="/" className="login-brand-badge" title="กลับหน้าแรก">
+            <div className="login-brand-icon-box">
+              <Home size={16} strokeWidth={2.4} />
             </div>
             <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>
               4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
             </span>
-          </div>
+          </Link>
 
-          <h1 style={{
-            fontSize: '2.25rem',
-            fontWeight: 800,
-            color: '#111827',
-            lineHeight: 1.25,
-            margin: '0 0 16px',
-            letterSpacing: '-0.02em'
-          }}>
+          <h1 className="login-showcase-title">
             ค้นหาเพื่อนสี่ขา <br />
             และมอบบ้านที่อบอุ่น
           </h1>
 
-          <p style={{
-            fontSize: '1rem',
-            color: '#4B5563',
-            lineHeight: 1.6,
-            margin: '0 0 36px'
-          }}>
+          <p className="login-showcase-desc">
             แพลตฟอร์มจับคู่และรับเลี้ยงสุนัข แมวจรจัด ที่เชื่อมโยงผู้รับเลี้ยงใจดีกับศูนย์พักพิงและมูลนิธิที่ผ่านการตรวจสอบทั่วไทย
           </p>
 
           {/* Feature Highlights */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="login-showcase-features">
             {[
               { title: 'ปัดการ์ดค้นหาที่ใช่', desc: 'เลือกลักษณะ สายพันธุ์ และขนาดที่เข้ากับไลฟ์สไตล์คุณ' },
               { title: 'มูลนิธิผ่านการยืนยันตัวตน', desc: 'มีเอกสารนิติบุคคลและความโปร่งใสทุกเคส' },
               { title: 'พูดคุยและนัดหมายผ่านแชท', desc: 'สอบถามข้อมูลตรงกับผู้ดูแลก่อนตัดสินใจรับเลี้ยง' }
             ].map((f, i) => (
-              <div key={i} style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px',
-                padding: '12px 16px',
-                backgroundColor: '#FFFFFF',
-                borderRadius: '10px',
-                border: '1px solid #E5E7EB',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  backgroundColor: '#ECFDF5',
-                  color: '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  marginTop: '2px'
-                }}>
+              <div key={i} className="login-feature-item">
+                <div className="login-feature-icon">
                   <CheckCircle2 size={16} />
                 </div>
                 <div>
@@ -234,50 +169,59 @@ const Login = () => {
       </div>
 
       {/* Right Panel - Auth Form */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '40px 24px',
-        backgroundColor: '#FAF8F5'
-      }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '420px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E5E7EB',
-          padding: '36px 32px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-        }}>
+      <div className="login-form-panel">
+        <div className="login-form-card">
 
-          {/* Mobile Brand Header */}
-          <div className="md:hidden" style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 14px',
-              backgroundColor: '#FAF8F5',
-              borderRadius: '8px',
-              border: '1px solid #E5E7EB',
-              marginBottom: '12px'
-            }}>
-              <Heart size={16} color="#D97706" fill="#D97706" />
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>
+          {/* Mobile Topbar */}
+          <div className="login-mobile-topbar">
+            <Link to="/" className="login-mobile-back-btn">
+              <ChevronLeft size={16} />
+              <span>หน้าแรก</span>
+            </Link>
+
+            <div className="login-mobile-brand">
+              <div className="login-mobile-brand-icon">
+                <Home size={15} strokeWidth={2.4} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
                 4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
               </span>
             </div>
           </div>
 
+          {/* Segmented Tab Switcher (เข้าสู่ระบบ | สมัครสมาชิก) */}
+          <div className="login-tab-switcher">
+            <button
+              type="button"
+              className={`login-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('login');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+            >
+              เข้าสู่ระบบ
+            </button>
+            <button
+              type="button"
+              className={`login-tab-btn ${activeTab === 'register' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('register');
+                setRole('user');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+            >
+              สมัครสมาชิก
+            </button>
+          </div>
+
           {/* Form Header */}
-          <div style={{ marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
-              {activeTab === 'login' ? 'เข้าสู่ระบบ' : 'สร้างบัญชีผู้ใช้ใหม่'}
+          <div className="login-header-group">
+            <h2 className="login-header-title">
+              {activeTab === 'login' ? 'ยินดีต้อนรับกลับมา' : 'สร้างบัญชีผู้ใช้ใหม่'}
             </h2>
-            <p style={{ fontSize: '0.875rem', color: '#6B7280', margin: 0 }}>
+            <p className="login-header-subtitle">
               {activeTab === 'login'
                 ? 'เข้าสู่ระบบเพื่อค้นหาและติดต่อรับเลี้ยงสัตว์'
                 : 'เริ่มต้นเป็นส่วนหนึ่งในการมอบบ้านที่อบอุ่น'}
@@ -288,13 +232,15 @@ const Login = () => {
           <AnimatePresence>
             {errorMsg && (
               <motion.div
-                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 style={{
                   backgroundColor: '#FEF2F2',
                   border: '1px solid #FCA5A5',
                   padding: '12px 14px',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
+                  borderRadius: '10px',
+                  marginBottom: '16px',
                   fontSize: '0.85rem',
                   color: '#DC2626',
                   display: 'flex',
@@ -304,7 +250,12 @@ const Login = () => {
                 }}
               >
                 <span style={{ flex: 1, lineHeight: 1.4 }}>{errorMsg}</span>
-                <button type="button" onClick={() => setErrorMsg('')} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setErrorMsg('')}
+                  style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: 0 }}
+                  title="ปิด"
+                >
                   <X size={16} />
                 </button>
               </motion.div>
@@ -312,13 +263,15 @@ const Login = () => {
 
             {successMsg && (
               <motion.div
-                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 style={{
                   backgroundColor: '#ECFDF5',
                   border: '1px solid #A7F3D0',
                   padding: '12px 14px',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
+                  borderRadius: '10px',
+                  marginBottom: '16px',
                   fontSize: '0.85rem',
                   color: '#059669',
                   display: 'flex',
@@ -328,7 +281,12 @@ const Login = () => {
                 }}
               >
                 <span style={{ flex: 1, lineHeight: 1.4 }}>{successMsg}</span>
-                <button type="button" onClick={() => setSuccessMsg('')} style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setSuccessMsg('')}
+                  style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0 }}
+                  title="ปิด"
+                >
                   <X size={16} />
                 </button>
               </motion.div>
@@ -338,363 +296,172 @@ const Login = () => {
           {/* Google Auth Button */}
           <button
             type="button"
+            className="login-google-btn"
             onClick={handleGoogleLogin}
             disabled={isSubmitting || authLoading || (activeTab === 'register' && !agreed)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              width: '100%',
-              height: '44px',
-              backgroundColor: '#FFFFFF',
-              color: '#374151',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              cursor: (isSubmitting || authLoading || (activeTab === 'register' && !agreed)) ? 'not-allowed' : 'pointer',
-              opacity: (activeTab === 'register' && !agreed) ? 0.6 : 1,
-              transition: 'background-color 0.15s, border-color 0.15s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google"
+              style={{ width: '18px', height: '18px' }}
+            />
             <span>{activeTab === 'login' ? 'เข้าสู่ระบบด้วย Google' : 'สมัครสมาชิกด้วย Google'}</span>
           </button>
 
           {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E5E7EB' }} />
-            <span style={{ padding: '0 12px', fontSize: '0.78rem', color: '#9CA3AF' }}>หรือใช้อีเมล</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E5E7EB' }} />
+          <div className="login-divider">
+            <div className="login-divider-line" />
+            <span className="login-divider-text">หรือใช้อีเมล</span>
+            <div className="login-divider-line" />
           </div>
 
           {/* Registration Role Switcher */}
           {activeTab === 'register' && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '6px',
-              padding: '4px',
-              backgroundColor: '#F3F4F6',
-              borderRadius: '8px',
-              marginBottom: '16px'
-            }}>
-              <button
-                type="button"
-                onClick={() => setRole('user')}
-                style={{
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: role === 'user' ? '#FFFFFF' : 'transparent',
-                  color: role === 'user' ? '#111827' : '#6B7280',
-                  fontWeight: role === 'user' ? 600 : 500,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: role === 'user' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.15s'
-                }}
-              >
-                ผู้รับเลี้ยงทั่วไป
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('foundation')}
-                style={{
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: role === 'foundation' ? '#FFFFFF' : 'transparent',
-                  color: role === 'foundation' ? '#111827' : '#6B7280',
-                  fontWeight: role === 'foundation' ? 600 : 500,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: role === 'foundation' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.15s'
-                }}
-              >
-                ตัวแทนมูลนิธิ
-              </button>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
+                ประเภทบัญชีของคุณ
+              </label>
+              <div className="login-role-selector">
+                <button
+                  type="button"
+                  className={`login-role-btn ${role === 'user' ? 'active' : ''}`}
+                  onClick={() => setRole('user')}
+                >
+                  <User size={15} />
+                  <span>ผู้รับเลี้ยงทั่วไป</span>
+                </button>
+                <button
+                  type="button"
+                  className={`login-role-btn ${role === 'foundation' ? 'active' : ''}`}
+                  onClick={() => setRole('foundation')}
+                >
+                  <Shield size={15} />
+                  <span>ตัวแทนมูลนิธิ</span>
+                </button>
+              </div>
             </div>
           )}
 
           {/* Forms */}
           {activeTab === 'login' ? (
-            <form onSubmit={handleEmailLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                  อีเมล
-                </label>
+            <form onSubmit={handleEmailLogin} className="login-field-group">
+              <div className="login-input-wrapper">
+                <label className="login-input-label">อีเมล</label>
                 <input
                   type="email"
+                  className="login-input-control"
                   placeholder="name@example.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    padding: '0 12px',
-                    fontSize: '0.9rem',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#D97706';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  autoComplete="email"
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                  รหัสผ่าน
-                </label>
+              <div className="login-input-wrapper">
+                <label className="login-input-label">รหัสผ่าน</label>
                 <input
                   type="password"
-                  placeholder="กรอกรหัสผ่าน"
+                  className="login-input-control"
+                  placeholder="กรอกรหัสผ่านของคุณ"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    padding: '0 12px',
-                    fontSize: '0.9rem',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#D97706';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  autoComplete="current-password"
                 />
               </div>
 
               <button
                 type="submit"
+                className="login-submit-btn primary-login"
                 disabled={isSubmitting || authLoading}
-                style={{
-                  width: '100%',
-                  height: '42px',
-                  backgroundColor: isSubmitting ? '#9CA3AF' : '#D97706',
-                  color: '#FFFFFF',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  marginTop: '6px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'background-color 0.15s'
-                }}
-                onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.backgroundColor = '#B45309'; }}
-                onMouseLeave={e => { if (!isSubmitting) e.currentTarget.style.backgroundColor = '#D97706'; }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="spin" size={16} />
+                    <Loader2 className="spin" size={18} />
                     <span>กำลังเข้าสู่ระบบ...</span>
                   </>
                 ) : 'เข้าสู่ระบบ'}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                  {role === 'user' ? 'ชื่อ - นามสกุล' : 'ชื่อมูลนิธิ / ศูนย์พักพิง'} <span style={{ color: '#DC2626' }}>*</span>
+            <form onSubmit={handleRegister} className="login-field-group">
+              <div className="login-input-wrapper">
+                <label className="login-input-label">
+                  <span>{role === 'user' ? 'ชื่อ - นามสกุล' : 'ชื่อมูลนิธิ / ศูนย์พักพิง'}</span>
+                  <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
                   type="text"
+                  className="login-input-control"
                   placeholder={role === 'user' ? 'เช่น สมชาย ใจดี' : 'เช่น มูลนิธิบ้านเพื่อหมาแมว'}
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    padding: '0 12px',
-                    fontSize: '0.9rem',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#D97706';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.boxShadow = 'none';
-                  }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                  อีเมลติดต่อ <span style={{ color: '#DC2626' }}>*</span>
+              <div className="login-input-wrapper">
+                <label className="login-input-label">
+                  <span>อีเมลสำหรับใช้งาน</span>
+                  <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
                   type="email"
+                  className="login-input-control"
                   placeholder="name@example.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    padding: '0 12px',
-                    fontSize: '0.9rem',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#D97706';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  autoComplete="email"
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                  รหัสผ่าน <span style={{ color: '#DC2626' }}>*</span>
+              <div className="login-input-wrapper">
+                <label className="login-input-label">
+                  <span>กำหนดรหัสผ่าน</span>
+                  <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
                   type="password"
+                  className="login-input-control"
                   placeholder="อย่างน้อย 6 ตัวอักษร"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    padding: '0 12px',
-                    fontSize: '0.9rem',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s'
-                  }}
-                  onFocus={e => {
-                    e.target.style.borderColor = '#D97706';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                  }}
-                  onBlur={e => {
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  autoComplete="new-password"
                 />
               </div>
 
               {role === 'foundation' && (
                 <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                      เบอร์โทรศัพท์ติดต่อ <span style={{ color: '#DC2626' }}>*</span>
+                  <div className="login-input-wrapper">
+                    <label className="login-input-label">
+                      <span>เบอร์โทรศัพท์ติดต่อ</span>
+                      <span style={{ color: '#DC2626' }}>*</span>
                     </label>
                     <input
                       type="tel"
-                      placeholder="เช่น 0812345678"
+                      className="login-input-control"
+                      placeholder="เช่น 081-234-5678"
                       value={phone}
                       onChange={e => setPhone(formatPhoneNumber(e.target.value))}
                       required
-                      style={{
-                        width: '100%',
-                        height: '42px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '8px',
-                        padding: '0 12px',
-                        fontSize: '0.9rem',
-                        color: '#111827',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        transition: 'border-color 0.15s, box-shadow 0.15s'
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = '#D97706';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = '#D1D5DB';
-                        e.target.style.boxShadow = 'none';
-                      }}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                      เลขทะเบียนมูลนิธิ (ถ้ามี)
+                  <div className="login-input-wrapper">
+                    <label className="login-input-label">
+                      <span>เลขทะเบียนมูลนิธิ / องค์กร</span>
+                      <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>(ถ้ามี)</span>
                     </label>
                     <input
                       type="text"
+                      className="login-input-control"
                       placeholder="เช่น 01055xxxxxxxx"
                       value={registrationNumber}
                       onChange={e => setRegistrationNumber(e.target.value)}
-                      style={{
-                        width: '100%',
-                        height: '42px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '8px',
-                        padding: '0 12px',
-                        fontSize: '0.9rem',
-                        color: '#111827',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        transition: 'border-color 0.15s, box-shadow 0.15s'
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = '#D97706';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = '#D1D5DB';
-                        e.target.style.boxShadow = 'none';
-                      }}
                     />
                   </div>
                 </>
@@ -706,44 +473,26 @@ const Login = () => {
                 gap: '8px',
                 fontSize: '0.8rem',
                 color: '#4B5563',
-                margin: '6px 0',
+                margin: '4px 0',
                 cursor: 'pointer'
               }}>
                 <input
                   type="checkbox"
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  style={{ marginTop: '2px', cursor: 'pointer', accentColor: '#D97706' }}
+                  style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#059669' }}
                 />
                 <span>ฉันยอมรับ <strong style={{ color: '#111827' }}>ข้อกำหนดการใช้งาน</strong> และ <strong style={{ color: '#111827' }}>นโยบายความเป็นส่วนตัว</strong></span>
               </label>
 
               <button
                 type="submit"
+                className="login-submit-btn primary-register"
                 disabled={isSubmitting || authLoading || !agreed}
-                style={{
-                  width: '100%',
-                  height: '42px',
-                  backgroundColor: (!agreed || isSubmitting) ? '#9CA3AF' : '#059669',
-                  color: '#FFFFFF',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: (!agreed || isSubmitting) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  transition: 'background-color 0.15s'
-                }}
-                onMouseEnter={e => { if (agreed && !isSubmitting) e.currentTarget.style.backgroundColor = '#047857'; }}
-                onMouseLeave={e => { if (agreed && !isSubmitting) e.currentTarget.style.backgroundColor = '#059669'; }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="spin" size={16} />
+                    <Loader2 className="spin" size={18} />
                     <span>กำลังสมัครสมาชิก...</span>
                   </>
                 ) : 'สมัครสมาชิก'}
@@ -752,27 +501,36 @@ const Login = () => {
           )}
 
           {/* Footer Switcher */}
-          <div style={{ marginTop: '24px', textAlign: 'center', paddingTop: '16px', borderTop: '1px solid #E5E7EB' }}>
+          <div className="login-footer-switcher">
             {activeTab === 'login' ? (
-              <p style={{ color: '#4B5563', fontSize: '0.875rem', margin: 0 }}>
-                ยังไม่มีบัญชีใช่ไหม?{' '}
+              <p style={{ margin: 0 }}>
+                ยังไม่มีบัญชีใช่ไหม?
                 <button
                   type="button"
-                  onClick={() => { setActiveTab('register'); setRole('user'); setErrorMsg(''); setSuccessMsg(''); }}
-                  style={{ color: '#D97706', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  className="login-footer-link"
+                  onClick={() => {
+                    setActiveTab('register');
+                    setRole('user');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
                 >
-                  สมัครสมาชิก
+                  สมัครสมาชิกที่นี่
                 </button>
               </p>
             ) : (
-              <p style={{ color: '#4B5563', fontSize: '0.875rem', margin: 0 }}>
-                มีบัญชีอยู่แล้ว?{' '}
+              <p style={{ margin: 0 }}>
+                มีบัญชีอยู่แล้ว?
                 <button
                   type="button"
-                  onClick={() => { setActiveTab('login'); setErrorMsg(''); setSuccessMsg(''); }}
-                  style={{ color: '#D97706', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  className="login-footer-link"
+                  onClick={() => {
+                    setActiveTab('login');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
                 >
-                  เข้าสู่ระบบ
+                  เข้าสู่ระบบที่นี่
                 </button>
               </p>
             )}
