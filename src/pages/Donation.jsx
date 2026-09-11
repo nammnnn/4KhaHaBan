@@ -9,7 +9,6 @@ import {
   Check, 
   X, 
   ShieldCheck, 
-  TrendingUp, 
   MapPin, 
   Camera, 
   ChevronRight, 
@@ -162,8 +161,7 @@ function Donation() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
-  // Real-time Total Donations & Incident Stats
-  const [totalDonations, setTotalDonations] = useState(0);
+  // Incident Stats
   const [incidentStats, setIncidentStats] = useState({ inProgress: 0, resolved: 0 });
   const [foundations, setFoundations] = useState([]);
   const [selectedFoundationId, setSelectedFoundationId] = useState('');
@@ -172,14 +170,6 @@ function Donation() {
   const foundationOptions = foundations.length > 0
     ? foundations.map(f => ({ value: f.id, label: f.full_name }))
     : [{ value: '', label: loadingFoundations ? 'กำลังโหลดรายชื่อมูลนิธิ...' : 'ไม่พบรายชื่อมูลนิธิ' }];
-
-  useEffect(() => {
-    const fetchTotal = async () => {
-      const total = await api.getDonationTotal();
-      setTotalDonations(total);
-    };
-    fetchTotal();
-  }, [paymentSuccess]);
 
   useEffect(() => {
     let channel = null;
@@ -556,21 +546,51 @@ function Donation() {
               />
             </div>
 
-            {/* Fundraising Progress */}
-            <div className="progress-card-section">
-              <div className="progress-details" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                <span className="progress-title-text"><TrendingUp size={14} className="text-primary" /> ยอดระดมทุนช่วยเหลือสัปดาห์นี้</span>
-                <span className="progress-percentage" style={{ marginLeft: 'auto' }}>
-                  {Math.min(100, Math.round((totalDonations / 100000) * 100))}% ({totalDonations.toLocaleString()} / 100,000 ฿)
-                </span>
+            {/* Direct & Verified Foundation Guarantee */}
+            <div style={{
+              padding: '12px 14px',
+              backgroundColor: '#F0FDF4',
+              borderRadius: '12px',
+              border: '1px solid #BBF7D0',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <div style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                backgroundColor: '#DCFCE7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: '#15803D',
+                marginTop: '1px'
+              }}>
+                <ShieldCheck size={20} />
               </div>
-              <div className="progress-bar-bg-premium">
-                <motion.div 
-                  className="progress-bar-fill-premium"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (totalDonations / 100000) * 100)}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#14532D' }}>
+                    โอนตรงเข้าบัญชีมูลนิธิ 100%
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    backgroundColor: '#DCFCE7',
+                    color: '#15803D',
+                    fontWeight: 600,
+                    border: '1px solid #86EFAC'
+                  }}>
+                    บัญชีทางการที่ตรวจสอบแล้ว
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '4px', lineHeight: 1.45 }}>
+                  เงินบริจาคจะเข้าบัญชีของ <strong>{foundations.find(f => f.id === selectedFoundationId)?.full_name || 'มูลนิธิที่เลือก'}</strong> โดยตรง ไม่ผ่านคนกลาง และไม่มีการหักค่าธรรมเนียมใดๆ
+                </div>
               </div>
             </div>
 
