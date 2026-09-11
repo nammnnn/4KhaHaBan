@@ -468,17 +468,9 @@
    =========================================== */
 .animal-profile-page {
   min-height: 100%;
-  background: var(--surface);
-  padding-bottom: 90px;
-}
-
-@media (min-width: 768px) {
-  .animal-profile-page {
-    display: flex;
-    flex-direction: row;
-    padding-bottom: 0;
-    height: 100%;
-  }
+  background: var(--background, #FAF8F5);
+  display: flex;
+  flex-direction: column;
 }
 
 .profile-header {

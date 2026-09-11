@@ -6,7 +6,10 @@
 .animal-profile-page {
   position: relative;
   background-color: var(--background, #FAF8F5);
-  min-height: 100dvh;
+  min-height: 100%;
+  width: 100%;
+  display: flex !important;
+  flex-direction: column !important;
   box-sizing: border-box;
 }
 
@@ -14,29 +17,34 @@
 .animal-profile-navbar {
   position: sticky;
   top: 0;
+  width: 100%;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border, #E5E7EB);
-  padding: 10px 16px;
+  padding: 12px 20px;
+  box-sizing: border-box;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .animal-profile-navbar-inner {
   max-width: 1080px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .animal-nav-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   border-radius: 9999px;
   background: var(--surface, #FFFFFF);
   border: 1px solid var(--border, #E5E7EB);
@@ -46,6 +54,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
 .animal-nav-back-btn:hover {
@@ -54,13 +63,14 @@
 }
 
 .animal-nav-title-truncate {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-dark, #111827);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: 450px;
+  text-align: center;
 }
 
 .animal-nav-actions {
