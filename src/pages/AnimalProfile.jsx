@@ -210,10 +210,6 @@ function AnimalProfile() {
             <span>ย้อนกลับ</span>
           </button>
 
-          <div className="animal-nav-title-truncate">
-            {animal.name}
-          </div>
-
           <div className="animal-nav-actions">
             <button 
               type="button" 
