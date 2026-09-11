@@ -189,32 +189,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Segmented Tab Switcher (เข้าสู่ระบบ | สมัครสมาชิก) */}
-          <div className="login-tab-switcher">
-            <button
-              type="button"
-              className={`login-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('login');
-                setErrorMsg('');
-                setSuccessMsg('');
-              }}
-            >
-              เข้าสู่ระบบ
-            </button>
-            <button
-              type="button"
-              className={`login-tab-btn ${activeTab === 'register' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('register');
-                setRole('user');
-                setErrorMsg('');
-                setSuccessMsg('');
-              }}
-            >
-              สมัครสมาชิก
-            </button>
-          </div>
 
           {/* Form Header */}
           <div className="login-header-group">
