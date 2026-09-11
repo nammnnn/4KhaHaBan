@@ -1,4 +1,5 @@
 import React from 'react';
+import '../pages/Login.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -647,3 +648,91 @@ export const UniversalPageSkeleton = () => (
     </div>
   </div>
 );
+
+// 16. Login & Register Skeleton (Login) - Responsive Desktop & Mobile Split
+export const LoginSkeleton = () => (
+  <div className="login-page-container" style={{ minHeight: '100dvh', display: 'flex', width: '100%', backgroundColor: '#FAF8F5' }}>
+    {/* Left Panel: Desktop Brand Showcase */}
+    <div className="login-desktop-showcase">
+      <div className="login-showcase-inner">
+        {/* Logo Badge Skeleton */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: '#FFFFFF', borderRadius: '10px', border: '1px solid #E5E7EB', marginBottom: '28px' }}>
+          <div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '84px', height: '16px' }} />
+        </div>
+
+        {/* Title Skeleton */}
+        <div className="skeleton skeleton-text" style={{ width: '80%', height: '36px', marginBottom: '12px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '60%', height: '36px', marginBottom: '20px' }} />
+
+        {/* Description Skeleton */}
+        <div className="skeleton skeleton-text" style={{ width: '95%', height: '16px', marginBottom: '8px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '70%', height: '16px', marginBottom: '32px' }} />
+
+        {/* Feature cards skeleton */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', backgroundColor: '#FFFFFF', borderRadius: '10px', border: '1px solid #E5E7EB' }}>
+              <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '6px', flexShrink: 0 }} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className="skeleton skeleton-text" style={{ width: '45%', height: '16px' }} />
+                <div className="skeleton skeleton-text" style={{ width: '85%', height: '12px' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Right Panel: Form Section (Desktop & Mobile) */}
+    <div className="login-form-panel">
+      <div className="login-form-card">
+        {/* Mobile Topbar Skeleton */}
+        <div className="login-mobile-topbar">
+          <div className="skeleton" style={{ width: '76px', height: '32px', borderRadius: '8px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="skeleton" style={{ width: '26px', height: '26px', borderRadius: '6px' }} />
+            <div className="skeleton skeleton-text" style={{ width: '70px', height: '16px' }} />
+          </div>
+        </div>
+
+        {/* Form Header Skeleton */}
+        <div style={{ marginBottom: '22px' }}>
+          <div className="skeleton skeleton-text" style={{ width: '55%', height: '26px', marginBottom: '8px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px' }} />
+        </div>
+
+        {/* Google Button Skeleton */}
+        <div className="skeleton" style={{ width: '100%', height: '46px', borderRadius: '10px', marginBottom: '20px' }} />
+
+        {/* Divider Skeleton */}
+        <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0', gap: '12px' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#E5E7EB' }} />
+          <div className="skeleton skeleton-text" style={{ width: '60px', height: '12px' }} />
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#E5E7EB' }} />
+        </div>
+
+        {/* Form Fields Skeleton */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <div className="skeleton skeleton-text" style={{ width: '40px', height: '14px', marginBottom: '6px' }} />
+            <div className="skeleton" style={{ width: '100%', height: '46px', borderRadius: '10px' }} />
+          </div>
+          <div>
+            <div className="skeleton skeleton-text" style={{ width: '50px', height: '14px', marginBottom: '6px' }} />
+            <div className="skeleton" style={{ width: '100%', height: '46px', borderRadius: '10px' }} />
+          </div>
+        </div>
+
+        {/* Submit Button Skeleton */}
+        <div className="skeleton" style={{ width: '100%', height: '46px', borderRadius: '10px', marginBottom: '20px' }} />
+
+        {/* Footer Link Skeleton */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px', borderTop: '1px solid #E5E7EB' }}>
+          <div className="skeleton skeleton-text" style={{ width: '180px', height: '14px' }} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+

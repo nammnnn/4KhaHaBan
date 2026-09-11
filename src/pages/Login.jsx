@@ -6,6 +6,7 @@ import {
   X, Shield, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LoginSkeleton } from '../components/Skeletons';
 import './Login.css';
 
 const Login = () => {
@@ -24,6 +25,11 @@ const Login = () => {
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // ถ้ากำลังโหลดข้อมูล auth อยู่ ให้แสดง Skeleton
+  if (authLoading) {
+    return <LoginSkeleton />;
+  }
 
   // ถ้าล็อกอินแล้วให้ข้ามไปหน้า Feed เลย
   if (user) {

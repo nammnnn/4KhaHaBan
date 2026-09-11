@@ -94,7 +94,8 @@ import {
   FormPageSkeleton,
   AdoptionTimelineSkeleton,
   AdoptionFollowupSkeleton,
-  UniversalPageSkeleton
+  UniversalPageSkeleton,
+  LoginSkeleton
 } from './components/Skeletons';
 
 // Route-Adaptive Skeleton Fallback (100% Skeleton Load, no spinner)
@@ -103,6 +104,9 @@ const PageLoader = () => {
 
   if (path === '/' || path.startsWith('/feed')) {
     return <FeedCardSkeleton />;
+  }
+  if (path.startsWith('/login')) {
+    return <LoginSkeleton />;
   }
   if (path.startsWith('/animal/')) {
     return (
