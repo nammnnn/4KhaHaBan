@@ -59,16 +59,16 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
 
   // Stack styling configuration for cards behind the front card
   const stackStyles = isSecond ? {
-    scale: 0.95,
-    y: 8,
-    opacity: 0.9
+    scale: 0.96,
+    y: 0,
+    opacity: 0.98
   } : isFront ? {
     scale: 1,
     y: 0,
     opacity: 1
   } : {
-    scale: 0.9,
-    y: 16,
+    scale: 0.92,
+    y: 0,
     opacity: 0
   };
 
@@ -82,10 +82,12 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
         rotate,
         zIndex: isFront ? 10 : isSecond ? 5 : 0,
         pointerEvents: isFront ? 'auto' : 'none',
-        borderRadius: '20px',
+        borderRadius: '22px',
         overflow: 'hidden',
-        border: '1px solid rgba(0, 0, 0, 0.08)',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.09)',
+        border: '1px solid rgba(217, 119, 6, 0.12)',
+        boxShadow: isFront 
+          ? '0 14px 34px rgba(28, 25, 23, 0.12), 0 4px 12px rgba(217, 119, 6, 0.08)' 
+          : '0 8px 24px rgba(0, 0, 0, 0.08)',
         willChange: 'transform',
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden',
@@ -96,7 +98,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
       onDragEnd={handleDragEnd}
       animate={stackStyles}
       transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-      initial={isSecond ? { scale: 0.9, y: 16, opacity: 0 } : false}
+      initial={isSecond ? { scale: 0.94, y: 0, opacity: 0 } : false}
     >
       <div className="card-image-container" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#111827' }}>
         <img 
@@ -199,8 +201,8 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
           bottom: 0,
           left: 0,
           right: 0,
-          height: '60%',
-          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.96) 0%, rgba(15, 23, 42, 0.75) 45%, rgba(15, 23, 42, 0.25) 80%, transparent 100%)',
+          height: '56%',
+          background: 'linear-gradient(to top, rgba(18, 14, 10, 0.94) 0%, rgba(18, 14, 10, 0.68) 45%, rgba(18, 14, 10, 0.15) 80%, transparent 100%)',
           pointerEvents: 'none',
           zIndex: 1
         }} />

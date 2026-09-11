@@ -229,7 +229,7 @@ function Feed() {
   return (
     <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
       {/* Top Bar */}
-      <div className="feed-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+      <div className="feed-header">
         <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
           4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
         </h1>

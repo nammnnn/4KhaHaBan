@@ -20,10 +20,10 @@
   .feed-header {
     background-color: transparent;
     border-bottom: none;
-    padding: 24px 20px 8px;
-    max-width: 520px;
+    padding: 16px 20px 4px;
+    max-width: 380px;
     margin: 0 auto;
-    justify-content: center;
+    justify-content: center !important;
   }
 }
 
@@ -136,12 +136,12 @@
   max-width: 380px;
   height: calc(100% - 10px);
   max-height: 100%;
-  border-radius: 20px;
+  border-radius: 22px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.12);
   background: #111827;
   will-change: transform;
-  transform-origin: center bottom;
+  transform-origin: center center;
   overflow: hidden;
   display: flex;
   flex-direction: column;
