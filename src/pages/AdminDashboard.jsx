@@ -83,6 +83,8 @@ const AdminDashboard = () => {
   const [pendingFoundations, setPendingFoundations] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [donations, setDonations] = useState([]);
+  const [donationFilter, setDonationFilter] = useState('all');
+  const [updatingDonationId, setUpdatingDonationId] = useState(null);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -351,6 +353,27 @@ const AdminDashboard = () => {
       showToast('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง', 'error');
     } finally {
       setUpdatingIncidentId(null);
+    }
+  };
+
+  const handleUpdateDonationStatus = async (donationId, newStatus) => {
+    setUpdatingDonationId(donationId);
+    try {
+      await api.updateDonationStatus(donationId, newStatus);
+      setDonations(prev => prev.map(d => d.id === donationId ? { ...d, status: newStatus } : d));
+      showToast(
+        newStatus === 'completed' 
+          ? 'อนุมัติสลิปและบันทึกยอดบริจาคสำเร็จ' 
+          : newStatus === 'rejected' 
+            ? 'ปฏิเสธรายการบริจาคนี้แล้ว' 
+            : 'เปลี่ยนสถานะเป็นรอตรวจสอบแล้ว',
+        newStatus === 'completed' ? 'success' : 'info'
+      );
+    } catch (err) {
+      console.error('Failed to update donation status:', err);
+      showToast('ไม่สามารถอัปเดตสถานะได้: ' + (err.message || 'เกิดข้อผิดพลาด'), 'error');
+    } finally {
+      setUpdatingDonationId(null);
     }
   };
 
@@ -1069,62 +1092,244 @@ const AdminDashboard = () => {
       ) : activeTab === 'donations' ? (
         <>
           {/* KPI Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <StatCard icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Banknote size={22} color="#059669" /></div>} count={`฿ ${donations.reduce((sum, d) => sum + Number(d.amount), 0).toLocaleString()}`} label="ยอดบริจาครวม" />
-            <StatCard icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={22} color="#D97706" /></div>} count={donations.length} label="จำนวนครั้งที่บริจาค" />
-          </div>
-          
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-            {donations.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)', textAlign: 'left' }}>
-                    <th style={{ padding: '16px' }}>วันที่</th>
-                    <th style={{ padding: '16px' }}>ผู้บริจาค</th>
-                    <th style={{ padding: '16px' }}>จำนวนเงิน</th>
-                    <th style={{ padding: '16px' }}>รูปแบบ</th>
-                    <th style={{ padding: '16px' }}>บริจาคให้</th>
-                    <th style={{ padding: '16px' }}>สลิป</th>
-                    <th style={{ padding: '16px' }}>สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {donations.map((don) => (
-                    <tr key={don.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
-                      <td style={{ padding: '16px', color: 'var(--text-medium)' }}>{new Date(don.created_at).toLocaleString('th-TH')}</td>
-                      <td style={{ padding: '16px', fontWeight: 500 }}>{don.profiles?.full_name || don.profiles?.email || 'ผู้ใช้งาน'}</td>
-                      <td style={{ padding: '16px', fontWeight: 700, color: 'var(--primary)' }}>฿ {Number(don.amount).toLocaleString()}</td>
-                      <td style={{ padding: '16px' }}>{don.billing_cycle === 'once' ? 'ครั้งเดียว' : 'รายเดือน'}</td>
-                      <td style={{ padding: '16px', color: 'var(--text-medium)', fontSize: '0.85rem' }}>{don.foundation?.full_name || '-'}</td>
-                      <td style={{ padding: '16px' }}>
-                        {don.slip_url ? (
-                          <a href={don.slip_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
-                            ดูสลิป
-                          </a>
-                        ) : (
-                          <span style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>ไม่มีสลิป</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span style={{ 
-                          padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
-                          backgroundColor: don.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
-                          color: don.status === 'completed' ? '#059669' : '#D97706',
-                          border: don.status === 'completed' ? '1px solid #A7F3D0' : '1px solid #FCD34D'
-                        }}>
-                          {don.status}
-                        </span>
-                      </td>
-                    </tr>
+          {(() => {
+            const verifiedTotal = donations
+              .filter(d => d.status === 'completed')
+              .reduce((sum, d) => sum + Number(d.amount), 0);
+            const pendingCount = donations.filter(d => d.status === 'pending_verification').length;
+            const completedCount = donations.filter(d => d.status === 'completed').length;
+            const rejectedCount = donations.filter(d => d.status === 'rejected').length;
+
+            const filteredDonations = donations.filter(d => {
+              if (donationFilter === 'all') return true;
+              return d.status === donationFilter;
+            });
+
+            return (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                  <StatCard 
+                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Banknote size={22} color="#059669" /></div>} 
+                    count={`฿ ${verifiedTotal.toLocaleString()}`} 
+                    label="ยอดบริจาคที่อนุมัติแล้ว (ยอดจริง)" 
+                  />
+                  <StatCard 
+                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={22} color="#D97706" /></div>} 
+                    count={`${pendingCount} รายการ`} 
+                    label="รอตรวจสอบสลิป" 
+                  />
+                  <StatCard 
+                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={22} color="#2563EB" /></div>} 
+                    count={`${completedCount} รายการ`} 
+                    label="อนุมัติแล้ว" 
+                  />
+                  <StatCard 
+                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={22} color="#4B5563" /></div>} 
+                    count={`${donations.length} รายการ`} 
+                    label="รายการทั้งหมด" 
+                  />
+                </div>
+
+                {/* Status Filter Tabs */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {[
+                    { id: 'all', label: 'ทั้งหมด', count: donations.length },
+                    { id: 'pending_verification', label: 'รอตรวจสอบสลิป', count: pendingCount, highlight: pendingCount > 0 },
+                    { id: 'completed', label: 'อนุมัติแล้ว', count: completedCount },
+                    { id: 'rejected', label: 'ปฏิเสธ', count: rejectedCount }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setDonationFilter(tab.id)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        border: donationFilter === tab.id ? '1px solid #D97706' : '1px solid #E5E7EB',
+                        backgroundColor: donationFilter === tab.id ? '#FEF3C7' : '#FFFFFF',
+                        color: donationFilter === tab.id ? '#B45309' : '#4B5563',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>{tab.label}</span>
+                      <span style={{
+                        padding: '2px 7px',
+                        borderRadius: '10px',
+                        fontSize: '0.75rem',
+                        backgroundColor: tab.highlight ? '#DC2626' : (donationFilter === tab.id ? '#D97706' : '#F3F4F6'),
+                        color: tab.highlight || donationFilter === tab.id ? '#FFFFFF' : '#6B7280'
+                      }}>
+                        {tab.count}
+                      </span>
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-medium)' }}>
-                ยังไม่มีข้อมูลการบริจาค
-              </div>
-            )}
-          </div>
+                </div>
+
+                <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                  {filteredDonations.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)', textAlign: 'left' }}>
+                            <th style={{ padding: '16px' }}>วันที่</th>
+                            <th style={{ padding: '16px' }}>ผู้บริจาค</th>
+                            <th style={{ padding: '16px' }}>จำนวนเงิน</th>
+                            <th style={{ padding: '16px' }}>รูปแบบ</th>
+                            <th style={{ padding: '16px' }}>บริจาคให้</th>
+                            <th style={{ padding: '16px' }}>หลักฐานสลิป</th>
+                            <th style={{ padding: '16px' }}>สถานะ</th>
+                            <th style={{ padding: '16px', textAlign: 'center' }}>จัดการ (แอดมิน)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDonations.map((don) => {
+                            const isUpdating = updatingDonationId === don.id;
+                            return (
+                              <tr key={don.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                                <td style={{ padding: '16px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>
+                                  {new Date(don.created_at).toLocaleString('th-TH')}
+                                </td>
+                                <td style={{ padding: '16px', fontWeight: 500 }}>
+                                  <div>{don.profiles?.full_name || 'ผู้ใช้งาน'}</div>
+                                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>{don.profiles?.email || '-'}</div>
+                                </td>
+                                <td style={{ padding: '16px', fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', whiteSpace: 'nowrap' }}>
+                                  ฿ {Number(don.amount).toLocaleString()}
+                                </td>
+                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.8rem', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#F3F4F6', color: '#4B5563' }}>
+                                    {don.billing_cycle === 'once' ? 'ครั้งเดียว' : 'รายเดือน'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '16px', color: 'var(--text-medium)', fontSize: '0.85rem' }}>
+                                  {don.foundation?.full_name || '-'}
+                                </td>
+                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
+                                  {don.slip_url ? (
+                                    <button 
+                                      type="button"
+                                      onClick={() => setReportProofImage(don.slip_url)}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '5px 10px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #D1D5DB',
+                                        backgroundColor: '#FFFFFF',
+                                        color: '#D97706',
+                                        fontWeight: 600,
+                                        fontSize: '0.82rem',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      <Eye size={14} /> ดูสลิป
+                                    </button>
+                                  ) : (
+                                    <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 500 }}>ไม่มีสลิป</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
+                                  <span style={{ 
+                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    backgroundColor: don.status === 'completed' ? '#ECFDF5' : don.status === 'rejected' ? '#FEF2F2' : '#FEF3C7',
+                                    color: don.status === 'completed' ? '#059669' : don.status === 'rejected' ? '#DC2626' : '#D97706',
+                                    border: `1px solid ${don.status === 'completed' ? '#A7F3D0' : don.status === 'rejected' ? '#FECACA' : '#FCD34D'}`
+                                  }}>
+                                    {don.status === 'completed' ? 'อนุมัติแล้ว' : don.status === 'rejected' ? 'ปฏิเสธ' : 'รอตรวจสอบ'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                    {don.status !== 'completed' && (
+                                      <button
+                                        disabled={isUpdating}
+                                        onClick={() => handleUpdateDonationStatus(don.id, 'completed')}
+                                        title="อนุมัติสลิปและนับยอดเงินเข้าโครงการ"
+                                        style={{
+                                          padding: '5px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          backgroundColor: '#059669',
+                                          color: '#FFFFFF',
+                                          border: 'none',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                      >
+                                        <CheckCircle2 size={13} /> อนุมัติ
+                                      </button>
+                                    )}
+
+                                    {don.status !== 'rejected' && (
+                                      <button
+                                        disabled={isUpdating}
+                                        onClick={() => handleUpdateDonationStatus(don.id, 'rejected')}
+                                        title="ปฏิเสธสลิป (สลิปปลอม/ไม่มียอดจริง)"
+                                        style={{
+                                          padding: '5px 10px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          backgroundColor: '#FFFFFF',
+                                          color: '#DC2626',
+                                          border: '1px solid #FCA5A5',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                      >
+                                        <X size={13} /> ปฏิเสธ
+                                      </button>
+                                    )}
+
+                                    {don.status === 'completed' && (
+                                      <button
+                                        disabled={isUpdating}
+                                        onClick={() => handleUpdateDonationStatus(don.id, 'pending_verification')}
+                                        title="เปลี่ยนกลับเป็นรอตรวจสอบ"
+                                        style={{
+                                          padding: '5px 8px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.75rem',
+                                          fontWeight: 500,
+                                          cursor: 'pointer',
+                                          backgroundColor: '#FFFFFF',
+                                          color: '#6B7280',
+                                          border: '1px solid #D1D5DB',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px'
+                                        }}
+                                      >
+                                        <RotateCcw size={12} /> แก้ไข
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-medium)' }}>
+                      ไม่พบข้อมูลการบริจาคในสถานะนี้
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </>
       ) : activeTab === 'support' ? (
         <div style={{ display: 'flex', gap: '24px', height: '600px' }}>

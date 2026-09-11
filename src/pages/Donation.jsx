@@ -431,29 +431,42 @@ function Donation() {
   };
 
   const handlePaymentConfirm = async () => {
+    if (!slipFile) {
+      alert('กรุณาแนบภาพสลิปหลักฐานการโอนเงิน PromptPay ก่อนกดยืนยัน');
+      return;
+    }
+
+    if (!user) {
+      alert('กรุณาเข้าสู่ระบบก่อนทำรายการบริจาค');
+      return;
+    }
+
     setIsSubmittingPayment(true);
     try {
-      let slipUrl = null;
-      if (slipFile) {
-        slipUrl = await api.uploadDonationSlip(slipFile);
+      // 1. อัปโหลดภาพสลิปขึ้น Storage
+      const slipUrl = await api.uploadDonationSlip(slipFile);
+      if (!slipUrl) {
+        throw new Error('ไม่สามารถอัปโหลดภาพสลิปได้ กรุณาลองใหม่อีกครั้ง');
       }
 
-      if (supabase && user) {
-        await supabase.from('donations').insert([
+      // 2. บันทึกข้อมูลด้วยสถานะ pending_verification (รอเจ้าหน้าที่ตรวจสอบสลิปก่อนนับยอดจริง)
+      if (supabase) {
+        const { error: insertErr } = await supabase.from('donations').insert([
           {
             user_id: user.id,
             amount: currentAmount,
             billing_cycle: billingCycle,
-            status: 'completed',
+            status: 'pending_verification',
             slip_url: slipUrl,
             foundation_id: selectedFoundationId || null
           }
         ]);
+        if (insertErr) throw insertErr;
       }
       setPaymentSuccess(true);
     } catch (error) {
       console.error("Error saving donation:", error);
-      alert('ไม่สามารถบันทึกข้อมูลการบริจาคได้ กรุณาลองใหม่อีกครั้ง');
+      alert(error.message || 'ไม่สามารถบันทึกข้อมูลการบริจาคได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -903,35 +916,62 @@ function Donation() {
                       </div>
 
                       {/* Payment Slip Upload */}
-                      <div style={{ marginTop: '16px', padding: '16px', backgroundColor: 'var(--gray-50)', borderRadius: '12px', border: '1px dashed var(--gray-300)' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '8px' }}>
-                          แนบหลักฐานการโอนเงิน (สลิป PromptPay)
+                      <div style={{ marginTop: '16px', padding: '16px', backgroundColor: 'var(--gray-50)', borderRadius: '12px', border: slipFile ? '1.5px solid #10B981' : '1px dashed var(--gray-300)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '8px' }}>
+                          <span>แนบหลักฐานการโอนเงิน (สลิป PromptPay) <span style={{ color: '#DC2626' }}>*จำเป็น</span></span>
+                          {slipFile && <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>แนบสลิปแล้ว</span>}
                         </label>
                         {slipPreview ? (
-                          <div style={{ position: 'relative', display: 'inline-block', maxWidth: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
+                          <div style={{ position: 'relative', display: 'inline-block', maxWidth: '160px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #D1D5DB', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
                             <img src={slipPreview} alt="Slip Preview" style={{ width: '100%', height: 'auto', display: 'block' }} />
                             <button 
                               type="button" 
                               onClick={removeSlip}
-                              style={{ position: 'absolute', top: '4px', right: '4px', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              title="ลบสลิปเพื่อเลือกใหม่"
+                              style={{ position: 'absolute', top: '4px', right: '4px', backgroundColor: 'rgba(0,0,0,0.65)', color: 'white', border: 'none', borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                             >
                               <X size={14} />
                             </button>
                           </div>
                         ) : (
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'white', border: '1px solid var(--gray-300)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-medium)', width: 'fit-content' }}>
-                            <Upload size={16} color="var(--primary)" />
-                            <span>อัปโหลดภาพสลิป</span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', backgroundColor: 'white', border: '1.5px dashed #D97706', borderRadius: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#B45309', width: 'fit-content' }}>
+                            <Upload size={18} color="#D97706" />
+                            <span style={{ fontWeight: 600 }}>คลิกเพื่ออัปโหลดภาพสลิปการโอน</span>
                             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleSlipSelect} />
                           </label>
                         )}
-                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-light)', marginTop: '6px' }}>* สามารถแนบสลิปเพื่อยืนยันรายการ หรือกดยืนยันเพื่อบันทึกยอดได้ทันที</span>
+                        <span style={{ display: 'block', fontSize: '0.78rem', color: slipFile ? '#059669' : '#DC2626', marginTop: '8px', fontWeight: 500 }}>
+                          {slipFile ? 'แนบสลิปเรียบร้อย พร้อมกดยืนยันการโอน' : '* กรุณาสแกน QR และแนบสลิปโอนเงิน เพื่อให้เจ้าหน้าที่ตรวจสอบความถูกต้องก่อนบันทึกยอด'}
+                        </span>
                       </div>
 
                       <div className="modal-buttons-row" style={{ marginTop: '20px' }}>
                         <button className="btn btn-secondary" disabled={isSubmittingPayment} onClick={() => setActiveModal(null)}>ยกเลิก</button>
-                        <button className="btn btn-primary" disabled={isSubmittingPayment} onClick={handlePaymentConfirm}>
-                          {isSubmittingPayment ? <Loader className="spin" size={16} /> : <Check size={16} />} ฉันสแกนโอนเงินเรียบร้อยแล้ว
+                        <button 
+                          className="btn btn-primary" 
+                          disabled={!slipFile || isSubmittingPayment} 
+                          onClick={handlePaymentConfirm}
+                          style={{
+                            opacity: !slipFile ? 0.6 : 1,
+                            cursor: !slipFile ? 'not-allowed' : 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          {isSubmittingPayment ? (
+                            <>
+                              <Loader className="spin" size={16} /> กำลังอัปโหลดสลิป...
+                            </>
+                          ) : !slipFile ? (
+                            <>
+                              <Upload size={16} /> กรุณาแนบสลิปก่อนยืนยัน
+                            </>
+                          ) : (
+                            <>
+                              <Check size={16} /> ยืนยันการโอนเงิน (แนบสลิปแล้ว)
+                            </>
+                          )}
                         </button>
                       </div>
                     </>
@@ -946,10 +986,15 @@ function Donation() {
                           <Check size={40} color="#059669" />
                         </div>
                       </div>
-                      <h2 className="success-title">ขออนุโมทนาและขอบคุณเป็นอย่างสูง!</h2>
+                      <h2 className="success-title">ส่งหลักฐานการบริจาคเรียบร้อยแล้ว!</h2>
+                      <div style={{ margin: '12px auto 16px', maxWidth: '380px', padding: '12px 16px', borderRadius: '10px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: '0.825rem', textAlign: 'left', lineHeight: 1.5 }}>
+                        <strong>สถานะ: รอการตรวจสอบสลิป (Pending Verification)</strong><br />
+                        ข้อมูลและสลิปการโอนเงินถูกส่งไปยังเจ้าหน้าที่/มูลนิธิเรียบร้อยแล้ว เมื่อเจ้าหน้าที่ตรวจสอบความถูกต้อง ยอดบริจาคจะถูกบันทึกสมทบเข้าสู่ยอดระดมทุนโครงการอย่างเป็นทางการ
+                      </div>
                       <p className="success-desc">
-                        ยอดบริจาคจำนวน <strong>฿ {currentAmount.toLocaleString()}.00</strong> ได้รับการบันทึกเข้าสู่โครงการเรียบร้อยแล้ว 
-                        ทุกเศษเหรียญจากความมีเมตตาของคุณคือพลังสำคัญที่จะช่วยเยียวยาชีวิตเพื่อนสี่ขาให้กลับมาวิ่งและมีความสุขได้อีกครั้ง
+                        ยอดบริจาคจำนวน <strong>฿ {currentAmount.toLocaleString()}.00</strong>
+                        <br />
+                        ขออนุโมทนาและขอบพระคุณในความเมตตาที่มีต่อเพื่อนสี่ขาเป็นอย่างสูงครับ/ค่ะ
                       </p>
                       <button className="btn btn-primary" style={{ minWidth: '150px' }} onClick={() => setActiveModal(null)}>
                         ปิดหน้าต่าง

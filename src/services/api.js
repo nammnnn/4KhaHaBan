@@ -986,6 +986,21 @@ export const api = {
     }
   },
 
+  /**
+   * Update donation verification status (approve/reject slip)
+   */
+  async updateDonationStatus(donationId, newStatus) {
+    if (!supabase) throw new Error('Supabase not connected');
+    const { data, error } = await supabase
+      .from('donations')
+      .update({ status: newStatus })
+      .eq('id', donationId)
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
   // รายการสิ่งของจำเป็นเริ่มต้น (Fallback)
   defaultNeeds: [
     { id: 'def-1', item_name: 'อาหารเม็ดสำหรับสุนัขโต', category: 'food', urgency: 'critical', note: 'ต้องการสูตรโภชนาการสำหรับสุนัขโตทุกสายพันธุ์' },
