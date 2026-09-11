@@ -182,13 +182,17 @@ button {
   overflow: hidden;
 }
 
-/* Mobile: When inside an active 1:1 chat room, hide the bottom navigation bar and expand to full screen */
+/* Mobile: When inside an active 1:1 chat room or animal profile detail, hide the bottom navigation bar and expand to full screen */
 @media (max-width: 767px) {
-  .app-container:has(.chat-room-container) .main-nav {
+  .app-container:has(.chat-room-container) .main-nav,
+  .app-container:has(.animal-profile-page) .main-nav {
     display: none !important;
   }
-  .app-container:has(.chat-room-container) .main-content {
+  .app-container:has(.chat-room-container) .main-content,
+  .app-container:has(.animal-profile-page) .main-content {
     padding-bottom: 0 !important;
+  }
+  .app-container:has(.chat-room-container) .main-content {
     overflow: hidden !important;
   }
 }
