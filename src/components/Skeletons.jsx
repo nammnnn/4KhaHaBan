@@ -580,3 +580,70 @@ export const FoundationPendingSkeleton = () => (
     </div>
   </div>
 );
+
+// 13. Donation Page Skeleton (Donation)
+export const DonationSkeleton = () => (
+  <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', padding: '24px 16px 100px', boxSizing: 'border-box' }}>
+    <div style={{ maxWidth: '840px', margin: '0 auto' }}>
+      {/* Hero Banner */}
+      <div className="skeleton" style={{ width: '100%', height: '180px', borderRadius: '20px', marginBottom: '24px' }} />
+      {/* 3 Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+        <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '8px' }} />
+      </div>
+      {/* Main Donation Box */}
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '24px', border: '1px solid #E5E7EB' }}>
+        <div className="skeleton skeleton-text" style={{ width: '40%', height: '22px', marginBottom: '16px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="skeleton" style={{ height: '54px', borderRadius: '12px' }} />
+          ))}
+        </div>
+        <div className="skeleton" style={{ width: '100%', height: '50px', borderRadius: '12px' }} />
+      </div>
+    </div>
+  </div>
+);
+
+// 14. User Profile Skeleton (UserProfile)
+export const UserProfileSkeleton = () => (
+  <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', padding: '28px 16px 100px', boxSizing: 'border-box' }}>
+    <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      {/* Header Avatar Box */}
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', padding: '24px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '20px' }}>
+        <div className="skeleton skeleton-circle" style={{ width: '84px', height: '84px', flexShrink: 0 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="skeleton skeleton-text" style={{ width: '160px', height: '22px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '220px', height: '14px' }} />
+          <div className="skeleton" style={{ width: '90px', height: '22px', borderRadius: '6px' }} />
+        </div>
+      </div>
+      {/* Settings Form Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '20px', border: '1px solid #E5E7EB' }}>
+          <div className="skeleton skeleton-text" style={{ width: '140px', height: '18px', marginBottom: '16px' }} />
+          <div className="skeleton" style={{ height: '44px', borderRadius: '10px', marginBottom: '12px' }} />
+          <div className="skeleton" style={{ height: '44px', borderRadius: '10px' }} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// 15. Universal Page Skeleton (Fallback for any route)
+export const UniversalPageSkeleton = () => (
+  <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div className="skeleton skeleton-text" style={{ width: '150px', height: '24px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '38px', height: '38px' }} />
+    </div>
+    <div className="skeleton" style={{ width: '100%', height: '180px', borderRadius: '16px', marginBottom: '18px' }} />
+    <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="skeleton skeleton-text" style={{ width: '45%', height: '18px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '90%', height: '14px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '75%', height: '14px' }} />
+    </div>
+  </div>
+);

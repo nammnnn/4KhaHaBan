@@ -695,9 +695,10 @@ function Donation() {
 
             {/* Need Checklist items */}
             {loadingNeeds ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#6B7280' }}>
-                <Loader className="spin" size={20} style={{ margin: '0 auto 8px' }} />
-                <span style={{ fontSize: '0.82rem' }}>กำลังตรวจสอบรายการของที่ขาด...</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0' }}>
+                <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
+                <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
+                <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
               </div>
             ) : foundationNeeds.length === 0 ? (
               <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#F9FAFB', borderRadius: '10px', marginBottom: '14px' }}>

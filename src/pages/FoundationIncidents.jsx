@@ -159,6 +159,22 @@ export default function FoundationIncidents() {
     return i.status === filter;
   });
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100dvh',
+        backgroundColor: '#FAF8F5',
+        fontFamily: 'Prompt, sans-serif',
+        padding: '24px 16px 100px',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ maxWidth: '840px', margin: '0 auto', width: '100%' }}>
+          <FoundationIncidentsSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: '100dvh',

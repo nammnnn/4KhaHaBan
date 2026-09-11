@@ -190,6 +190,22 @@ export default function FoundationNeeds() {
     return n.category === selectedCategory;
   });
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100dvh',
+        backgroundColor: '#FAF8F5',
+        fontFamily: 'Prompt, sans-serif',
+        padding: '32px 16px 100px',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ maxWidth: '840px', margin: '0 auto' }}>
+          <FoundationNeedsSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: '100dvh',

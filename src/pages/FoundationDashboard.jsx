@@ -101,6 +101,10 @@ const FoundationDashboard = () => {
     }
   };
 
+  if (loading) {
+    return <FoundationDashboardSkeleton />;
+  }
+
   return (
     <div style={{
       minHeight: '100dvh',

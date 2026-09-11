@@ -79,12 +79,81 @@ const FoundationNeeds = React.lazy(() => import('./pages/FoundationNeeds'));
 const AdoptionFollowup = React.lazy(() => import('./pages/AdoptionFollowup'));
 const AdoptionTimeline = React.lazy(() => import('./pages/AdoptionTimeline'));
 
-// Loading Fallback Component
-const PageLoader = () => (
-  <div style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-    <Loader className="spin" size={32} color="var(--primary)" />
-  </div>
-);
+import {
+  FeedCardSkeleton,
+  AnimalProfileSkeleton,
+  ChatListSkeleton,
+  ChatRoomSkeleton,
+  DonationSkeleton,
+  UserProfileSkeleton,
+  FoundationDashboardSkeleton,
+  FoundationAnimalsSkeleton,
+  FoundationIncidentsSkeleton,
+  FoundationNeedsSkeleton,
+  FoundationPendingSkeleton,
+  FormPageSkeleton,
+  AdoptionTimelineSkeleton,
+  AdoptionFollowupSkeleton,
+  UniversalPageSkeleton
+} from './components/Skeletons';
+
+// Route-Adaptive Skeleton Fallback (100% Skeleton Load, no spinner)
+const PageLoader = () => {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+  if (path === '/' || path.startsWith('/feed')) {
+    return <FeedCardSkeleton />;
+  }
+  if (path.startsWith('/animal/')) {
+    return (
+      <div className="page-container" style={{ padding: '16px' }}>
+        <AnimalProfileSkeleton />
+      </div>
+    );
+  }
+  if (path.startsWith('/chat/')) {
+    return <ChatRoomSkeleton />;
+  }
+  if (path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
+    return (
+      <div className="page-container match-page">
+        <ChatListSkeleton />
+      </div>
+    );
+  }
+  if (path.startsWith('/donation')) {
+    return <DonationSkeleton />;
+  }
+  if (path.startsWith('/profile')) {
+    return <UserProfileSkeleton />;
+  }
+  if (path.startsWith('/foundation/animals')) {
+    return <FoundationAnimalsSkeleton />;
+  }
+  if (path.startsWith('/foundation/incidents')) {
+    return <FoundationIncidentsSkeleton />;
+  }
+  if (path.startsWith('/foundation/needs')) {
+    return <FoundationNeedsSkeleton />;
+  }
+  if (path.startsWith('/foundation/pending')) {
+    return <FoundationPendingSkeleton />;
+  }
+  if (path === '/foundation' || path.startsWith('/foundation/dashboard')) {
+    return <FoundationDashboardSkeleton />;
+  }
+  if (path.startsWith('/verify-user') || path.includes('/new') || path.includes('/edit') || path.startsWith('/foundation/onboarding')) {
+    return <FormPageSkeleton />;
+  }
+  if (path.startsWith('/adoption/timeline')) {
+    return <AdoptionTimelineSkeleton />;
+  }
+  if (path.startsWith('/adoption/followup')) {
+    return <AdoptionFollowupSkeleton />;
+  }
+
+  return <UniversalPageSkeleton />;
+};
 
 // RoleEnforcer: บังคับ redirect ตาม role + verification status
 // - foundation ที่ยังไม่ approved → redirect ไป /foundation/pending
