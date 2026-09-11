@@ -1,6 +1,6 @@
 import { useEffect, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { MapPin, Heart, X, CheckCircle2, Info, ChevronRight } from 'lucide-react';
+import { MapPin, Heart, X, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger }) {
@@ -136,32 +136,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
           </span>
         </div>
 
-        {/* Top-Right: Info button linking to full profile */}
-        <Link 
-          to={`/animal/${animal.id}`}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '14px',
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(0, 0, 0, 0.42)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid rgba(255, 255, 255, 0.25)',
-            zIndex: 3,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-          }}
-          title="ดูโปรไฟล์เต็ม"
-        >
-          <Info size={16} />
-        </Link>
+
 
         {/* Like / Nope Stamps (on drag) */}
         <motion.div 
@@ -309,14 +284,20 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
           )}
 
           {/* Short Bio snippet + View Profile hint */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            paddingTop: '6px',
-            marginTop: '2px'
-          }}>
+          <Link
+            to={`/animal/${animal.id}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+              paddingTop: '6px',
+              marginTop: '2px',
+              textDecoration: 'none',
+              cursor: 'pointer'
+            }}
+          >
             <p style={{
               fontSize: '0.78rem',
               color: 'rgba(255, 255, 255, 0.82)',
@@ -330,20 +311,17 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
               {animal.description || 'รอผู้ใจดีมารับเลี้ยงอยู่นะครับ สุนัขตัวนี้ต้องการบ้านที่อบอุ่น'}
             </p>
             <span style={{
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               color: '#FDE68A',
               display: 'flex',
               alignItems: 'center',
               gap: '2px',
               flexShrink: 0,
-              fontWeight: 500
+              fontWeight: 600
             }}>
               ดูประวัติ <ChevronRight size={13} />
             </span>
-          </div>
-
-          {/* Hidden link for router push */}
-          <Link to={`/animal/${animal.id}`} className={`info-btn-${animal.id}`} style={{ display: 'none' }}></Link>
+          </Link>
         </div>
       </div>
     </motion.div>

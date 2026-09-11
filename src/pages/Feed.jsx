@@ -238,26 +238,28 @@ function Feed() {
             className="filter-btn"
             onClick={handleRequestGps}
             disabled={isLocating}
-            title="แตะเพื่อขอสิทธิ์และระบุพิกัด GPS จริงของคุณ"
+            title={userCoords && !userCoords.isFallback ? 'ระบุพิกัด GPS จริงแล้ว (แตะเพื่ออัปเดต)' : 'แตะเพื่อขอสิทธิ์และระบุพิกัด GPS จริงของคุณ'}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '6px 10px',
-              borderRadius: '20px',
-              fontSize: '0.78rem',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              padding: 0,
+              borderRadius: '50%',
               backgroundColor: userCoords && !userCoords.isFallback ? '#ECFDF5' : '#FFFBEB',
               border: userCoords && !userCoords.isFallback ? '1px solid #A7F3D0' : '1px solid #FDE68A',
               color: userCoords && !userCoords.isFallback ? '#065F46' : '#92400E',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              flexShrink: 0
             }}
           >
             {isLocating ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <MapPin size={13} />
+              <MapPin size={16} />
             )}
-            <span>{userCoords && !userCoords.isFallback ? 'ใช้ GPS จริง' : 'แตะเปิด GPS'}</span>
           </button>
 
           <button
