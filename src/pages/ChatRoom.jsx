@@ -20,10 +20,11 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
             background: '#ffffff',
             border: '1.5px solid #fed7aa',
             borderRadius: '16px',
-            padding: '16px',
+            padding: '14px',
             boxShadow: '0 4px 14px rgba(249, 115, 22, 0.08)',
-            maxWidth: '440px',
+            maxWidth: '100%',
             width: '100%',
+            boxSizing: 'border-box',
             textAlign: 'left'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #ffedd5', paddingBottom: '10px', marginBottom: '12px' }}>
@@ -494,10 +495,20 @@ function ChatRoom() {
   }
 
   return (
-    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="chat-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+      <div className="chat-header" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 14px',
+        borderBottom: '1px solid var(--gray-200, #E5E7EB)',
+        backgroundColor: '#FFFFFF',
+        flexShrink: 0,
+        zIndex: 10,
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           <button 
             className="chat-back-btn" 
             onClick={() => navigate('/matches')} 
@@ -507,21 +518,21 @@ function ChatRoom() {
           </button>
           
           {animal && (
-            <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, margin: 0 }}>
+            <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, margin: 0, flex: 1 }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <img 
                   src={animal.images?.[0] || 'https://via.placeholder.com/150'} 
                   alt={animal.name} 
                   className="chat-avatar" 
-                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
                 />
                 <span style={{ position: 'absolute', bottom: '1px', right: '1px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', border: '2px solid #FFFFFF' }}></span>
               </div>
-              <div style={{ minWidth: 0 }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {animal.name}
                 </h2>
-                <p style={{ fontSize: '0.78rem', color: '#6B7280', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <p style={{ fontSize: '0.75rem', color: '#059669', margin: '1px 0 0', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
                   เจ้าหน้าที่กำลังออนไลน์
                 </p>
               </div>
@@ -905,10 +916,10 @@ function ChatRoom() {
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="chat-messages-area" style={{ padding: '24px 24px' }}>
+      <div className="chat-messages-area" style={{ flex: 1, minHeight: 0, padding: '14px 12px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: '#FAF8F5' }}>
         {/* Date Separator */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-          <span style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--gray-200)', color: 'var(--text-medium)', fontSize: '0.75rem', padding: '4px 12px', borderRadius: '9999px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+          <span style={{ backgroundColor: 'var(--surface, #FFFFFF)', border: '1px solid var(--gray-200, #E5E7EB)', color: 'var(--text-medium, #6B7280)', fontSize: '0.72rem', padding: '3px 12px', borderRadius: '9999px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
             วันนี้
           </span>
         </div>
@@ -926,7 +937,7 @@ function ChatRoom() {
         })}
         <div ref={messagesEndRef} />
         {isSending && (
-          <div className="message-row msg-user" style={{ marginBottom: '16px' }}>
+          <div className="message-row msg-user" style={{ marginBottom: '12px' }}>
             <div className="message-wrapper msg-user">
               <div className="message-bubble" style={{ opacity: 0.7 }}>
                 กำลังส่ง...
@@ -937,39 +948,39 @@ function ChatRoom() {
       </div>
 
       {/* Input */}
-      <div style={{ position: 'relative', padding: '16px', borderTop: '1px solid var(--gray-200)', backgroundColor: 'white' }}>
+      <div className="chat-input-wrapper" style={{ position: 'relative', padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF', flexShrink: 0, boxSizing: 'border-box', zIndex: 10 }}>
         {showAttachMenu && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '16px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', padding: '16px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid var(--gray-100)' }}>
+          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '14px 18px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid #E5E7EB' }}>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--success-light)', color: 'var(--success)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--success-light, #ECFDF5)', color: 'var(--success, #059669)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <FileText size={22} />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontWeight: 500 }}>ส่งเอกสาร</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ส่งเอกสาร</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={handleShareLocation}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <MapPin size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={handleShareLocation}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <MapPin size={22} />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontWeight: 500 }}>ตำแหน่ง</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ตำแหน่ง</span>
             </div>
           </div>
         )}
 
         {imagePreview && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '16px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 -4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center' }}>
-            <img src={imagePreview} alt="preview" style={{ height: '80px', borderRadius: '8px' }} />
-            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '0', right: '0', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <X size={14} />
+          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB' }}>
+            <img src={imagePreview} alt="preview" style={{ height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
+            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger, #DC2626)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+              <X size={13} />
             </button>
           </div>
         )}
-        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0, padding: '8px', backgroundColor: 'var(--surface-container-low, #fff8f6)', border: '1px solid var(--gray-200)', borderRadius: '9999px' }}>
-          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'var(--text-medium)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}>
-            <PlusCircle size={24} />
+        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, padding: '4px 6px', backgroundColor: 'var(--surface-container-low, #F9FAFB)', border: '1px solid var(--gray-200, #E5E7EB)', borderRadius: '24px' }}>
+          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PlusCircle size={22} />
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'var(--text-medium)' }}>
-            <ImageIcon size={24} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageIcon size={22} />
           </button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} />
           <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} style={{ display: 'none' }} />
@@ -980,10 +991,10 @@ function ChatRoom() {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={isSending}
-            style={{ flex: 1, padding: '8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark)' }}
+            style={{ flex: 1, padding: '6px 8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark, #111827)', fontSize: '16px', fontFamily: 'inherit' }}
           />
-          <button type="submit" className="btn-send" disabled={(!inputText.trim() && !imageFile) || isSending} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(249,168,38,0.25)' }}>
-            <Send size={20} />
+          <button type="submit" className="btn-send" disabled={(!inputText.trim() && !imageFile) || isSending} style={{ background: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', minWidth: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(217,119,6,0.25)', opacity: (!inputText.trim() && !imageFile) || isSending ? 0.5 : 1 }}>
+            <Send size={16} />
           </button>
         </form>
       </div>

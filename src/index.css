@@ -176,9 +176,21 @@ button {
   scrollbar-width: none;
 }
 
-/* Feed page locks viewport without vertical scrolling */
-.main-content:has(.feed-container) {
+/* Feed & Matches pages lock viewport without vertical scrolling */
+.main-content:has(.feed-container),
+.main-content:has(.matches-split-view) {
   overflow: hidden;
+}
+
+/* Mobile: When inside an active 1:1 chat room, hide the bottom navigation bar and expand to full screen */
+@media (max-width: 767px) {
+  .app-container:has(.chat-room-container) .main-nav {
+    display: none !important;
+  }
+  .app-container:has(.chat-room-container) .main-content {
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+  }
 }
 
 .main-content::-webkit-scrollbar {

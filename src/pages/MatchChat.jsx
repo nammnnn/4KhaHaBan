@@ -191,7 +191,7 @@ function MatchChat() {
                 style={{ 
                   width: '100%', height: '40px', padding: '0 16px 0 38px', 
                   borderRadius: '10px', border: '1px solid var(--gray-200, #E5E7EB)', 
-                  backgroundColor: '#F9FAFB', outline: 'none', fontSize: '0.875rem', 
+                  backgroundColor: '#F9FAFB', outline: 'none', fontSize: '16px', 
                   boxSizing: 'border-box', transition: 'all 0.15s ease' 
                 }}
                 onFocus={(e) => { e.target.style.backgroundColor = '#FFFFFF'; e.target.style.borderColor = 'var(--primary, #D97706)'; }}
