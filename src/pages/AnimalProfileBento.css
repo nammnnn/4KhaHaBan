@@ -44,11 +44,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 9999px;
+  padding: 8px 14px;
+  height: 38px;
+  border-radius: 8px;
   background: var(--surface, #FFFFFF);
-  border: 1px solid var(--border, #E5E7EB);
-  color: var(--text-dark, #111827);
+  border: 1px solid var(--border-input, #D1D5DB);
+  color: var(--text-dark, #374151);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -59,7 +60,8 @@
 
 .animal-nav-back-btn:hover {
   background: var(--surface-hover, #F9FAFB);
-  border-color: var(--border-input, #D1D5DB);
+  border-color: #9CA3AF;
+  color: #111827;
 }
 
 .animal-nav-title-truncate {
@@ -82,10 +84,10 @@
 .animal-nav-icon-btn {
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--surface, #FFFFFF);
-  border: 1px solid var(--border, #E5E7EB);
-  color: var(--text-dark, #111827);
+  border: 1px solid var(--border-input, #D1D5DB);
+  color: var(--text-dark, #374151);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,8 +98,8 @@
 
 .animal-nav-icon-btn:hover {
   background: var(--surface-hover, #F9FAFB);
-  border-color: var(--primary, #D97706);
-  color: var(--primary, #D97706);
+  border-color: #9CA3AF;
+  color: #111827;
 }
 
 .share-toast {
