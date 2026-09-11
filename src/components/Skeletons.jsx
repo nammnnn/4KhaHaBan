@@ -12,11 +12,11 @@ export const FeedCardSkeleton = () => (
     <div
       className="swipe-card"
       style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        transform: 'scale(0.96) translateY(12px)',
-        opacity: 0.6,
+        backgroundColor: '#E2E8F0',
+        borderRadius: '20px',
+        border: '1px solid rgba(0,0,0,0.06)',
+        transform: 'scale(0.95) translateY(8px)',
+        opacity: 0.5,
         zIndex: 1,
         pointerEvents: 'none'
       }}
@@ -26,29 +26,29 @@ export const FeedCardSkeleton = () => (
     <div
       className="swipe-card"
       style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
+        backgroundColor: '#1E293B',
+        borderRadius: '20px',
         overflow: 'hidden',
-        border: '1px solid #E5E7EB',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-        display: 'flex',
-        flexDirection: 'column',
+        border: '1px solid rgba(0,0,0,0.08)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
         zIndex: 2,
         pointerEvents: 'none'
       }}
     >
-      {/* Image container with top-left status chip */}
-      <div className="card-image-container" style={{ backgroundColor: '#F3F4F6' }}>
-        <div className="skeleton" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+      <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+        {/* Full image shimmer */}
+        <div className="skeleton" style={{ width: '100%', height: '100%', borderRadius: 0, opacity: 0.25 }} />
+
+        {/* Top-left chip */}
         <div
           style={{
             position: 'absolute',
-            top: '16px',
-            left: '16px',
-            backgroundColor: '#FFFFFF',
+            top: '14px',
+            left: '14px',
+            backgroundColor: 'rgba(255,255,255,0.94)',
             padding: '4px 10px',
-            borderRadius: '6px',
-            border: '1px solid #E5E7EB',
+            borderRadius: '20px',
+            border: '1px solid #A7F3D0',
             display: 'flex',
             alignItems: 'center',
             gap: '6px'
@@ -57,29 +57,36 @@ export const FeedCardSkeleton = () => (
           <div className="skeleton skeleton-circle" style={{ width: '10px', height: '10px' }} />
           <div className="skeleton skeleton-text" style={{ width: '56px', height: '12px' }} />
         </div>
-      </div>
 
-      {/* Card info section */}
-      <div className="card-info-section" style={{ padding: '16px 18px', gap: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1 }}>
-            <div className="skeleton skeleton-text" style={{ width: '130px', height: '22px', marginBottom: '6px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '180px', height: '14px' }} />
+        {/* Bottom overlay info skeleton */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '16px 16px 14px',
+            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 50%, transparent 100%)'
+          }}
+        >
+          {/* Name and age */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <div className="skeleton skeleton-text" style={{ width: '120px', height: '22px', backgroundColor: 'rgba(255,255,255,0.25)' }} />
+            <div className="skeleton skeleton-text" style={{ width: '40px', height: '16px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
           </div>
-          <div className="skeleton skeleton-text" style={{ width: '45px', height: '18px' }} />
-        </div>
 
-        {/* Tags */}
-        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-          <div className="skeleton" style={{ width: '72px', height: '24px', borderRadius: '6px' }} />
-          <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '6px' }} />
-          <div className="skeleton" style={{ width: '64px', height: '24px', borderRadius: '6px' }} />
-        </div>
+          {/* Shelter */}
+          <div className="skeleton skeleton-text" style={{ width: '160px', height: '14px', marginBottom: '10px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
 
-        {/* Description line placeholder */}
-        <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '10px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div className="skeleton skeleton-text" style={{ width: '100%', height: '12px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '70%', height: '12px' }} />
+          {/* Tags */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+            <div className="skeleton" style={{ width: '64px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
+            <div className="skeleton" style={{ width: '74px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
+            <div className="skeleton" style={{ width: '56px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
+          </div>
+
+          {/* Bio line */}
+          <div className="skeleton skeleton-text" style={{ width: '85%', height: '12px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
         </div>
       </div>
     </div>

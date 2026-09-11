@@ -227,7 +227,7 @@ function Feed() {
   };
 
   return (
-    <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', minHeight: '100%' }}>
+    <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
       {/* Top Bar */}
       <div className="feed-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
@@ -335,6 +335,8 @@ function Feed() {
         ) : (
           [...cards].reverse().map((animal, reversedIndex, arr) => {
             const index = arr.length - 1 - reversedIndex;
+            // Only render top 2 cards for optimal performance and clean stacking
+            if (index > 1) return null;
             return (
               <SwipeCard 
                 key={animal.cardKey || animal.id}
@@ -444,27 +446,18 @@ function Feed() {
 
       {/* Swiper Actions */}
       {loading ? (
-        <div className="swiper-actions" style={{ gap: '16px', paddingBottom: '16px' }}>
+        <div className="swiper-actions">
           <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
-          <div className="skeleton skeleton-circle" style={{ width: '56px', height: '56px' }} />
-          <div className="skeleton skeleton-circle" style={{ width: '56px', height: '56px' }} />
+          <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+          <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
         </div>
       ) : (cards.length > 0 || history.length > 0) && (
-        <div className="swiper-actions" style={{ gap: '16px', paddingBottom: '16px' }}>
+        <div className="swiper-actions">
           <button 
             className="swiper-btn btn-undo" 
             onClick={handleUndo} 
             disabled={history.length === 0} 
             title="ย้อนกลับ"
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #D1D5DB',
-              color: '#6B7280',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-            }}
           >
             <RotateCcw size={18} />
           </button>
@@ -475,15 +468,6 @@ function Feed() {
                 className="swiper-btn btn-nope"
                 onClick={() => handleSwipeAction('left')}
                 title="ข้าม"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #FCA5A5',
-                  color: '#DC2626',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }}
               >
                 <X size={26} strokeWidth={2.5} />
               </button>
@@ -492,15 +476,6 @@ function Feed() {
                 className="swiper-btn btn-like"
                 onClick={() => handleSwipeAction('right')}
                 title="สนใจรับเลี้ยง"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #A7F3D0',
-                  color: '#059669',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }}
               >
                 <Heart size={26} fill="currentColor" strokeWidth={0} />
               </button>

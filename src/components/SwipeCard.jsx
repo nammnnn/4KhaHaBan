@@ -1,6 +1,6 @@
 import { useEffect, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { MapPin, Heart, X, CheckCircle2 } from 'lucide-react';
+import { MapPin, Heart, X, CheckCircle2, Info, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger }) {
@@ -17,8 +17,8 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
   // Rotate based on drag x
   const rotate = useTransform(x, [-200, 200], [-16, 16]);
   // Opacity for nope/like stamps
-  const opacityRight = useTransform(x, [0, 80], [0, 1]);
-  const opacityLeft = useTransform(x, [0, -80], [0, 1]);
+  const opacityRight = useTransform(x, [0, 70], [0, 1]);
+  const opacityLeft = useTransform(x, [0, -70], [0, 1]);
 
   const notifyRemove = (direction) => {
     if (!onRemove) return;
@@ -44,11 +44,11 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
     const offset = info.offset.x;
     const velocity = info.velocity.x;
     
-    if (offset > 100 || velocity > 500) {
+    if (offset > 90 || velocity > 450) {
       Promise.all([
         animate(x, 500, { duration: 0.2 })
       ]).then(() => notifyRemove('right'));
-    } else if (offset < -100 || velocity < -500) {
+    } else if (offset < -90 || velocity < -450) {
       Promise.all([
         animate(x, -500, { duration: 0.2 })
       ]).then(() => notifyRemove('left'));
@@ -59,18 +59,20 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
 
   // Stack styling configuration for cards behind the front card
   const stackStyles = isSecond ? {
-    scale: 0.96,
-    y: 12,
-    opacity: 0.92
+    scale: 0.95,
+    y: 8,
+    opacity: 0.9
   } : isFront ? {
     scale: 1,
     y: 0,
     opacity: 1
   } : {
-    scale: 0.92,
-    y: 20,
+    scale: 0.9,
+    y: 16,
     opacity: 0
   };
+
+  const imageSrc = animal?.images?.[0] || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800';
 
   return (
     <motion.div
@@ -80,10 +82,10 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
         rotate,
         zIndex: isFront ? 10 : isSecond ? 5 : 0,
         pointerEvents: isFront ? 'auto' : 'none',
-        borderRadius: '16px',
+        borderRadius: '20px',
         overflow: 'hidden',
-        border: '1px solid #E5E7EB',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        border: '1px solid rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.09)',
         willChange: 'transform',
         transform: 'translateZ(0)',
         backfaceVisibility: 'hidden',
@@ -94,31 +96,35 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
       onDragEnd={handleDragEnd}
       animate={stackStyles}
       transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-      initial={isSecond ? { scale: 0.92, y: 20, opacity: 0 } : false}
+      initial={isSecond ? { scale: 0.9, y: 16, opacity: 0 } : false}
     >
-      <div className="card-image-container">
+      <div className="card-image-container" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#111827' }}>
         <img 
-          src={animal.images[0]} 
+          src={imageSrc} 
           alt={animal.name} 
           draggable="false" 
           loading={isFront ? "eager" : "lazy"} 
           decoding="async" 
           fetchPriority={isFront ? "high" : "auto"}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
         
         {/* Status Chip (Top Left) */}
         <div style={{
           position: 'absolute',
-          top: '16px',
-          left: '16px',
-          backgroundColor: '#FFFFFF',
+          top: '14px',
+          left: '14px',
+          backgroundColor: 'rgba(255, 255, 255, 0.94)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           padding: '4px 10px',
-          borderRadius: '6px',
-          border: '1px solid #A7F3D0',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+          borderRadius: '20px',
+          border: '1px solid rgba(167, 243, 208, 0.8)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          zIndex: 3
         }}>
           <span style={{
-            fontSize: '0.78rem',
+            fontSize: '0.76rem',
             fontWeight: 600,
             color: '#059669',
             display: 'flex',
@@ -130,99 +136,215 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
           </span>
         </div>
 
-        {/* Like/Nope Stamps */}
+        {/* Top-Right: Info button linking to full profile */}
+        <Link 
+          to={`/animal/${animal.id}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '14px',
+            right: '14px',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.42)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            zIndex: 3,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+          }}
+          title="ดูโปรไฟล์เต็ม"
+        >
+          <Info size={16} />
+        </Link>
+
+        {/* Like / Nope Stamps (on drag) */}
         <motion.div 
           className="stamp stamp-nope" 
           style={{ 
             opacity: opacityLeft,
+            position: 'absolute',
+            top: '24px',
+            right: '20px',
             border: '3px solid #DC2626',
             color: '#DC2626',
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backgroundColor: 'rgba(255, 255, 255, 0.94)',
             borderRadius: '12px',
-            padding: '8px 24px',
+            padding: '6px 18px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 16px rgba(220, 38, 38, 0.2)',
+            gap: '6px',
+            boxShadow: '0 4px 16px rgba(220, 38, 38, 0.25)',
             fontWeight: 700,
-            fontSize: '1.75rem',
-            letterSpacing: '0.5px'
+            fontSize: '1.4rem',
+            letterSpacing: '0.5px',
+            transform: 'rotate(12deg)',
+            zIndex: 10,
+            pointerEvents: 'none'
           }}
         >
-          <X size={32} strokeWidth={2.5} /> ข้าม
+          <X size={26} strokeWidth={2.5} /> ข้าม
         </motion.div>
         
         <motion.div 
           className="stamp stamp-like" 
           style={{ 
             opacity: opacityRight,
+            position: 'absolute',
+            top: '24px',
+            left: '20px',
             border: '3px solid #059669',
             color: '#059669',
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backgroundColor: 'rgba(255, 255, 255, 0.94)',
             borderRadius: '12px',
-            padding: '8px 24px',
+            padding: '6px 18px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 16px rgba(5, 150, 105, 0.2)',
+            gap: '6px',
+            boxShadow: '0 4px 16px rgba(5, 150, 105, 0.25)',
             fontWeight: 700,
-            fontSize: '1.75rem',
-            letterSpacing: '0.5px'
+            fontSize: '1.4rem',
+            letterSpacing: '0.5px',
+            transform: 'rotate(-12deg)',
+            zIndex: 10,
+            pointerEvents: 'none'
           }}
         >
-          <Heart size={30} fill="currentColor" strokeWidth={0} /> สนใจ
+          <Heart size={24} fill="currentColor" strokeWidth={0} /> สนใจ
         </motion.div>
 
-        <div className="card-gradient"></div>
-      </div>
+        {/* Bottom Dark Gradient Overlay */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '60%',
+          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.96) 0%, rgba(15, 23, 42, 0.75) 45%, rgba(15, 23, 42, 0.25) 80%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
 
-      <div className="card-info-section" onClick={(e) => { e.stopPropagation(); document.querySelector(`.info-btn-${animal.id}`)?.click(); }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>{animal.name}</h2>
-            <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <MapPin size={15} color="#D97706" /> {animal.shelter || 'ศูนย์พักพิงสัตว์'}{animal.distance ? ` (${animal.distance})` : ''}
-            </p>
-          </div>
-          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#374151' }}>{animal.age}</span>
-        </div>
-        
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-          {animal.tags.slice(0, 3).map(tag => (
-            <span
-              key={tag}
-              style={{
-                backgroundColor: '#F3F4F6',
-                color: '#374151',
-                border: '1px solid #E5E7EB',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                padding: '3px 8px',
-                borderRadius: '6px'
-              }}
-            >
-              {tag}
+        {/* Bottom Info Content (Overlayed on gradient) */}
+        <div 
+          className="card-info-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            document.querySelector(`.info-btn-${animal.id}`)?.click();
+          }}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '16px 16px 14px',
+            zIndex: 2,
+            color: '#FFFFFF',
+            cursor: 'pointer'
+          }}
+        >
+          {/* Name and Age */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '3px' }}>
+            <h2 style={{
+              fontSize: '1.45rem',
+              fontWeight: 700,
+              color: '#FFFFFF',
+              margin: 0,
+              lineHeight: 1.2,
+              textShadow: '0 2px 6px rgba(0,0,0,0.5)'
+            }}>
+              {animal.name}
+            </h2>
+            <span style={{
+              fontSize: '1.05rem',
+              fontWeight: 500,
+              color: 'rgba(255, 255, 255, 0.9)',
+              textShadow: '0 1px 4px rgba(0,0,0,0.5)'
+            }}>
+              {animal.age}
             </span>
-          ))}
+          </div>
+
+          {/* Shelter & Distance */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '0.82rem',
+            color: 'rgba(255, 255, 255, 0.9)',
+            marginBottom: '8px',
+            textShadow: '0 1px 3px rgba(0,0,0,0.5)'
+          }}>
+            <MapPin size={13} color="#FBBF24" />
+            <span>{animal.shelter || 'ศูนย์พักพิงสัตว์'}{animal.distance ? ` (${animal.distance})` : ''}</span>
+          </div>
+
+          {/* Tags (Frosted pills) */}
+          {animal.tags && animal.tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+              {animal.tags.slice(0, 3).map(tag => (
+                <span
+                  key={tag}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    fontSize: '0.72rem',
+                    fontWeight: 500,
+                    padding: '2px 8px',
+                    borderRadius: '6px'
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Short Bio snippet + View Profile hint */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+            paddingTop: '6px',
+            marginTop: '2px'
+          }}>
+            <p style={{
+              fontSize: '0.78rem',
+              color: 'rgba(255, 255, 255, 0.82)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              flex: 1,
+              paddingRight: '8px'
+            }}>
+              {animal.description || 'รอผู้ใจดีมารับเลี้ยงอยู่นะครับ สุนัขตัวนี้ต้องการบ้านที่อบอุ่น'}
+            </p>
+            <span style={{
+              fontSize: '0.72rem',
+              color: '#FDE68A',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              flexShrink: 0,
+              fontWeight: 500
+            }}>
+              ดูประวัติ <ChevronRight size={13} />
+            </span>
+          </div>
+
+          {/* Hidden link for router push */}
+          <Link to={`/animal/${animal.id}`} className={`info-btn-${animal.id}`} style={{ display: 'none' }}></Link>
         </div>
-        
-        <p style={{
-          fontSize: '0.85rem',
-          color: '#4B5563',
-          marginTop: '8px',
-          borderTop: '1px solid #F3F4F6',
-          paddingTop: '10px',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          lineHeight: 1.5
-        }}>
-          {animal.description || 'รอผู้ใจดีมารับเลี้ยงอยู่นะครับ สุนัขตัวนี้ต้องการบ้านที่อบอุ่นและให้ความรัก'}
-        </p>
-        
-        {/* Hidden link for full profile */}
-        <Link to={`/animal/${animal.id}`} className={`info-btn-${animal.id}`} style={{ display: 'none' }}></Link>
       </div>
     </motion.div>
   );

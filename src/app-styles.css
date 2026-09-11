@@ -101,46 +101,56 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: #FAF8F5;
+  box-sizing: border-box;
 }
 
 .card-stack-container {
   flex: 1;
+  min-height: 0;
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px 16px;
-  min-height: 400px;
+  padding: 8px 16px 4px;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
   .card-stack-container {
-    padding: 16px;
+    padding: 16px 20px 8px;
+    max-width: 440px;
+    margin: 0 auto;
   }
 }
 
 /* Swipe Card */
 .swipe-card {
   position: absolute;
-  width: 92%;
+  width: calc(100% - 24px);
   max-width: 380px;
-  height: auto;
-  min-height: 520px;
-  max-height: 580px;
-  border-radius: 24px;
-  box-shadow: none;
-  border: 1px solid var(--gray-200);
-  background: var(--surface);
+  height: calc(100% - 10px);
+  max-height: 100%;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #111827;
   will-change: transform;
   transform-origin: center bottom;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
   .swipe-card {
-    max-width: 400px;
+    max-width: 380px;
     max-height: 560px;
   }
 }
@@ -148,8 +158,8 @@
 .card-image-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 1/1; /* Square image */
-  background-color: var(--surface-variant);
+  height: 100%;
+  background-color: #111827;
   overflow: hidden;
 }
 
@@ -277,12 +287,15 @@
   justify-content: center;
   align-items: center;
   gap: 20px;
-  padding: 12px 16px 16px;
+  padding: 6px 16px 14px;
+  flex-shrink: 0;
+  z-index: 10;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
   .swiper-actions {
-    padding: 16px;
+    padding: 12px 16px 16px;
     max-width: 420px;
     margin: 0 auto;
   }
@@ -292,13 +305,14 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--surface);
+  background: #FFFFFF;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--gray-200);
+  cursor: pointer;
 }
 
 .swiper-btn:active {
@@ -308,12 +322,13 @@
 .swiper-btn.btn-undo {
   width: 44px;
   height: 44px;
-  color: var(--text-medium);
+  color: #6B7280;
+  border: 1px solid #D1D5DB;
 }
 
 .swiper-btn.btn-undo:hover:not(:disabled) {
-  background: var(--gray-100);
-  color: var(--text-dark);
+  background: #F3F4F6;
+  color: #111827;
   transform: scale(1.05);
 }
 
@@ -323,16 +338,18 @@
 }
 
 .swiper-btn.btn-nope {
-  width: 64px;
-  height: 64px;
-  color: var(--danger);
+  width: 58px;
+  height: 58px;
+  color: #DC2626;
+  border: 1.5px solid #FCA5A5;
+  background: #FFFFFF;
 }
 
 .swiper-btn.btn-nope:hover {
-  background: var(--danger);
-  color: white;
-  transform: scale(1.08);
-  border-color: var(--danger);
+  background: #FEF2F2;
+  border-color: #DC2626;
+  color: #DC2626;
+  transform: scale(1.06);
 }
 
 .swiper-btn.btn-super-like {
@@ -349,18 +366,18 @@
 }
 
 .swiper-btn.btn-like {
-  width: 64px;
-  height: 64px;
-  color: var(--success);
-  background: var(--surface);
-  border: 1px solid var(--gray-200);
+  width: 58px;
+  height: 58px;
+  color: #059669;
+  background: #FFFFFF;
+  border: 1.5px solid #A7F3D0;
 }
 
 .swiper-btn.btn-like:hover {
-  background: var(--success);
-  color: white;
-  transform: scale(1.08);
-  border-color: var(--success);
+  background: #ECFDF5;
+  border-color: #059669;
+  color: #059669;
+  transform: scale(1.06);
 }
 
 /* Match Overlay */
