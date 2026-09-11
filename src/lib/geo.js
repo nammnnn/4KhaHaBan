@@ -62,18 +62,68 @@ export function formatDistance(distanceKm) {
 }
 
 /**
- * ดึงพิกัดปัจจุบันของผู้ใช้ผ่าน Geolocation API
- * @param {boolean} fallbackToDefault หากผู้ใช้ปฏิเสธ จะคืนค่าพิกัด กทม. แทนหรือไม่
+ * ดึงพิกัดปัจจุบันของผู้ใช้ผ่าน Geolocation API แบบไม่บล็อกการโหลดแอป
+ * @param {boolean} fallbackToDefault หากผู้ใช้ปฏิเสธหรือหมดเวลา จะคืนค่าพิกัด กทม. แทนหรือไม่
+ * @param {number} timeoutMs ระยะเวลา timeout สูงสุด (หน่วย ms) ป้องกันค้างบนมือถือ
  * @returns {Promise<{ latitude: number, longitude: number, isFallback: boolean }>}
  */
-export function getUserCoordinates(fallbackToDefault = true) {
+export function getUserCoordinates(fallbackToDefault = true, timeoutMs = 2000) {
   return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      if (fallbackToDefault) {
-        resolve({ ...DEFAULT_USER_COORDS, isFallback: true });
-      } else {
-        resolve(null);
+    let resolved = false;
+    const safeResolve = (val) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(val);
       }
+    };
+
+    // Hard JavaScript safety timer: ป้องกัน Promise ค้างเด็ดขาดหาก browser มือถือไม่ส่ง callback
+    const timer = setTimeout(() => {
+      safeResolve(fallbackToDefault ? { ...DEFAULT_USER_COORDS, isFallback: true } : null);
+    }, timeoutMs);
+
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      clearTimeout(timer);
+      safeResolve(fallbackToDefault ? { ...DEFAULT_USER_COORDS, isFallback: true } : null);
+      return;
+    }
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timer);
+          safeResolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            isFallback: false
+          });
+        },
+        (error) => {
+          clearTimeout(timer);
+          console.warn('Geolocation access failed or denied:', error.message);
+          safeResolve(fallbackToDefault ? { ...DEFAULT_USER_COORDS, isFallback: true } : null);
+        },
+        {
+          enableHighAccuracy: false, // รวดเร็ว ไม่กินแบตเตอรี่ และทำงานในที่ร่มได้ดี
+          timeout: timeoutMs,
+          maximumAge: 300000 // แคชพิกัดไว้ 5 นาที
+        }
+      );
+    } catch (e) {
+      clearTimeout(timer);
+      safeResolve(fallbackToDefault ? { ...DEFAULT_USER_COORDS, isFallback: true } : null);
+    }
+  });
+}
+
+/**
+ * ขอพิกัด GPS แบบเจาะจงเมื่อผู้ใช้กดปุ่ม (User-initiated Gesture)
+ * เบราว์เซอร์บนมือถือจะยอมแสดงหน้าต่างขอสิทธิ์พิกัดเมื่อถูกเรียกจากการแตะของผู้ใช้
+ */
+export function requestUserLocation(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      reject(new Error('อุปกรณ์นี้ไม่รองรับ Geolocation'));
       return;
     }
 
@@ -86,17 +136,12 @@ export function getUserCoordinates(fallbackToDefault = true) {
         });
       },
       (error) => {
-        console.warn('Geolocation access failed or denied:', error.message);
-        if (fallbackToDefault) {
-          resolve({ ...DEFAULT_USER_COORDS, isFallback: true });
-        } else {
-          resolve(null);
-        }
+        reject(error);
       },
       {
         enableHighAccuracy: true,
-        timeout: 6000,
-        maximumAge: 60000
+        timeout: timeoutMs,
+        maximumAge: 0
       }
     );
   });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles } from 'lucide-react';
+import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard } from '../components/SwipeCard';
 import { FilterModal } from '../components/FilterModal';
@@ -8,7 +8,7 @@ import { FeedCardSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { calculateDistance, formatDistance, getUserCoordinates } from '../lib/geo';
+import { calculateDistance, formatDistance, getUserCoordinates, requestUserLocation, DEFAULT_USER_COORDS } from '../lib/geo';
 
 const makeCard = (animal) => ({
   ...animal,
@@ -26,39 +26,48 @@ function Feed() {
   const [history, setHistory] = useState([]);
   const [pendingMatch, setPendingMatch] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
   
   const navigate = useNavigate();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ maxDistance: 50, animalType: 'all', gender: 'all' });
+  const [filters, setFilters] = useState({ maxDistance: 100, animalType: 'all', gender: 'all' });
 
   const { addMatch } = useAppContext();
   const { user } = useAuth();
 
-  const loadAnimals = async (appliedFilters = filters) => {
+  const loadAnimals = async (appliedFilters = filters, forcedCoords = null) => {
     setLoading(true);
     try {
       let currentFilters = appliedFilters;
-      if (appliedFilters === filters && !isFilterOpen) {
-        const userPrefs = await api.getUserPreferences(user?.id).catch(() => ({ maxDistance: 50, animalType: 'all', gender: 'all' }));
-        currentFilters = userPrefs;
-        setFilters(userPrefs);
-      }
-
-      // ดึงพิกัด GPS ของผู้ใช้ (หรือใช้พิกัดเริ่มต้นถ้าปฏิเสธ)
-      let coords = userCoords;
-      if (!coords) {
-        coords = await getUserCoordinates(true);
-        setUserCoords(coords);
-      }
-
-      const data = await api.getAnimals(user?.id);
       
+      // ดึงข้อมูลการตั้งค่า, พิกัด GPS และรายการสัตว์พร้อมกันแบบ Parallel ไม่บล็อกกัน
+      const [userPrefsResult, coordsResult, data] = await Promise.all([
+        appliedFilters === filters && !isFilterOpen
+          ? api.getUserPreferences(user?.id).catch(() => ({ maxDistance: 100, animalType: 'all', gender: 'all' }))
+          : Promise.resolve(appliedFilters),
+        forcedCoords ? Promise.resolve(forcedCoords) : (userCoords ? Promise.resolve(userCoords) : getUserCoordinates(true, 1800)),
+        api.getAnimals(user?.id).catch(err => {
+          console.error("Failed to fetch animals from API:", err);
+          return [];
+        })
+      ]);
+
+      if (appliedFilters === filters && !isFilterOpen && userPrefsResult) {
+        currentFilters = userPrefsResult;
+        setFilters(userPrefsResult);
+      }
+
+      const activeCoords = forcedCoords || coordsResult || DEFAULT_USER_COORDS;
+      if (!userCoords || forcedCoords) {
+        setUserCoords(activeCoords);
+      }
+
       // คำนวณระยะทางจริงจาก GPS ระหว่างผู้ใช้กับสัตว์แต่ละตัว
-      const animalsWithDistance = data.map(animal => {
+      const animalsWithDistance = (data || []).map(animal => {
         let distKm = null;
-        if (animal.latitude && animal.longitude && coords) {
-          distKm = calculateDistance(coords.latitude, coords.longitude, animal.latitude, animal.longitude);
+        if (animal.latitude && animal.longitude && activeCoords) {
+          distKm = calculateDistance(activeCoords.latitude, activeCoords.longitude, animal.latitude, animal.longitude);
         } else if (animal.distance && !isNaN(parseFloat(animal.distance))) {
           distKm = parseFloat(animal.distance);
         }
@@ -73,16 +82,29 @@ function Feed() {
       });
 
       // กรองตามเงื่อนไข ชนิด เพศ และระยะทางจริง
-      const filteredData = animalsWithDistance.filter(animal => {
+      let filteredData = animalsWithDistance.filter(animal => {
         if (currentFilters.animalType && currentFilters.animalType !== 'all' && animal.type !== currentFilters.animalType) return false;
         if (currentFilters.gender && currentFilters.gender !== 'all' && animal.gender !== currentFilters.gender) return false;
-        if (currentFilters.maxDistance && animal.distanceKm !== null) {
+        if (currentFilters.maxDistance && currentFilters.maxDistance < 300 && animal.distanceKm !== null) {
           if (animal.distanceKm > currentFilters.maxDistance) {
             return false;
           }
         }
         return true;
       });
+
+      // ป้องกันหน้าปัดว่างบนมือถือ: กรณีผู้ใช้อยู่นอกเขตตัวกรอง (เช่น ต่างจังหวัด หรือไกลกว่าระยะที่ตั้งไว้)
+      // หากไม่มีสัตว์ในระยะ แต่มีสัตว์ชนิดที่เลือก ให้แสดงสัตว์ทั้งหมดที่มีโดยเรียงจากตัวที่ใกล้ที่สุด
+      if (filteredData.length === 0 && animalsWithDistance.length > 0) {
+        const typeGenderFiltered = animalsWithDistance.filter(animal => {
+          if (currentFilters.animalType && currentFilters.animalType !== 'all' && animal.type !== currentFilters.animalType) return false;
+          if (currentFilters.gender && currentFilters.gender !== 'all' && animal.gender !== currentFilters.gender) return false;
+          return true;
+        });
+        if (typeGenderFiltered.length > 0) {
+          filteredData = typeGenderFiltered;
+        }
+      }
 
       // จัดเรียงน้องที่อยู่ใกล้ตัวผู้ใช้มากที่สุดขึ้นมาก่อน
       filteredData.sort((a, b) => {
@@ -110,6 +132,20 @@ function Feed() {
     setFilters(newFilters);
     setIsFilterOpen(false);
     loadAnimals(newFilters);
+  };
+
+  const handleRequestGps = async () => {
+    setIsLocating(true);
+    try {
+      const coords = await requestUserLocation(8000);
+      setUserCoords(coords);
+      await loadAnimals(filters, coords);
+    } catch (err) {
+      console.warn('GPS permission denied or unavailable:', err);
+      alert('ไม่สามารถดึงพิกัด GPS ได้ กรุณาเปิด GPS และอนุญาตการเข้าถึงตำแหน่งในการตั้งค่าเบราว์เซอร์หรือโทรศัพท์ของคุณ');
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   const removeCard = useCallback(async (cardIdentifier, action) => {
@@ -193,22 +229,53 @@ function Feed() {
   return (
     <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', minHeight: '100%' }}>
       {/* Top Bar */}
-      <div className="feed-header">
-        <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827' }}>
+      <div className="feed-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
           4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
         </h1>
-        <button
-          className="filter-btn"
-          onClick={() => setIsFilterOpen(true)}
-        >
-          <SlidersHorizontal size={15} color="#D97706" />
-          <span>ตัวกรอง ({filters.maxDistance} กม.)</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            className="filter-btn"
+            onClick={handleRequestGps}
+            disabled={isLocating}
+            title="แตะเพื่อขอสิทธิ์และระบุพิกัด GPS จริงของคุณ"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 10px',
+              borderRadius: '20px',
+              fontSize: '0.78rem',
+              backgroundColor: userCoords && !userCoords.isFallback ? '#ECFDF5' : '#FFFBEB',
+              border: userCoords && !userCoords.isFallback ? '1px solid #A7F3D0' : '1px solid #FDE68A',
+              color: userCoords && !userCoords.isFallback ? '#065F46' : '#92400E',
+              cursor: 'pointer'
+            }}
+          >
+            {isLocating ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <MapPin size={13} />
+            )}
+            <span>{userCoords && !userCoords.isFallback ? 'ใช้ GPS จริง' : 'แตะเปิด GPS'}</span>
+          </button>
+
+          <button
+            className="filter-btn"
+            onClick={() => setIsFilterOpen(true)}
+          >
+            <SlidersHorizontal size={15} color="#D97706" />
+            <span>ตัวกรอง</span>
+          </button>
+        </div>
       </div>
 
       <FilterModal 
         isOpen={isFilterOpen} 
         currentFilters={filters}
+        userCoords={userCoords}
+        onRequestGps={handleRequestGps}
+        isLocating={isLocating}
         onClose={() => setIsFilterOpen(false)} 
         onApply={handleApplyFilters} 
       />

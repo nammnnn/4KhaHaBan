@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, SlidersHorizontal, MapPin, Search } from 'lucide-react';
+import { X, SlidersHorizontal, MapPin, Search, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './FilterModal.css';
 
-export function FilterModal({ isOpen, onClose, onApply, currentFilters }) {
+export function FilterModal({ isOpen, onClose, onApply, currentFilters, userCoords, onRequestGps, isLocating }) {
   const { user } = useAuth();
   
-  const [maxDistance, setMaxDistance] = useState(50);
+  const [maxDistance, setMaxDistance] = useState(100);
   const [animalType, setAnimalType] = useState('all');
   const [gender, setGender] = useState('all');
 
   useEffect(() => {
     if (isOpen && currentFilters) {
-      setMaxDistance(currentFilters.maxDistance || 50);
+      setMaxDistance(currentFilters.maxDistance || 100);
       setAnimalType(currentFilters.animalType || 'all');
       setGender(currentFilters.gender || 'all');
     }
@@ -61,20 +61,56 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters }) {
               <div className="filter-section">
                 <div className="filter-section-header">
                   <label><MapPin size={16} /> ระยะทางสูงสุด</label>
-                  <span className="filter-value">{maxDistance} กม.</span>
+                  <span className="filter-value">{maxDistance >= 300 ? 'ทุกระยะทาง (ทั่วประเทศ)' : `${maxDistance} กม.`}</span>
                 </div>
                 <input 
                   type="range" 
-                  min="1" 
-                  max="50" 
+                  min="5" 
+                  max="300" 
+                  step="5"
                   value={maxDistance} 
                   onChange={(e) => setMaxDistance(parseInt(e.target.value))}
                   className="range-slider"
                 />
                 <div className="range-labels">
-                  <span>1 กม.</span>
-                  <span>50 กม.</span>
+                  <span>5 กม.</span>
+                  <span>150 กม.</span>
+                  <span>ทั่วประเทศ</span>
                 </div>
+
+                {onRequestGps && (
+                  <button
+                    type="button"
+                    onClick={onRequestGps}
+                    disabled={isLocating}
+                    style={{
+                      width: '100%',
+                      marginTop: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      border: userCoords && !userCoords.isFallback ? '1px solid #A7F3D0' : '1px solid #E5E7EB',
+                      backgroundColor: userCoords && !userCoords.isFallback ? '#ECFDF5' : '#F9FAFB',
+                      color: userCoords && !userCoords.isFallback ? '#065F46' : '#374151',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isLocating ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <MapPin size={14} color={userCoords && !userCoords.isFallback ? '#059669' : '#D97706'} />
+                    )}
+                    <span>
+                      {userCoords && !userCoords.isFallback 
+                        ? 'กำลังใช้พิกัด GPS จริง (แตะเพื่ออัปเดตใหม่)' 
+                        : 'แตะเพื่อขอสิทธิ์และใช้ตำแหน่ง GPS ปัจจุบัน'}
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Type Filter */}
