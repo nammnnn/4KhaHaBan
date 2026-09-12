@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Home, Loader2, Mail, Lock, User, Phone, FileText,
+  PawPrint, Loader2, Mail, Lock, User, Phone, FileText,
   X, Shield, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -136,7 +136,7 @@ const Login = () => {
           {/* Logo Badge */}
           <Link to="/" className="login-brand-badge" title="กลับหน้าแรก">
             <div className="login-brand-icon-box">
-              <Home size={16} strokeWidth={2.4} />
+              <PawPrint size={16} strokeWidth={2.4} />
             </div>
             <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>
               4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
@@ -187,7 +187,7 @@ const Login = () => {
 
             <div className="login-mobile-brand">
               <div className="login-mobile-brand-icon">
-                <Home size={15} strokeWidth={2.4} />
+                <PawPrint size={15} strokeWidth={2.4} />
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
                 4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
