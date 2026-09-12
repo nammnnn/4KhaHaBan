@@ -115,12 +115,9 @@ const PageLoader = () => {
       </div>
     );
   }
-  if (path.startsWith('/chat/')) {
-    return <ChatRoomSkeleton />;
-  }
-  if (path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
+  if (path.startsWith('/chat/') || path.startsWith('/foundation/chat/') || path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
     return (
-      <div className="page-container match-page">
+      <div className="page-container match-page" style={{ padding: 0 }}>
         <ChatListSkeleton />
       </div>
     );

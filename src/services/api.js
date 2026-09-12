@@ -450,15 +450,56 @@ export const api = {
   async getFoundationMatches(foundationId) {
     if (!supabase || !foundationId) return [];
     
-    const { data, error } = await supabase
+    let matchesData = null;
+
+    // 1. Try embedded query with animal
+    const res1 = await supabase
       .from('matches')
       .select('*, animal:animals!inner(*)')
       .eq('animals.foundation_id', foundationId)
       .order('created_at', { ascending: false });
-      
-    if (!error && data && data.length > 0) {
+
+    if (!res1.error && res1.data && res1.data.length > 0) {
+      matchesData = res1.data;
+    } else {
+      // 2. Try aliased filter syntax
+      const res2 = await supabase
+        .from('matches')
+        .select('*, animal:animals!inner(*)')
+        .eq('animal.foundation_id', foundationId)
+        .order('created_at', { ascending: false });
+
+      if (!res2.error && res2.data && res2.data.length > 0) {
+        matchesData = res2.data;
+      } else {
+        // 3. Fallback: query foundation's animals directly then fetch matches
+        try {
+          const { data: myAnimals } = await supabase
+            .from('animals')
+            .select('id')
+            .eq('foundation_id', foundationId);
+
+          if (myAnimals && myAnimals.length > 0) {
+            const animalIds = myAnimals.map(a => a.id);
+            const res3 = await supabase
+              .from('matches')
+              .select('*, animal:animals(*)')
+              .in('animal_id', animalIds)
+              .order('created_at', { ascending: false });
+
+            if (!res3.error && res3.data) {
+              matchesData = res3.data;
+            }
+          }
+        } catch (fErr) {
+          console.warn('Fallback matches query failed:', fErr);
+        }
+      }
+    }
+
+    if (matchesData && matchesData.length > 0) {
       // Enrich matches with user verification and profile data
-      const enriched = await Promise.all(data.map(async match => {
+      const enriched = await Promise.all(matchesData.map(async match => {
         let userData = await this.getUserVerification(match.user_id);
         
         try {

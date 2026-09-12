@@ -94,135 +94,125 @@ export const FeedCardSkeleton = () => (
   </>
 );
 
-// 2. Chat List Skeleton (MatchChat, FoundationMatchChat) - Split-view aligned
-export const ChatListSkeleton = () => (
-  <div style={{ width: '100%', display: 'flex', height: '100%', minHeight: '80dvh', boxSizing: 'border-box' }}>
-    {/* Left Panel */}
-    <div
-      style={{
-        width: '100%',
-        maxWidth: '420px',
-        backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #E5E7EB',
-        display: 'flex',
-        flexDirection: 'column',
-        boxSizing: 'border-box'
-      }}
-    >
-      {/* Header */}
-      <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div className="skeleton skeleton-text" style={{ width: '110px', height: '24px' }} />
-          <div className="skeleton" style={{ width: '54px', height: '22px', borderRadius: '12px' }} />
-        </div>
+// 2. Chat List & Split View Skeleton (MatchChat, FoundationMatchChat) - Responsive Desktop & Mobile
+export const ChatListSkeleton = () => {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isChatRoomRoute = path.includes('/chat/');
 
-        {/* 3 Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', gap: '8px', paddingBottom: '12px' }}>
-          <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
-          <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
-          <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
-        </div>
-
-        {/* Search Bar */}
-        <div style={{ padding: '14px 0' }}>
-          <div className="skeleton" style={{ width: '100%', height: '38px', borderRadius: '10px' }} />
-        </div>
-      </div>
-
-      {/* Chat Rows */}
-      <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px',
-              borderRadius: '12px',
-              border: '1px solid #F3F4F6',
-              backgroundColor: i === 1 ? '#FFFBEB' : '#FFFFFF'
-            }}
-          >
-            <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 25}px`, height: '16px' }} />
-                <div className="skeleton skeleton-text" style={{ width: '40px', height: '11px' }} />
-              </div>
-              <div className="skeleton skeleton-text" style={{ width: `${120 + (i % 2) * 40}px`, height: '13px' }} />
-              <div className="skeleton" style={{ width: '70px', height: '18px', borderRadius: '4px' }} />
-            </div>
+  return (
+    <div className="matches-split-view" style={{ width: '100%', height: '100%', minHeight: '100dvh', boxSizing: 'border-box' }}>
+      {/* Left Panel: Matches List (hidden on mobile when chat room is active) */}
+      <div className={`matches-list-panel ${isChatRoomRoute ? 'hidden-on-mobile' : ''}`} style={{ boxSizing: 'border-box' }}>
+        {/* Header */}
+        <div className="list-header" style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div className="skeleton skeleton-text" style={{ width: '110px', height: '24px' }} />
+            <div className="skeleton" style={{ width: '54px', height: '22px', borderRadius: '12px' }} />
           </div>
-        ))}
+
+          {/* 3 Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', gap: '8px', paddingBottom: '12px' }}>
+            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
+          </div>
+
+          {/* Search Bar */}
+          <div style={{ padding: '14px 0' }}>
+            <div className="skeleton" style={{ width: '100%', height: '38px', borderRadius: '10px' }} />
+          </div>
+        </div>
+
+        {/* Chat Rows */}
+        <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'hidden' }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                borderRadius: '12px',
+                border: '1px solid #F3F4F6',
+                backgroundColor: i === 1 ? '#FFFBEB' : '#FFFFFF'
+              }}
+            >
+              <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 25}px`, height: '16px' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '40px', height: '11px' }} />
+                </div>
+                <div className="skeleton skeleton-text" style={{ width: `${120 + (i % 2) * 40}px`, height: '13px' }} />
+                <div className="skeleton" style={{ width: '70px', height: '18px', borderRadius: '4px' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right Panel: Chat Room or Empty State (hidden on mobile when list is active) */}
+      <div className={`matches-chat-panel ${!isChatRoomRoute ? 'hidden-on-mobile' : ''}`} style={{ boxSizing: 'border-box', overflow: 'hidden' }}>
+        {isChatRoomRoute ? (
+          <ChatRoomSkeleton />
+        ) : (
+          <div className="empty-chat-state hidden-on-mobile" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '32px' }}>
+            <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px', marginBottom: '14px' }} />
+            <div className="skeleton skeleton-text" style={{ width: '180px', height: '18px', marginBottom: '8px' }} />
+            <div className="skeleton skeleton-text" style={{ width: '240px', height: '14px' }} />
+          </div>
+        )}
       </div>
     </div>
+  );
+};
 
-    {/* Right Panel Placeholder (visible on desktop) */}
-    <div
-      className="hidden-on-mobile"
-      style={{
-        flex: 1,
-        backgroundColor: '#FAF8F5',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '32px'
-      }}
-    >
-      <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px', marginBottom: '14px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '180px', height: '18px', marginBottom: '8px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '240px', height: '14px' }} />
-    </div>
-  </div>
-);
-
-// 3. Chat Room Skeleton (ChatRoom, FoundationChatRoom, SupportChat)
+// 3. Chat Room Skeleton (ChatRoom, FoundationChatRoom, SupportChat) - Responsive Desktop & Mobile
 export const ChatRoomSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FAF8F5' }}>
+  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden', boxSizing: 'border-box' }}>
     {/* Top Header */}
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '14px 18px',
+        padding: '12px 16px',
         borderBottom: '1px solid #E5E7EB',
         backgroundColor: '#FFFFFF',
         flexShrink: 0
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div className="skeleton" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
-        <div className="skeleton skeleton-circle" style={{ width: '42px', height: '42px', flexShrink: 0 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+        <div className="skeleton skeleton-circle" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div className="skeleton skeleton-text" style={{ width: '110px', height: '16px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '75px', height: '11px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '70px', height: '11px' }} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <div className="skeleton" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ width: '34px', height: '34px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ width: '34px', height: '34px', borderRadius: '8px' }} />
       </div>
     </div>
 
     {/* Status Banner Placeholder */}
-    <div style={{ padding: '10px 18px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ padding: '10px 16px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div className="skeleton skeleton-text" style={{ width: '220px', height: '14px' }} />
-      <div className="skeleton" style={{ width: '120px', height: '30px', borderRadius: '8px' }} />
+      <div className="skeleton" style={{ width: '110px', height: '28px', borderRadius: '8px' }} />
     </div>
 
     {/* Messages Area */}
-    <div style={{ flex: 1, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+    <div style={{ flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'hidden' }}>
       {/* Date Chip */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-        <div className="skeleton" style={{ width: '56px', height: '22px', borderRadius: '9999px' }} />
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+        <div className="skeleton" style={{ width: '56px', height: '20px', borderRadius: '9999px' }} />
       </div>
 
-      {/* Message 1: Application Form Card (Shelter or user) */}
+      {/* Message 1: Application Form Card */}
       <div style={{ alignSelf: 'flex-start', maxWidth: '440px', width: '100%' }}>
-        <div className="skeleton" style={{ width: '100%', height: '140px', borderRadius: '16px', border: '1.5px solid #FED7AA' }} />
+        <div className="skeleton" style={{ width: '100%', height: '130px', borderRadius: '16px', border: '1.5px solid #FED7AA' }} />
       </div>
 
       {/* Message 2: Incoming message */}
@@ -238,14 +228,15 @@ export const ChatRoomSkeleton = () => (
     </div>
 
     {/* Bottom Input Bar */}
-    <div style={{ padding: '14px 18px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+    <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
       <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
       <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
-      <div className="skeleton" style={{ flex: 1, height: '42px', borderRadius: '22px' }} />
+      <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '20px' }} />
       <div className="skeleton skeleton-circle" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
     </div>
   </div>
 );
+
 
 // 4. Foundation Dashboard Skeleton (Redesigned matching current UI)
 export const FoundationDashboardSkeleton = () => (

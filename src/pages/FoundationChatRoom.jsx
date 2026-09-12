@@ -133,11 +133,41 @@ function FoundationChatRoom() {
 
   // Load chat history & match info
   useEffect(() => {
+    let isMounted = true;
     const loadChat = async () => {
       try {
         setLoading(true);
-        const foundationMatches = await api.getFoundationMatches(user?.id);
-        const currentMatch = foundationMatches.find(m => m.id === matchId);
+        let currentMatch = null;
+
+        if (user?.id) {
+          const foundationMatches = await api.getFoundationMatches(user.id);
+          currentMatch = foundationMatches?.find(m => m.id === matchId) || null;
+        }
+
+        // Direct fetch fallback if not found in list
+        if (!currentMatch && matchId && supabase) {
+          try {
+            const { data: directMatch, error: dmErr } = await supabase
+              .from('matches')
+              .select('*, animal:animals(*)')
+              .eq('id', matchId)
+              .maybeSingle();
+
+            if (!dmErr && directMatch) {
+              currentMatch = {
+                ...directMatch,
+                animalId: directMatch.animal_id,
+                animal: directMatch.animal,
+                lastMessage: directMatch.last_message,
+                timestamp: directMatch.created_at ? new Date(directMatch.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+              };
+            }
+          } catch (dErr) {
+            console.warn('Could not fetch match directly:', dErr);
+          }
+        }
+
+        if (!isMounted) return;
         
         if (currentMatch) {
           if (!currentMatch.userData?.avatar_url && currentMatch.user_id && supabase) {
@@ -147,7 +177,7 @@ function FoundationChatRoom() {
                 .select('id, full_name, phone, avatar_url')
                 .eq('id', currentMatch.user_id)
                 .maybeSingle();
-              if (prof) {
+              if (prof && isMounted) {
                 currentMatch.userData = {
                   ...(currentMatch.userData || {}),
                   full_name: prof.full_name || currentMatch.userData?.full_name,
@@ -163,20 +193,35 @@ function FoundationChatRoom() {
           if (!currentMatch.userData || !currentMatch.userData.assessment) {
             try {
               const uData = await api.getUserVerification(currentMatch.user_id);
-              if (uData) {
+              if (uData && isMounted) {
                 currentMatch.userData = { ...(currentMatch.userData || {}), ...uData };
               }
             } catch (e) {
               console.warn('Could not fetch user verification in loadChat:', e);
             }
           }
-          setMatch(currentMatch);
-          const animalData = await api.getAnimalById(currentMatch.animalId);
-          setAnimal(animalData);
+
+          if (isMounted) {
+            setMatch(currentMatch);
+            if (currentMatch.animal) {
+              setAnimal(currentMatch.animal);
+            } else if (currentMatch.animalId) {
+              try {
+                const animalData = await api.getAnimalById(currentMatch.animalId);
+                if (isMounted) setAnimal(animalData);
+              } catch (aErr) {
+                console.warn('Could not load animal in loadChat:', aErr);
+              }
+            }
+          }
         }
 
-        const chatHistory = await api.getMessages(matchId);
-        setMessages(chatHistory);
+        try {
+          const chatHistory = await api.getMessages(matchId);
+          if (isMounted) setMessages(chatHistory || []);
+        } catch (mErr) {
+          console.error('Could not fetch messages in loadChat:', mErr);
+        }
 
         // Mark as read immediately for foundation
         if (matchId && user?.id) {
@@ -185,11 +230,15 @@ function FoundationChatRoom() {
       } catch (error) {
         console.error("Failed to load chat data", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     loadChat();
+
+    return () => {
+      isMounted = false;
+    };
   }, [matchId, user?.id]);
 
   // Subscribe to Supabase Realtime for incoming messages
@@ -576,13 +625,34 @@ function FoundationChatRoom() {
     }
   }, [match?.user_id, match?.userData]);
 
+  const adopterName = match?.userData?.full_name || 'ผู้ใช้งานทั่วไป';
+  const defaultAdopterAvatar = useMemo(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(adopterName)}&background=D97706&color=fff`, [adopterName]);
+  const adopterAvatar = (!adopterImgErr && match?.userData?.avatar_url) ? match.userData.avatar_url : defaultAdopterAvatar;
+
   if (loading) {
     return <ChatRoomSkeleton />;
   }
 
-  const adopterName = match?.userData?.full_name || 'ผู้ใช้งานทั่วไป';
-  const defaultAdopterAvatar = useMemo(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(adopterName)}&background=D97706&color=fff`, [adopterName]);
-  const adopterAvatar = (!adopterImgErr && match?.userData?.avatar_url) ? match.userData.avatar_url : defaultAdopterAvatar;
+  // กรณีโหลดเสร็จแล้วแต่ไม่พบ match เลย
+  if (!loading && !match && messages.length === 0) {
+    return (
+      <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', padding: '24px', textAlign: 'center', backgroundColor: '#FAF8F5' }}>
+        <div style={{ padding: '20px', backgroundColor: '#F3F4F6', borderRadius: '50%', marginBottom: '16px', color: '#9CA3AF' }}>
+          <Info size={40} />
+        </div>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>ไม่พบข้อมูลห้องแชทนี้</h3>
+        <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0 0 20px', maxWidth: '320px', lineHeight: 1.5 }}>
+          คำขอนี้อาจถูกลบไปแล้ว หรือคุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้
+        </p>
+        <button
+          onClick={() => navigate('/foundation/matches')}
+          style={{ padding: '10px 20px', backgroundColor: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}
+        >
+          กลับไปยังรายการแชท
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
