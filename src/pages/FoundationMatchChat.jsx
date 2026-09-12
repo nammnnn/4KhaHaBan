@@ -81,11 +81,7 @@ function FoundationMatchChat() {
   }, [user?.id]);
 
   if (loading) {
-    return (
-      <div className="page-container match-page">
-        <ChatListSkeleton />
-      </div>
-    );
+    return <ChatListSkeleton />;
   }
 
   // Filter logic

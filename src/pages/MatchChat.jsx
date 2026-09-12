@@ -66,11 +66,7 @@ function MatchChat() {
   }, [matches]);
 
   if (loadingMatches || loadingAnimals) {
-    return (
-      <div className="page-container match-page">
-        <ChatListSkeleton />
-      </div>
-    );
+    return <ChatListSkeleton />;
   }
 
   // Filter logic

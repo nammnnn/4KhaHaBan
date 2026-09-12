@@ -100,67 +100,70 @@ export const ChatListSkeleton = () => {
   const isChatRoomRoute = path.includes('/chat/');
 
   return (
-    <div className="matches-split-view" style={{ width: '100%', height: '100%', minHeight: '100dvh', boxSizing: 'border-box' }}>
+    <div className="page-container match-page matches-split-view">
       {/* Left Panel: Matches List (hidden on mobile when chat room is active) */}
-      <div className={`matches-list-panel ${isChatRoomRoute ? 'hidden-on-mobile' : ''}`} style={{ boxSizing: 'border-box' }}>
+      <div className={`matches-list-panel ${isChatRoomRoute ? 'hidden-on-mobile' : ''}`}>
         {/* Header */}
         <div className="list-header" style={{ padding: '20px 20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '110px', height: '24px' }} />
-            <div className="skeleton" style={{ width: '54px', height: '22px', borderRadius: '12px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="skeleton skeleton-text" style={{ width: '100px', height: '24px' }} />
+            <div className="skeleton" style={{ width: '60px', height: '22px', borderRadius: '12px' }} />
           </div>
 
           {/* 3 Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', gap: '8px', paddingBottom: '12px' }}>
-            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
-            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
-            <div className="skeleton" style={{ flex: 1, height: '28px', borderRadius: '8px' }} />
+          <div className="chat-tabs" style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginTop: '16px', gap: '8px', paddingBottom: '12px' }}>
+            <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
+            <div className="skeleton" style={{ flex: 1, height: '26px', borderRadius: '6px' }} />
           </div>
 
           {/* Search Bar */}
-          <div style={{ padding: '14px 0' }}>
-            <div className="skeleton" style={{ width: '100%', height: '38px', borderRadius: '10px' }} />
+          <div className="chat-search-bar" style={{ padding: '14px 0' }}>
+            <div className="skeleton" style={{ width: '100%', height: '40px', borderRadius: '10px' }} />
           </div>
         </div>
 
-        {/* Chat Rows */}
-        <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'hidden' }}>
+        {/* Matches List */}
+        <div className="matches-list" style={{ padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'hidden' }}>
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
+              className="match-item"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px',
-                borderRadius: '12px',
+                padding: '12px 14px',
+                borderRadius: '16px',
                 border: '1px solid #F3F4F6',
-                backgroundColor: i === 1 ? '#FFFBEB' : '#FFFFFF'
+                backgroundColor: i === 1 ? '#FFFBEB' : '#FFFFFF',
+                borderLeft: i === 1 ? '3px solid #D97706' : '1px solid #F3F4F6'
               }}
             >
               <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 25}px`, height: '16px' }} />
-                  <div className="skeleton skeleton-text" style={{ width: '40px', height: '11px' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '48px', height: '12px' }} />
                 </div>
-                <div className="skeleton skeleton-text" style={{ width: `${120 + (i % 2) * 40}px`, height: '13px' }} />
-                <div className="skeleton" style={{ width: '70px', height: '18px', borderRadius: '4px' }} />
+                <div className="skeleton skeleton-text" style={{ width: `${130 + (i % 2) * 40}px`, height: '13px' }} />
+                <div className="skeleton" style={{ width: '80px', height: '18px', borderRadius: '4px' }} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right Panel: Chat Room or Empty State (hidden on mobile when list is active) */}
-      <div className={`matches-chat-panel ${!isChatRoomRoute ? 'hidden-on-mobile' : ''}`} style={{ boxSizing: 'border-box', overflow: 'hidden' }}>
+      {/* Right Panel: Chat Room or Empty State */}
+      <div className={`matches-chat-panel ${!isChatRoomRoute ? 'hidden-on-mobile hidden-on-desktop' : ''}`}>
         {isChatRoomRoute ? (
           <ChatRoomSkeleton />
         ) : (
-          <div className="empty-chat-state hidden-on-mobile" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '32px' }}>
-            <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px', marginBottom: '14px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '180px', height: '18px', marginBottom: '8px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '240px', height: '14px' }} />
+          <div className="empty-chat-state">
+            <div style={{ padding: '24px', backgroundColor: '#F3F4F6', borderRadius: '50%', marginBottom: '16px' }}>
+              <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px' }} />
+            </div>
+            <div className="skeleton skeleton-text" style={{ width: '220px', height: '22px' }} />
           </div>
         )}
       </div>
