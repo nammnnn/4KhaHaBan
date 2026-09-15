@@ -317,16 +317,24 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
   );
 });
 
+// Global in-memory cache for 0ms instant room switching
+const foundationChatCache = new Map();
+
 function FoundationChatRoom() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   
-  const [messages, setMessages] = useState([]);
+  // Instant Cache lookup
+  const initialCache = useMemo(() => {
+    return matchId ? foundationChatCache.get(matchId) : null;
+  }, [matchId]);
+
+  const [messages, setMessages] = useState(() => initialCache?.messages || []);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [animal, setAnimal] = useState(null);
-  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(() => !initialCache);
+  const [animal, setAnimal] = useState(() => initialCache?.animal || null);
+  const [match, setMatch] = useState(() => initialCache?.match || null);
   const [isSending, setIsSending] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -345,12 +353,36 @@ function FoundationChatRoom() {
     setAdopterImgErr(false);
   }, [matchId, match?.user_id]);
 
+  // Keep cache updated whenever state changes
+  useEffect(() => {
+    if (matchId && (match || messages.length > 0)) {
+      const prevCached = foundationChatCache.get(matchId) || {};
+      foundationChatCache.set(matchId, {
+        ...prevCached,
+        match: match || prevCached.match,
+        animal: animal || prevCached.animal,
+        messages: messages.length > 0 ? messages : prevCached.messages || []
+      });
+    }
+  }, [matchId, messages, match, animal]);
+
   // Load chat history & match info
   useEffect(() => {
     let isMounted = true;
+
+    // Check cache immediately on matchId change
+    if (foundationChatCache.has(matchId)) {
+      const cached = foundationChatCache.get(matchId);
+      if (cached.match) setMatch(cached.match);
+      if (cached.animal) setAnimal(cached.animal);
+      if (cached.messages) setMessages(cached.messages);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const loadChat = async () => {
       try {
-        setLoading(true);
         let currentMatch = null;
 
         if (user?.id) {

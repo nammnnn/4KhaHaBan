@@ -171,10 +171,10 @@ export const ChatListSkeleton = () => {
   );
 };
 
-// 3. Chat Room Skeleton (ChatRoom, FoundationChatRoom, SupportChat) - Responsive Desktop & Mobile
+// 3. Chat Room Skeleton (ChatRoom, FoundationChatRoom, SupportChat) - Clean Minimalist Loader (No fake bubbles)
 export const ChatRoomSkeleton = () => (
   <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden', boxSizing: 'border-box' }}>
-    {/* Top Header */}
+    {/* Top Header Placeholder */}
     <div
       style={{
         display: 'flex',
@@ -187,55 +187,48 @@ export const ChatRoomSkeleton = () => (
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
         <div className="skeleton skeleton-circle" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '130px', height: '16px' }} />
           <div className="skeleton skeleton-text" style={{ width: '70px', height: '11px' }} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <div className="skeleton" style={{ width: '34px', height: '34px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '34px', height: '34px', borderRadius: '8px' }} />
+        <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
       </div>
     </div>
 
-    {/* Status Banner Placeholder */}
-    <div style={{ padding: '10px 16px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div className="skeleton skeleton-text" style={{ width: '220px', height: '14px' }} />
-      <div className="skeleton" style={{ width: '110px', height: '28px', borderRadius: '8px' }} />
+    {/* Center Loading State (Clean Minimalist Spinner - NO fake bubbles) */}
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAF8F5', gap: '12px' }}>
+      <div style={{
+        width: '44px',
+        height: '44px',
+        borderRadius: '50%',
+        backgroundColor: '#FFFFFF',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          width: '20px',
+          height: '20px',
+          border: '2.5px solid #F3F4F6',
+          borderTopColor: 'var(--primary, #D97706)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+      </div>
+      <span style={{ fontSize: '0.84rem', color: '#9CA3AF', fontWeight: 500 }}>
+        กำลังโหลดข้อความ...
+      </span>
     </div>
 
-    {/* Messages Area */}
-    <div style={{ flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'hidden' }}>
-      {/* Date Chip */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-        <div className="skeleton" style={{ width: '56px', height: '20px', borderRadius: '9999px' }} />
-      </div>
-
-      {/* Message 1: Application Form Card */}
-      <div style={{ alignSelf: 'flex-start', maxWidth: '440px', width: '100%' }}>
-        <div className="skeleton" style={{ width: '100%', height: '130px', borderRadius: '16px', border: '1.5px solid #FED7AA' }} />
-      </div>
-
-      {/* Message 2: Incoming message */}
-      <div style={{ alignSelf: 'flex-start', display: 'flex', gap: '8px', alignItems: 'flex-end', maxWidth: '75%' }}>
-        <div className="skeleton skeleton-circle" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
-        <div className="skeleton" style={{ width: '180px', height: '42px', borderRadius: '16px 16px 16px 4px' }} />
-      </div>
-
-      {/* Message 3: Outgoing message */}
-      <div style={{ alignSelf: 'flex-end', maxWidth: '75%' }}>
-        <div className="skeleton" style={{ width: '220px', height: '46px', borderRadius: '16px 16px 4px 16px' }} />
-      </div>
-    </div>
-
-    {/* Bottom Input Bar */}
+    {/* Bottom Input Bar Placeholder */}
     <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
       <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
-      <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
       <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '20px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
+      <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
     </div>
   </div>
 );

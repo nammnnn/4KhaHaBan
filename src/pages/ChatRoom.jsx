@@ -297,17 +297,25 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
   );
 });
 
+// Global in-memory cache for 0ms instant room switching
+const userChatCache = new Map();
+
 function ChatRoom() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { matches } = useAppContext();
   const { user, profile } = useAuth();
 
-  const [messages, setMessages] = useState([]);
+  // Instant Cache lookup
+  const initialCache = useMemo(() => {
+    return matchId ? userChatCache.get(matchId) : null;
+  }, [matchId]);
+
+  const [messages, setMessages] = useState(() => initialCache?.messages || []);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [animal, setAnimal] = useState(null);
-  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(() => !initialCache);
+  const [animal, setAnimal] = useState(() => initialCache?.animal || null);
+  const [match, setMatch] = useState(() => initialCache?.match || null);
   const [isSending, setIsSending] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -419,9 +427,34 @@ function ChatRoom() {
 
   const messagesEndRef = useRef(null);
 
+  // Keep cache updated whenever state changes
+  useEffect(() => {
+    if (matchId && (match || messages.length > 0)) {
+      const prevCached = userChatCache.get(matchId) || {};
+      userChatCache.set(matchId, {
+        ...prevCached,
+        match: match || prevCached.match,
+        animal: animal || prevCached.animal,
+        messages: messages.length > 0 ? messages : prevCached.messages || []
+      });
+    }
+  }, [matchId, messages, match, animal]);
+
   // โหลดข้อมูลแชทครั้งเดียวเมื่อ matchId เปลี่ยน (ไม่ re-fetch ซ้ำเมื่อ matches/user เปลี่ยน)
   useEffect(() => {
     let cancelled = false;
+
+    // Check cache immediately on matchId change
+    if (userChatCache.has(matchId)) {
+      const cached = userChatCache.get(matchId);
+      if (cached.match) setMatch(cached.match);
+      if (cached.animal) setAnimal(cached.animal);
+      if (cached.messages) setMessages(cached.messages);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const fetchChatData = async () => {
       try {
         // อ่านค่าจาก ref เพื่อไม่ให้เกิดการ re-run เมื่อ context เปลี่ยน
@@ -477,7 +510,14 @@ function ChatRoom() {
         try {
           const chatHistory = await api.getMessages(matchId);
           if (cancelled) return;
-          setMessages(chatHistory);
+          setMessages(chatHistory || []);
+
+          // Update cache
+          userChatCache.set(matchId, {
+            match: currentMatch,
+            animal,
+            messages: chatHistory || []
+          });
         } catch (msgErr) {
           console.error("Failed to load chat history:", msgErr);
         }
@@ -488,7 +528,6 @@ function ChatRoom() {
       }
     };
 
-    setLoading(true);
     fetchChatData();
     return () => { cancelled = true; };
   }, [matchId]);
