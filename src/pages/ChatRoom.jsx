@@ -12,7 +12,7 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: '100%' }}>
+    <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }}>
       {lines.map((line, idx) => {
         const trimmed = line.trim();
         // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
@@ -34,7 +34,7 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
 
         const parts = line.split(/(https?:\/\/[^\s]+)/g);
         return (
-          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {parts.map((part, pIdx) => {
               if (part.match(/^https?:\/\/[^\s]+$/)) {
                 return (
@@ -100,7 +100,7 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
             </div>
           </div>
         ) : (
-          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', width: 'fit-content', minWidth: '44px' }}>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
             )}

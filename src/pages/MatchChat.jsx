@@ -220,6 +220,7 @@ function MatchChat() {
                 <div
                   key={match.id}
                   className={`match-item ${isAdopted ? 'adopted' : isApproved ? 'approved' : isRejected ? 'rejected' : 'pending'} ${isActive ? 'active' : ''}`}
+                  style={{ minHeight: '84px', boxSizing: 'border-box' }}
                   onClick={() => {
                     if (user?.id) {
                       try {
@@ -233,8 +234,8 @@ function MatchChat() {
                     navigate(`/chat/${match.id}`);
                   }}
                 >
-                  <div className="match-avatar" style={{ position: 'relative' }}>
-                    <img loading="lazy" src={animal.images[0]} alt={animal.name} />
+                  <div className="match-avatar" style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', flexShrink: 0 }}>
+                    <img loading="lazy" src={animal.images[0]} alt={animal.name} style={{ width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', borderRadius: '50%', objectFit: 'cover' }} />
                     {isAdopted ? (
                       <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', backgroundColor: '#10B981', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CheckCircle size={10} color="#fff" strokeWidth={3} />
@@ -247,9 +248,9 @@ function MatchChat() {
                       <div className="status-badge bg-warning"><Clock size={12} color="#fff" /></div>
                     )}
                   </div>
-                  <div className="match-info">
+                  <div className="match-info" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="match-header">
-                      <h3 style={{ fontSize: '1rem' }}>{animal.name}</h3>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{animal.name}</h3>
                       <span className="timestamp">{match.timestamp}</span>
                     </div>
                     <p className="last-message">
@@ -260,12 +261,16 @@ function MatchChat() {
                         <CheckCircle size={12} /> ได้รับเลี้ยงแล้ว • ติดตามสถานะ
                       </p>
                     ) : isRejected ? (
-                      <p className="pending-text text-sm" style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <p className="pending-text text-sm" style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0 0' }}>
                         <XCircle size={12} /> ปฏิเสธคำขอรับเลี้ยงแล้ว
                       </p>
-                    ) : !isApproved ? (
-                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark)' }}>รอผู้ดูแลตรวจสอบประวัติการรับเลี้ยง</p>
-                    ) : null}
+                    ) : isApproved ? (
+                      <p className="pending-text text-sm" style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
+                        <CheckCircle size={12} /> อนุมัติแล้ว • กำลังสนทนา
+                      </p>
+                    ) : (
+                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark)', margin: '2px 0 0' }}>รอผู้ดูแลตรวจสอบประวัติการรับเลี้ยง</p>
+                    )}
                   </div>
                 </div>
               );
