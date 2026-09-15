@@ -1980,15 +1980,18 @@
   align-items: flex-end;
   gap: 8px;
   max-width: 85%;
+  width: fit-content;
 }
 
 .message-row.msg-user {
   align-self: flex-end;
   flex-direction: row-reverse;
+  margin-left: auto;
 }
 
 .message-row.msg-shelter {
   align-self: flex-start;
+  margin-right: auto;
 }
 
 .message-avatar {
@@ -2004,6 +2007,9 @@
 .message-wrapper {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  width: fit-content;
+  min-width: fit-content;
 }
 
 .message-wrapper.msg-user {
@@ -2019,14 +2025,16 @@
 .message-bubble {
   padding: 10px 16px;
   border-radius: 18px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   box-shadow: var(--shadow-sm);
-  width: fit-content;
+  width: max-content;
   max-width: 100%;
-  word-break: break-word;
+  min-width: fit-content;
+  word-break: normal;
   overflow-wrap: break-word;
   box-sizing: border-box;
+  display: inline-block;
 }
 
 .msg-user .message-bubble {
@@ -2048,6 +2056,7 @@
   margin-top: 4px;
   margin-right: 4px;
   margin-left: 4px;
+  white-space: nowrap;
 }
 
 .chat-input-area {
@@ -2465,7 +2474,8 @@
 /* Common message styles */
 .message-wrapper {
   max-width: 86%;
-  min-width: 0;
+  width: fit-content;
+  min-width: fit-content;
   display: flex;
   flex-direction: column;
   animation: fadeIn 0.2s ease;
@@ -2490,16 +2500,18 @@
 
 .message-wrapper .message-bubble {
   padding: 10px 16px;
-  border-radius: 20px;
+  border-radius: 18px;
   font-size: 0.95rem;
   line-height: 1.5;
-  margin-bottom: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  word-break: break-word;
+  margin-bottom: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  word-break: normal;
   overflow-wrap: break-word;
-  width: fit-content;
+  width: max-content;
   max-width: 100%;
+  min-width: fit-content;
   box-sizing: border-box;
+  display: inline-block;
 }
 
 .message-wrapper.msg-user .message-bubble {
@@ -2520,14 +2532,16 @@
   background: var(--primary);
   color: white;
   padding: 10px 16px;
-  border-radius: 20px;
+  border-radius: 18px;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  word-break: break-word;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  word-break: normal;
   overflow-wrap: break-word;
-  width: fit-content;
+  width: max-content;
   max-width: 100%;
+  min-width: fit-content;
   box-sizing: border-box;
+  display: inline-block;
 }
 
 .message-bubble.them {
@@ -2535,16 +2549,17 @@
   background: white;
   color: var(--text-dark);
   padding: 12px 16px;
-  border-radius: 20px;
+  border-radius: 18px;
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .message-time, .message-timestamp {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-medium);
-  margin-top: 4px;
-  opacity: 0.8;
+  margin-top: 3px;
+  opacity: 0.85;
+  white-space: nowrap;
 }
 
 .message-bubble.me .message-time {

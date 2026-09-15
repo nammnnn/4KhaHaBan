@@ -11,7 +11,7 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }}>
+    <div style={{ overflowWrap: 'break-word', wordBreak: 'normal', maxWidth: '100%' }}>
       {lines.map((line, idx) => {
         const trimmed = line.trim();
         // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
@@ -33,7 +33,7 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
 
         const parts = line.split(/(https?:\/\/[^\s]+)/g);
         return (
-          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', overflowWrap: 'break-word', wordBreak: 'normal', whiteSpace: 'pre-wrap' }}>
             {parts.map((part, pIdx) => {
               if (part.match(/^https?:\/\/[^\s]+$/)) {
                 return (
@@ -91,7 +91,7 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
           style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} 
         />
       )}
-      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`} style={{ minWidth: 0 }}>
+      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`} style={{ maxWidth: '100%', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
         {isApplication ? (
           <div style={{
             background: '#ffffff',
@@ -130,15 +130,15 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
             </div>
           </div>
         ) : (
-          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', width: 'fit-content', minWidth: '44px' }}>
+          <div className="message-bubble" style={{ overflowWrap: 'break-word', wordBreak: 'normal', width: 'max-content', maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
             {msg.imageUrl && (
-              <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
+              <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px', display: 'block' }} />
             )}
             {msg.text && msg.text.trim() && renderMessageContent(msg.text, isMe, false)}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
-          <span className="message-timestamp" style={{ fontSize: '11px', color: 'var(--text-medium)' }}>{msg.timestamp}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', alignSelf: isMe ? 'flex-end' : 'flex-start', whiteSpace: 'nowrap' }}>
+          <span className="message-timestamp" style={{ fontSize: '11px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>{msg.timestamp}</span>
           {isMe && <Check size={12} color="var(--primary)" />}
         </div>
       </div>
@@ -729,14 +729,13 @@ function FoundationChatRoom() {
                 onError={() => setAdopterImgErr(true)}
                 style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
               />
-              <span style={{ position: 'absolute', bottom: '1px', right: '1px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', border: '2px solid #FFFFFF' }}></span>
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {adopterName}
               </h2>
-              <p style={{ fontSize: '0.75rem', color: '#059669', margin: '1px 0 0', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                กำลังออนไลน์
+              <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                ผู้ขอรับเลี้ยง
               </p>
             </div>
           </div>
@@ -1449,8 +1448,8 @@ function FoundationChatRoom() {
         <div ref={messagesEndRef} />
         {isSending && (
           <div className="message-row msg-user" style={{ marginBottom: '16px' }}>
-            <div className="message-wrapper msg-user">
-              <div className="message-bubble" style={{ opacity: 0.7 }}>
+            <div className="message-wrapper msg-user" style={{ maxWidth: '100%', alignItems: 'flex-end' }}>
+              <div className="message-bubble" style={{ opacity: 0.7, width: 'max-content' }}>
                 กำลังส่ง...
               </div>
             </div>
