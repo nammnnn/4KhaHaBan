@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin } from 'lucide-react';
+import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard } from '../components/SwipeCard';
 import { FilterModal } from '../components/FilterModal';
+import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { FeedCardSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
@@ -34,7 +35,8 @@ function Feed() {
   const [filters, setFilters] = useState({ maxDistance: 100, animalType: 'all', gender: 'all' });
 
   const { addMatch } = useAppContext();
-  const { user } = useAuth();
+  const { user, userVerificationStatus } = useAuth();
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
 
   const loadAnimals = async (appliedFilters = filters, forcedCoords = null) => {
     setLoading(true);
@@ -156,6 +158,14 @@ function Feed() {
     setSwipeTrigger(null);
 
     if (action === 'right') {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      if (userVerificationStatus !== 'verified') {
+        setShowVerificationPrompt(true);
+        return;
+      }
       api.submitSwipe(realAnimalId, user?.id, 'like');
       setPendingMatch({ animal: swipedAnimal, id: cardIdentifier });
       // สัตว์ที่ถูกใจแล้ว จะตัดออกจาก pool ถาวร ไม่นำกลับมาวนซ้ำ
@@ -191,7 +201,7 @@ function Feed() {
 
       return remaining;
     });
-  }, [user?.id]);
+  }, [user, userVerificationStatus, navigate]);
 
   const handleConfirmMatch = async () => {
     if (!pendingMatch) return;
@@ -222,6 +232,16 @@ function Feed() {
 
   const handleSwipeAction = (direction) => {
     if (cards.length > 0) {
+      if (direction === 'right') {
+        if (!user) {
+          navigate('/login');
+          return;
+        }
+        if (userVerificationStatus !== 'verified') {
+          setShowVerificationPrompt(true);
+          return;
+        }
+      }
       setSwipeTrigger({ id: cards[0].cardKey || cards[0].id, direction });
     }
   };
@@ -271,6 +291,39 @@ function Feed() {
           </button>
         </div>
       </div>
+
+      {/* Verification Prompt Banner for unverified users */}
+      {user && userVerificationStatus !== 'verified' && (
+        <div
+          onClick={() => setShowVerificationPrompt(true)}
+          style={{
+            margin: '0 16px 10px',
+            padding: '10px 14px',
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            fontSize: '0.82rem',
+            color: '#92400E',
+            boxShadow: '0 1px 3px rgba(217, 119, 6, 0.08)',
+            transition: 'all 0.15s ease',
+            flexShrink: 0
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <ShieldAlert size={16} color="#D97706" style={{ flexShrink: 0 }} />
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
+              ยืนยันตัวตนและตอบแบบประเมิน เพื่อเปิดการปัดรับเลี้ยง
+            </span>
+          </div>
+          <span style={{ fontWeight: 600, color: '#D97706', whiteSpace: 'nowrap', marginLeft: '8px', textDecoration: 'underline' }}>
+            ยืนยันเลย
+          </span>
+        </div>
+      )}
 
       <FilterModal 
         isOpen={isFilterOpen} 
@@ -347,6 +400,8 @@ function Feed() {
                 isSecond={index === 1}
                 swipeTrigger={swipeTrigger}
                 onRemove={removeCard}
+                canSwipeRight={userVerificationStatus === 'verified'}
+                onBlockedSwipeRight={() => setShowVerificationPrompt(true)}
               />
             );
           })
@@ -541,6 +596,13 @@ function Feed() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Verification Required Modal */}
+      <VerificationPromptModal
+        isOpen={showVerificationPrompt}
+        onClose={() => setShowVerificationPrompt(false)}
+        fromPath="/"
+      />
     </div>
   );
 }

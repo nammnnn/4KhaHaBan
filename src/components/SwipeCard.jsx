@@ -3,7 +3,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { MapPin, Heart, X, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger }) {
+function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger, canSwipeRight = true, onBlockedSwipeRight }) {
   const x = useMotionValue(0);
   
   // Preload image if this card is second in the stack for seamless transition
@@ -32,19 +32,28 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger 
 
   useEffect(() => {
     if (swipeTrigger && (swipeTrigger.id === animal.id || swipeTrigger.id === animal.cardKey)) {
+      if (swipeTrigger.direction === 'right' && !canSwipeRight) {
+        if (onBlockedSwipeRight) onBlockedSwipeRight();
+        return;
+      }
       const targetX = swipeTrigger.direction === 'right' ? 500 : -500;
       
       Promise.all([
         animate(x, targetX, { duration: 0.28 })
       ]).then(() => notifyRemove(swipeTrigger.direction));
     }
-  }, [swipeTrigger, animal.id, animal.cardKey, onRemove, x]);
+  }, [swipeTrigger, animal.id, animal.cardKey, onRemove, x, canSwipeRight, onBlockedSwipeRight]);
 
   const handleDragEnd = (event, info) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
     
     if (offset > 90 || velocity > 450) {
+      if (!canSwipeRight) {
+        animate(x, 0, { type: 'spring', stiffness: 320, damping: 22 });
+        if (onBlockedSwipeRight) onBlockedSwipeRight();
+        return;
+      }
       Promise.all([
         animate(x, 500, { duration: 0.2 })
       ]).then(() => notifyRemove('right'));

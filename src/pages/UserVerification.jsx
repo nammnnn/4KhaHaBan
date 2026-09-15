@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   ChevronLeft, CheckCircle2, Loader2, AlertCircle, Phone, FileText, User, 
@@ -70,6 +70,9 @@ const ASSESSMENT_QUESTIONS = [
 export default function UserVerification() {
   const { user, profile, userVerificationStatus, verifyUser, getUserVerificationData } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnUrl = location.state?.from || '/profile';
+  const isFromMatch = Boolean(location.state?.fromAction === 'swipe_match' || location.state?.from);
 
   const [step, setStep] = useState(1); // 1: ข้อมูลส่วนตัว, 2: แบบประเมิน
   const [isEditing, setIsEditing] = useState(false);
@@ -216,7 +219,7 @@ export default function UserVerification() {
       setSuccess(true);
       setIsEditing(false);
       setTimeout(() => {
-        navigate('/profile');
+        navigate(returnUrl);
       }, 1800);
     }
   };
@@ -240,7 +243,7 @@ export default function UserVerification() {
         <div style={{ maxWidth: '540px', width: '100%' }}>
           <button
             type="button"
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate(returnUrl)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -275,7 +278,7 @@ export default function UserVerification() {
             >
               <ChevronLeft size={20} />
             </div>
-            <span>กลับไปหน้าโปรไฟล์</span>
+            <span>{returnUrl === '/' ? 'กลับไปหน้าค้นหา (Feed)' : 'กลับไปหน้าเดิม'}</span>
           </button>
 
           <div style={{
@@ -365,7 +368,7 @@ export default function UserVerification() {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate(returnUrl)}
                 style={{
                   flex: 1,
                   height: '44px',
@@ -378,7 +381,7 @@ export default function UserVerification() {
                   cursor: 'pointer'
                 }}
               >
-                กลับสู่หน้าโปรไฟล์
+                {returnUrl === '/' ? 'ไปค้นหาสัตว์เลี้ยง (Feed)' : 'กลับสู่หน้าเดิม'}
               </button>
             </div>
           </div>
@@ -404,7 +407,7 @@ export default function UserVerification() {
             onClick={() => {
               if (step === 2) setStep(1);
               else if (isEditing) setIsEditing(false);
-              else navigate('/profile');
+              else navigate(returnUrl);
             }}
             style={{
               display: 'inline-flex',
@@ -439,9 +442,35 @@ export default function UserVerification() {
             >
               <ChevronLeft size={20} />
             </div>
-            <span>{step === 2 ? 'กลับไปแก้ไขข้อมูลส่วนตัว' : 'กลับไปหน้าโปรไฟล์'}</span>
+            <span>{step === 2 ? 'กลับไปแก้ไขข้อมูลส่วนตัว' : (returnUrl === '/' ? 'กลับไปหน้าค้นหา (Feed)' : 'กลับไปหน้าโปรไฟล์')}</span>
           </button>
         </div>
+
+        {/* Contextual Banner when coming from match attempt */}
+        {isFromMatch && (
+          <div style={{
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: '14px',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#92400E',
+            fontSize: '0.88rem',
+            lineHeight: 1.5,
+            boxShadow: '0 1px 3px rgba(217, 119, 6, 0.06)'
+          }}>
+            <ShieldCheck size={24} color="#D97706" style={{ flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: 'block', color: '#B45309', marginBottom: '2px' }}>
+                ยืนยันตัวตนเพื่อเริ่มส่งคำขอรับเลี้ยงน้อง
+              </strong>
+              กรอกข้อมูลและตอบแบบประเมินให้ครบถ้วน เมื่อเสร็จสิ้นระบบจะพาท่านกลับไปยังน้องสัตว์เลี้ยงทันที
+            </div>
+          </div>
+        )}
 
         {/* Card Main */}
         <div style={{

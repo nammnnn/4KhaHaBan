@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
         setProfile(null);
         setRole(null);
         setFoundationStatus(null);
+        setUserVerificationStatus(null);
       }
       setLoading(false);
     });
@@ -123,10 +124,19 @@ export const AuthProvider = ({ children }) => {
           .eq('id', currentUser.id)
           .maybeSingle();
           
-        if (verifyData) {
+        if (verifyData && verifyData.status) {
           setUserVerificationStatus(verifyData.status);
+          try {
+            localStorage.setItem(`user_verification_status_${currentUser.id}`, verifyData.status);
+          } catch (e) {}
         } else {
-          setUserVerificationStatus(null);
+          // ตรวจสอบ fallback จาก localStorage เผื่อกรณีเน็ตเวิร์กหน่วงหรือฐานข้อมูลชั่วคราว
+          try {
+            const cachedStatus = localStorage.getItem(`user_verification_status_${currentUser.id}`);
+            setUserVerificationStatus(cachedStatus || null);
+          } catch (e) {
+            setUserVerificationStatus(null);
+          }
         }
       }
     } catch (error) {
@@ -167,6 +177,11 @@ export const AuthProvider = ({ children }) => {
       }
       
       setUserVerificationStatus('verified');
+      try {
+        localStorage.setItem(`user_verification_status_${user.id}`, 'verified');
+        localStorage.setItem(`user_verification_data_${user.id}`, JSON.stringify(payload));
+      } catch (e) {}
+
       // Sync basic profile fields
       if (verificationData.full_name || verificationData.phone) {
         await updateProfile({
@@ -194,11 +209,20 @@ export const AuthProvider = ({ children }) => {
         .eq('id', uid)
         .maybeSingle();
       if (!error && data) {
+        try {
+          localStorage.setItem(`user_verification_data_${uid}`, JSON.stringify(data));
+        } catch (e) {}
         return data;
       }
     } catch (err) {
       console.error('[Auth] getUserVerificationData error:', err);
     }
+
+    // Fallback จาก LocalStorage
+    try {
+      const cached = localStorage.getItem(`user_verification_data_${uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
 
     return null;
   };
@@ -242,6 +266,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    setUserVerificationStatus(null);
     if (!supabase) return;
     return await supabase.auth.signOut();
   };

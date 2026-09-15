@@ -22,6 +22,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { AnimalProfileSkeleton } from '../components/Skeletons';
 import { calculateDistance, formatDistance, getUserCoordinates } from '../lib/geo';
+import { VerificationPromptModal } from '../components/VerificationPromptModal';
 
 import './AnimalProfileBento.css';
 
@@ -29,12 +30,13 @@ function AnimalProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { matches, addMatch } = useAppContext();
-  const { user } = useAuth();
+  const { user, userVerificationStatus } = useAuth();
   
   const [animal, setAnimal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isMatchSubmitting, setIsMatchSubmitting] = useState(false);
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -65,6 +67,10 @@ function AnimalProfile() {
   const handleAdopt = async () => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+    if (userVerificationStatus !== 'verified') {
+      setShowVerificationPrompt(true);
       return;
     }
     try {
@@ -382,6 +388,13 @@ function AnimalProfile() {
       <div className="animal-mobile-bottom-dock">
         {renderAdoptButton()}
       </div>
+
+      {/* Verification Prompt Modal */}
+      <VerificationPromptModal
+        isOpen={showVerificationPrompt}
+        onClose={() => setShowVerificationPrompt(false)}
+        fromPath={`/animal/${id}`}
+      />
     </div>
   );
 }
