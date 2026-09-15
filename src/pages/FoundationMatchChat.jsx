@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
-import { Heart, Clock, Loader, ArrowLeft, Search, XCircle, CheckCircle } from 'lucide-react';
+import { Heart, Clock, Loader, ArrowLeft, Search, XCircle, CheckCircle, PawPrint, User } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
 import FoundationChatRoom from './FoundationChatRoom';
 
@@ -18,7 +18,13 @@ function FoundationMatchChat() {
   const { matchId } = useParams(); // Check if a chat is active
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('active'); // 'active' or 'pending'
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'pending', or 'rejected'
+  const [selectedAnimalId, setSelectedAnimalId] = useState('all');
+
+  // Reset selected animal filter whenever active tab changes
+  useEffect(() => {
+    setSelectedAnimalId('all');
+  }, [activeTab]);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,21 +90,58 @@ function FoundationMatchChat() {
     return <ChatListSkeleton />;
   }
 
+  // Animals with application count in current active tab
+  const animalChips = useMemo(() => {
+    const counts = {};
+    matches.forEach(m => {
+      let matchesTab = false;
+      if (activeTab === 'active') matchesTab = m.status === 'approved' || m.status === 'adopted' || m.status === 'completed';
+      else if (activeTab === 'pending') matchesTab = m.status === 'pending';
+      else if (activeTab === 'rejected') matchesTab = m.status === 'rejected';
+
+      if (matchesTab && m.animalId) {
+        counts[m.animalId] = (counts[m.animalId] || 0) + 1;
+      }
+    });
+
+    return Object.keys(counts)
+      .map(id => ({
+        id,
+        animal: animalData[id],
+        count: counts[id]
+      }))
+      .filter(item => item.animal);
+  }, [matches, activeTab, animalData]);
+
   // Filter logic
   const filteredMatches = matches.filter(match => {
     const animal = animalData[match.animalId];
     if (!animal) return false;
 
-    // Search filter
-    const matchesSearch = animal.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Tab filter
+    // 1. Tab filter
     let matchesTab = false;
     if (activeTab === 'active') matchesTab = match.status === 'approved' || match.status === 'adopted' || match.status === 'completed';
     else if (activeTab === 'pending') matchesTab = match.status === 'pending';
     else if (activeTab === 'rejected') matchesTab = match.status === 'rejected';
+    if (!matchesTab) return false;
 
-    return matchesSearch && matchesTab;
+    // 2. Animal filter chip
+    if (selectedAnimalId !== 'all' && match.animalId !== selectedAnimalId) {
+      return false;
+    }
+
+    // 3. Search filter (by adopter name, animal name, or message)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const adopterName = (match.userData?.full_name || 'ผู้ขอรับเลี้ยง').toLowerCase();
+      const animalName = animal.name.toLowerCase();
+      const lastMsg = (match.lastMessage || '').toLowerCase();
+      if (!adopterName.includes(q) && !animalName.includes(q) && !lastMsg.includes(q)) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   const activeCount = matches.filter(m => m.status === 'approved' || m.status === 'adopted' || m.status === 'completed').length;
@@ -191,12 +234,12 @@ function FoundationMatchChat() {
           </div>
           
           {/* Search Box */}
-          <div className="chat-search-bar" style={{ padding: '14px 0' }}>
+          <div className="chat-search-bar" style={{ padding: '14px 0 10px' }}>
             <div style={{ position: 'relative' }}>
               <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
               <input 
                 type="text" 
-                placeholder="ค้นหาแชท..."
+                placeholder="ค้นหาชื่อผู้ขอ, ชื่อน้องสัตว์..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ 
@@ -210,6 +253,89 @@ function FoundationMatchChat() {
               />
             </div>
           </div>
+
+          {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
+          {animalChips.length > 0 && (
+            <div className="animal-filter-chips">
+              <button
+                type="button"
+                onClick={() => setSelectedAnimalId('all')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  border: selectedAnimalId === 'all' ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
+                  backgroundColor: selectedAnimalId === 'all' ? 'var(--primary, #D97706)' : '#FFFFFF',
+                  color: selectedAnimalId === 'all' ? '#FFFFFF' : '#4B5563',
+                  boxShadow: selectedAnimalId === 'all' ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0
+                }}
+              >
+                <PawPrint size={13} />
+                <span>ทั้งหมด</span>
+                <span style={{ 
+                  fontSize: '0.72rem', 
+                  padding: '1px 6px', 
+                  borderRadius: '10px', 
+                  backgroundColor: selectedAnimalId === 'all' ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
+                  color: selectedAnimalId === 'all' ? '#FFFFFF' : '#6B7280'
+                }}>
+                  {activeTab === 'active' ? activeCount : activeTab === 'pending' ? pendingCount : rejectedCount}
+                </span>
+              </button>
+
+              {animalChips.map(item => {
+                const isSelected = selectedAnimalId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedAnimalId(isSelected ? 'all' : item.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 11px 4px 5px',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      border: isSelected ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
+                      backgroundColor: isSelected ? 'var(--primary, #D97706)' : '#FFFFFF',
+                      color: isSelected ? '#FFFFFF' : '#4B5563',
+                      boxShadow: isSelected ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0
+                    }}
+                  >
+                    <img 
+                      src={item.animal.images?.[0] || 'https://via.placeholder.com/60'} 
+                      alt={item.animal.name}
+                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <span>{item.animal.name}</span>
+                    <span style={{ 
+                      fontSize: '0.72rem', 
+                      padding: '1px 6px', 
+                      borderRadius: '10px', 
+                      backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
+                      color: isSelected ? '#FFFFFF' : '#6B7280'
+                    }}>
+                      {item.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         
         <div className="matches-list" style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}>
@@ -219,7 +345,18 @@ function FoundationMatchChat() {
                 <Search size={24} color="#9CA3AF" />
               </div>
               <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: '#374151' }}>ไม่พบรายการแชท</p>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#9CA3AF' }}>{searchQuery ? 'ลองค้นหาด้วยคำอื่น' : 'ยังไม่มีข้อความในหมวดหมู่นี้'}</p>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#9CA3AF' }}>
+                {selectedAnimalId !== 'all' ? 'ไม่พบคำขอรับเลี้ยงของน้องตัวนี้ในหมวดนี้' : searchQuery ? 'ลองค้นหาด้วยคำอื่น' : 'ยังไม่มีข้อความในหมวดหมู่นี้'}
+              </p>
+              {selectedAnimalId !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnimalId('all')}
+                  style={{ marginTop: '10px', fontSize: '0.8rem', color: 'var(--primary, #D97706)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  แสดงผู้ขอรับเลี้ยงทั้งหมด
+                </button>
+              )}
             </div>
           ) : (
             filteredMatches.map(match => {
@@ -231,11 +368,15 @@ function FoundationMatchChat() {
               const isRejected = match.status === 'rejected';
               const isActive = match.id === matchId;
 
+              const adopterName = match.userData?.full_name || 'ผู้ขอรับเลี้ยง';
+              const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(adopterName)}&background=D97706&color=fff`;
+              const adopterAvatar = match.userData?.avatar_url || defaultAvatar;
+
               return (
                 <div 
                   key={match.id} 
                   className={`match-item ${isAdopted ? 'approved' : isApproved ? 'approved' : isRejected ? 'rejected' : 'pending'} ${isActive ? 'active' : ''}`}
-                  style={{ minHeight: '84px', boxSizing: 'border-box' }}
+                  style={{ minHeight: '88px', boxSizing: 'border-box' }}
                   onClick={() => {
                     if (user?.id) {
                       api.markMatchAsRead(match.id, 'shelter', user.id);
@@ -243,26 +384,84 @@ function FoundationMatchChat() {
                     navigate(`/foundation/chat/${match.id}`);
                   }}
                 >
+                  {/* Adopter Avatar with Pet Badge Overlaid */}
                   <div className="match-avatar" style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', flexShrink: 0 }}>
-                    <img loading="lazy" src={animal.images[0]} alt={animal.name} style={{ width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', borderRadius: '50%', objectFit: 'cover' }} />
-                    {isAdopted ? (
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', backgroundColor: '#15803D', borderRadius: '50%', border: '2px solid white' }}></div>
-                    ) : isApproved ? (
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', backgroundColor: 'var(--success)', borderRadius: '50%', border: '2px solid white' }}></div>
-                    ) : isRejected ? (
-                      <div className="status-badge" style={{ backgroundColor: '#EF4444' }}><XCircle size={12} color="#fff"/></div>
-                    ) : (
-                      <div className="status-badge bg-warning"><Clock size={12} color="#fff"/></div>
-                    )}
-                  </div>
-                  <div className="match-info" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="match-header">
-                      <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{animal.name} <span>(ผู้สนใจ)</span></h3>
-                      <span className="timestamp">{match.timestamp || 'เมื่อวาน'}</span>
+                    <img 
+                      loading="lazy" 
+                      src={adopterAvatar} 
+                      alt={adopterName} 
+                      style={{ width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
+                      onError={(e) => { e.currentTarget.src = defaultAvatar; }}
+                    />
+                    {/* Corner Pet Badge */}
+                    <div 
+                      title={`ขอรับเลี้ยง: ${animal.name}`}
+                      style={{ 
+                        position: 'absolute', 
+                        bottom: '-2px', 
+                        right: '-2px', 
+                        width: '24px', 
+                        height: '24px', 
+                        borderRadius: '50%', 
+                        overflow: 'hidden', 
+                        border: '2px solid #FFFFFF', 
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                        backgroundColor: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2
+                      }}
+                    >
+                      <img 
+                        src={animal.images?.[0] || 'https://via.placeholder.com/50'} 
+                        alt={animal.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
                     </div>
-                    <p className="last-message">
+                  </div>
+
+                  <div className="match-info" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div className="match-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                        <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {adopterName}
+                        </h3>
+                        {match.userData?.kyc_verified && (
+                          <CheckCircle size={13} color="#16A34A" style={{ flexShrink: 0 }} title="ยืนยันตัวตนแล้ว (KYC)" />
+                        )}
+                      </div>
+                      <span className="timestamp" style={{ fontSize: '0.72rem', color: '#9CA3AF', flexShrink: 0 }}>
+                        {match.timestamp || 'เมื่อวาน'}
+                      </span>
+                    </div>
+
+                    {/* Target Pet Badge */}
+                    <div style={{ margin: '3px 0' }}>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '4px', 
+                        fontSize: '0.73rem', 
+                        color: '#9A3412', 
+                        backgroundColor: '#FFEDD5', 
+                        padding: '1px 8px', 
+                        borderRadius: '6px', 
+                        fontWeight: 600,
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <PawPrint size={11} style={{ flexShrink: 0 }} />
+                        <span>ขอรับเลี้ยง: <strong>{animal.name}</strong></span>
+                      </span>
+                    </div>
+
+                    <p className="last-message" style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {match.lastMessage || 'ส่งคำขอแล้ว'}
                     </p>
+
                     {isAdopted ? (
                       <p className="pending-text text-sm" style={{ color: '#15803D', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
                         <CheckCircle size={12} /> ส่งมอบแล้ว (ติดตามสถานะ)
@@ -276,7 +475,9 @@ function FoundationMatchChat() {
                         <CheckCircle size={12} /> อนุมัติแล้ว • กำลังสนทนา
                       </p>
                     ) : (
-                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark)', margin: '2px 0 0' }}>รอตรวจสอบและอนุมัติการรับเลี้ยง</p>
+                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark, #D97706)', margin: '2px 0 0', fontWeight: 500 }}>
+                        รอตรวจสอบและอนุมัติการรับเลี้ยง
+                      </p>
                     )}
                   </div>
                 </div>

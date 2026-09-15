@@ -2795,6 +2795,21 @@
   padding: 12px;
 }
 
+/* Animal Filter Chips for Foundation Match Chat */
+.animal-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.animal-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+
 .admin-users-desktop-table {
   display: none;
 }
