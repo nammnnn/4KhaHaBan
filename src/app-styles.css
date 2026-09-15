@@ -2009,7 +2009,6 @@
   flex-direction: column;
   max-width: 100%;
   width: fit-content;
-  min-width: fit-content;
 }
 
 .message-wrapper.msg-user {
@@ -2028,9 +2027,8 @@
   font-size: 0.95rem;
   line-height: 1.5;
   box-shadow: var(--shadow-sm);
-  width: max-content;
+  width: fit-content;
   max-width: 100%;
-  min-width: fit-content;
   word-break: normal;
   overflow-wrap: break-word;
   box-sizing: border-box;
@@ -2507,9 +2505,8 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   word-break: normal;
   overflow-wrap: break-word;
-  width: max-content;
+  width: fit-content;
   max-width: 100%;
-  min-width: fit-content;
   box-sizing: border-box;
   display: inline-block;
 }
@@ -2537,9 +2534,8 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   word-break: normal;
   overflow-wrap: break-word;
-  width: max-content;
+  width: fit-content;
   max-width: 100%;
-  min-width: fit-content;
   box-sizing: border-box;
   display: inline-block;
 }

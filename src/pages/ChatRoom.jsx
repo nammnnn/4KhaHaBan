@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Send, Loader, Image as ImageIcon, X, Info, MoreVertical, PlusCircle, MapPin, FileText, User, CheckCircle, Check, Clock, XCircle, CheckCircle2, Camera, Calendar } from 'lucide-react';
+import { ChevronLeft, Send, Loader, Image as ImageIcon, X, Info, MoreVertical, PlusCircle, MapPin, FileText, User, CheckCircle, Check, Clock, XCircle, CheckCircle2, Camera, Calendar, ShieldCheck, Heart } from 'lucide-react';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useAppContext } from '../context/AppContext';
@@ -62,7 +62,188 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
   );
 };
 
+const OfficialNoticeCard = memo(function OfficialNoticeCard({ msg, timestamp }) {
+  const text = msg.text || '';
+  const isApproved = text.includes('ได้รับการอนุมัติแล้ว') || text.includes('อนุมัติคำขอ');
+  const isHandover = text.includes('การส่งมอบ') && (text.includes('เสร็จสมบูรณ์') || text.includes('สำเร็จ'));
+  const isCancelled = text.includes('ยกเลิก');
+  const isDeclined = !isApproved && !isHandover && (text.includes('ไม่สามารถอนุมัติ') || text.includes('ปฏิเสธ') || isCancelled);
+
+  // Extract clean lines without raw brackets or line dividers
+  const cleanLines = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !/^[━─\-=_~]{3,}$/.test(l) && !/^\[.*\]$/.test(l));
+
+  // Determine theme styles and badges
+  let icon = <CheckCircle2 size={20} color="#16A34A" />;
+  let iconBg = '#DCFCE7';
+  let badgeText = 'อนุมัติแล้ว';
+  let badgeColor = '#15803D';
+  let badgeBg = '#DCFCE7';
+  let cardBorder = '#BBF7D0';
+  let headerTitle = 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
+
+  if (isHandover) {
+    icon = <Heart size={20} color="#EA580C" />;
+    iconBg = '#FFEDD5';
+    badgeText = 'ส่งมอบสำเร็จ';
+    badgeColor = '#C2410C';
+    badgeBg = '#FFEDD5';
+    cardBorder = '#FED7AA';
+    headerTitle = 'ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ';
+  } else if (isDeclined) {
+    icon = <XCircle size={20} color="#DC2626" />;
+    iconBg = '#FEE2E2';
+    badgeText = isCancelled ? 'ยกเลิกแล้ว' : 'ไม่ผ่านการพิจารณา';
+    badgeColor = '#B91C1C';
+    badgeBg = '#FEE2E2';
+    cardBorder = '#FECDD3';
+    headerTitle = isCancelled ? 'แจ้งยกเลิกคำขอรับเลี้ยง' : 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'center',
+      margin: '18px 0',
+      padding: '0 8px',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{
+        maxWidth: '460px',
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        border: `1.5px solid ${cardBorder}`,
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        textAlign: 'left'
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderBottom: '1px solid #F3F4F6',
+          backgroundColor: '#FAFAFA'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              backgroundColor: iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {icon}
+            </div>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>
+                {headerTitle}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#6B7280' }}>
+                ข้อความแจ้งเตือนอัตโนมัติจากระบบ
+              </div>
+            </div>
+          </div>
+
+          <span style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '3px 10px',
+            borderRadius: '12px',
+            backgroundColor: badgeBg,
+            color: badgeColor,
+            flexShrink: 0
+          }}>
+            {badgeText}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '14px 16px', fontSize: '0.86rem', lineHeight: 1.6, color: '#374151' }}>
+          {cleanLines.map((line, idx) => {
+            const isReason = line.startsWith('เหตุผล:') || line.startsWith('รายละเอียดเพิ่มเติม:');
+            if (isReason) {
+              return (
+                <div key={idx} style={{
+                  margin: '10px 0',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FEE2E2',
+                  color: '#991B1B',
+                  fontSize: '0.82rem'
+                }}>
+                  {line}
+                </div>
+              );
+            }
+
+            const isHero = line.includes('ยินดีด้วย') || line.includes('ขอขอบคุณ');
+            return (
+              <p key={idx} style={{
+                margin: idx === 0 ? 0 : '8px 0 0',
+                fontWeight: isHero ? 600 : 400,
+                color: isHero ? '#111827' : '#4B5563'
+              }}>
+                {line}
+              </p>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 16px',
+          borderTop: '1px solid #F3F4F6',
+          fontSize: '0.72rem',
+          color: '#9CA3AF',
+          backgroundColor: '#FCFCFD'
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ShieldCheck size={13} color="#16A34A" /> ระบบรับรอง 4 ขาหาบ้าน
+          </span>
+          <span>{msg.timestamp || timestamp}</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
+  if (msg.sender === 'system') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+        <div style={{ padding: '6px 12px', backgroundColor: 'var(--success-light)', color: 'var(--success-dark)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center', maxWidth: '90%', wordBreak: 'break-word' }}>
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
+
+  // Official Adoption Status / Event Notice Card
+  const isOfficialNotice = msg.text && (
+    msg.text.includes('[แจ้งผลการพิจารณาคำขอรับเลี้ยง]') ||
+    msg.text.includes('[แจ้งขอยกเลิกคำขอรับเลี้ยง]') ||
+    msg.text.includes('[ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ]') ||
+    (msg.text.includes('คำขอรับเลี้ยง') && (msg.text.includes('ได้รับการอนุมัติแล้ว') || msg.text.includes('ไม่สามารถอนุมัติคำขอรับเลี้ยง')))
+  );
+
+  if (isOfficialNotice) {
+    return <OfficialNoticeCard msg={msg} timestamp={msg.timestamp} />;
+  }
+
   const isApplication = msg.text && (msg.text.includes('ใบสมัครขอรับเลี้ยง') || msg.text.startsWith('\uD83D\uDCCB'));
 
   return (
@@ -100,7 +281,7 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
             </div>
           </div>
         ) : (
-          <div className="message-bubble" style={{ overflowWrap: 'break-word', wordBreak: 'normal', width: 'max-content', maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
+          <div className="message-bubble" style={{ overflowWrap: 'break-word', wordBreak: 'normal', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px', display: 'block' }} />
             )}
@@ -980,7 +1161,7 @@ function ChatRoom() {
         {isSending && (
           <div className="message-row msg-user" style={{ marginBottom: '12px' }}>
             <div className="message-wrapper msg-user" style={{ maxWidth: '100%', alignItems: 'flex-end' }}>
-              <div className="message-bubble" style={{ opacity: 0.7, width: 'max-content' }}>
+              <div className="message-bubble" style={{ opacity: 0.7, width: 'fit-content' }}>
                 กำลังส่ง...
               </div>
             </div>
