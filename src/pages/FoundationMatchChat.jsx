@@ -24,10 +24,19 @@ function FoundationMatchChat() {
   const chipsRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  // Mouse drag to scroll refs
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftStartRef = useRef(0);
+  const hasMovedRef = useRef(false);
 
   const checkScroll = useCallback(() => {
     if (chipsRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = chipsRef.current;
+      const overflow = scrollWidth > clientWidth + 4;
+      setHasOverflow(overflow);
       setCanScrollLeft(scrollLeft > 4);
       setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
     }
@@ -122,20 +131,59 @@ function FoundationMatchChat() {
   }, [matches, activeTab, animalData]);
 
   useEffect(() => {
+    const el = chipsRef.current;
     checkScroll();
+
+    let ro;
+    if (window.ResizeObserver && el) {
+      ro = new ResizeObserver(() => {
+        checkScroll();
+      });
+      ro.observe(el);
+    }
+
+    const timer = setTimeout(checkScroll, 120);
     const handleResize = () => checkScroll();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
   }, [checkScroll, animalChips]);
 
   const handleScrollChips = (direction) => {
     if (chipsRef.current) {
+      const scrollDistance = Math.max(160, Math.floor(chipsRef.current.clientWidth * 0.7));
       chipsRef.current.scrollBy({
-        left: direction === 'left' ? -200 : 200,
+        left: direction === 'left' ? -scrollDistance : scrollDistance,
         behavior: 'smooth'
       });
-      setTimeout(checkScroll, 220);
+      setTimeout(checkScroll, 300);
     }
+  };
+
+  const handleMouseDown = (e) => {
+    if (!chipsRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - chipsRef.current.offsetLeft;
+    scrollLeftStartRef.current = chipsRef.current.scrollLeft;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current || !chipsRef.current) return;
+    const x = e.pageX - chipsRef.current.offsetLeft;
+    const walk = x - startXRef.current;
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    chipsRef.current.scrollLeft = scrollLeftStartRef.current - walk;
+    checkScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
   };
 
   if (loading) {
@@ -285,69 +333,56 @@ function FoundationMatchChat() {
 
           {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
           {animalChips.length > 0 && (
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              {canScrollLeft && (
-                <div style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '38px',
-                  background: 'linear-gradient(to right, #FFFFFF 70%, transparent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  zIndex: 10,
-                  pointerEvents: 'none'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => handleScrollChips('left')}
-                    aria-label="เลื่อนซ้าย"
-                    style={{
-                      pointerEvents: 'auto',
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FFFFFF',
-                      border: '1.5px solid #E5E7EB',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#374151',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      padding: 0
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = 'var(--primary, #D97706)'; e.currentTarget.style.color = 'var(--primary, #D97706)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#374151'; }}
-                  >
-                    <ChevronLeft size={15} />
-                  </button>
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0 12px', width: '100%' }}>
+              {/* Left Scroll Button */}
+              {hasOverflow && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollChips('left')}
+                  disabled={!canScrollLeft}
+                  aria-label="เลื่อนซ้าย"
+                  className="chip-scroll-btn"
+                  style={{
+                    boxShadow: canScrollLeft ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    color: canScrollLeft ? 'var(--primary, #D97706)' : '#D1D5DB',
+                    cursor: canScrollLeft ? 'pointer' : 'default',
+                    opacity: canScrollLeft ? 1 : 0.25
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
               )}
 
+              {/* Scrollable Container */}
               <div 
                 ref={chipsRef}
                 className="animal-filter-chips"
                 onScroll={checkScroll}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUpOrLeave}
+                onMouseLeave={handleMouseUpOrLeave}
                 onWheel={(e) => {
-                  if (e.deltaY !== 0 && chipsRef.current) {
+                  if (chipsRef.current && e.deltaY !== 0) {
                     chipsRef.current.scrollLeft += e.deltaY;
                     checkScroll();
                   }
                 }}
                 style={{ 
                   flex: 1, 
-                  paddingLeft: canScrollLeft ? '32px' : '2px',
-                  paddingRight: canScrollRight ? '32px' : '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  padding: '4px 2px',
                   boxSizing: 'border-box'
                 }}
               >
                 <button
                   type="button"
-                  onClick={() => setSelectedAnimalId('all')}
+                  onClick={() => {
+                    if (!hasMovedRef.current) setSelectedAnimalId('all');
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -385,7 +420,9 @@ function FoundationMatchChat() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setSelectedAnimalId(isSelected ? 'all' : item.id)}
+                      onClick={() => {
+                        if (!hasMovedRef.current) setSelectedAnimalId(isSelected ? 'all' : item.id);
+                      }}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -407,7 +444,8 @@ function FoundationMatchChat() {
                       <img 
                         src={item.animal.images?.[0] || 'https://via.placeholder.com/60'} 
                         alt={item.animal.name}
-                        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                        draggable={false}
+                        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', pointerEvents: 'none' }}
                       />
                       <span>{item.animal.name}</span>
                       <span style={{ 
@@ -424,46 +462,23 @@ function FoundationMatchChat() {
                 })}
               </div>
 
-              {canScrollRight && (
-                <div style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '38px',
-                  background: 'linear-gradient(to left, #FFFFFF 70%, transparent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  zIndex: 10,
-                  pointerEvents: 'none'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => handleScrollChips('right')}
-                    aria-label="เลื่อนขวา"
-                    style={{
-                      pointerEvents: 'auto',
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FFFFFF',
-                      border: '1.5px solid #E5E7EB',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#374151',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      padding: 0
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = 'var(--primary, #D97706)'; e.currentTarget.style.color = 'var(--primary, #D97706)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#374151'; }}
-                  >
-                    <ChevronRight size={15} />
-                  </button>
-                </div>
+              {/* Right Scroll Button */}
+              {hasOverflow && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollChips('right')}
+                  disabled={!canScrollRight}
+                  aria-label="เลื่อนขวา"
+                  className="chip-scroll-btn"
+                  style={{
+                    boxShadow: canScrollRight ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    color: canScrollRight ? 'var(--primary, #D97706)' : '#D1D5DB',
+                    cursor: canScrollRight ? 'pointer' : 'default',
+                    opacity: canScrollRight ? 1 : 0.25
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
               )}
             </div>
           )}

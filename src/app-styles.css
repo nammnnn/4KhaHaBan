@@ -2805,12 +2805,36 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  scroll-behavior: smooth;
+  cursor: grab;
+  user-select: none;
+}
+.animal-filter-chips:active {
+  cursor: grabbing;
 }
 .animal-filter-chips::-webkit-scrollbar {
   display: none;
   height: 0;
   width: 0;
+}
+
+.chip-scroll-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+@media (max-width: 767px) {
+  .chip-scroll-btn {
+    display: none !important;
+  }
 }
 
 
