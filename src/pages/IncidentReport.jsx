@@ -31,8 +31,19 @@ function IncidentReport() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReport, setSubmittedReport] = useState(null);
 
-  // Statistics & History States
-  const [incidentStats, setIncidentStats] = useState({ inProgress: 0, resolved: 0 });
+  // Statistics & History States (cached in sessionStorage to prevent 0 flicker on mount)
+  const [incidentStats, setIncidentStats] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_incident_stats');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (typeof parsed?.inProgress === 'number' && typeof parsed?.resolved === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return null;
+  });
   const [userReports, setUserReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
 
@@ -57,6 +68,9 @@ function IncidentReport() {
       try {
         const stats = await api.getIncidentStats();
         setIncidentStats(stats);
+        try {
+          sessionStorage.setItem('cached_incident_stats', JSON.stringify(stats));
+        } catch (e) {}
       } catch (err) {
         console.warn('Error fetching incident stats:', err);
       }
@@ -377,15 +391,41 @@ function IncidentReport() {
             fontSize: '0.825rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626' }} />
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }} />
               <span style={{ color: '#4B5563' }}>กำลังช่วย:</span>
-              <strong style={{ color: '#DC2626' }}>{incidentStats.inProgress} เคส</strong>
+              <strong style={{ color: '#DC2626', minWidth: '36px', display: 'inline-flex', alignItems: 'center' }}>
+                {incidentStats?.inProgress != null ? (
+                  <motion.span
+                    key={incidentStats.inProgress}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {incidentStats.inProgress} เคส
+                  </motion.span>
+                ) : (
+                  <span className="skeleton" style={{ width: '34px', height: '14px', borderRadius: '4px', display: 'inline-block' }} />
+                )}
+              </strong>
             </div>
             <div style={{ width: '1px', height: '14px', backgroundColor: '#E5E7EB' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <CheckCircle2 size={14} color="#059669" />
+              <CheckCircle2 size={14} color="#059669" style={{ flexShrink: 0 }} />
               <span style={{ color: '#4B5563' }}>ช่วยสำเร็จ:</span>
-              <strong style={{ color: '#059669' }}>{incidentStats.resolved} เคส</strong>
+              <strong style={{ color: '#059669', minWidth: '36px', display: 'inline-flex', alignItems: 'center' }}>
+                {incidentStats?.resolved != null ? (
+                  <motion.span
+                    key={incidentStats.resolved}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {incidentStats.resolved} เคส
+                  </motion.span>
+                ) : (
+                  <span className="skeleton" style={{ width: '34px', height: '14px', borderRadius: '4px', display: 'inline-block' }} />
+                )}
+              </strong>
             </div>
           </div>
         </motion.div>
