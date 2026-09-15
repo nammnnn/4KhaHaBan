@@ -7,6 +7,60 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
 
+const renderMessageContent = (text, isMe, isApplication = false) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: '100%' }}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
+        if (/^[━─\-=_~]{3,}$/.test(trimmed)) {
+          return (
+            <div
+              key={idx}
+              style={{
+                height: '1px',
+                backgroundColor: isApplication ? '#fed7aa' : (isMe ? 'rgba(255,255,255,0.35)' : 'var(--gray-200, #E5E7EB)'),
+                margin: '10px 0',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}
+            />
+          );
+        }
+
+        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+        return (
+          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+            {parts.map((part, pIdx) => {
+              if (part.match(/^https?:\/\/[^\s]+$/)) {
+                return (
+                  <a
+                    key={pIdx}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: isMe ? '#ffffff' : '#2563eb',
+                      textDecoration: 'underline',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {part}
+                  </a>
+                );
+              }
+              return part;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const FoundationMessageItem = memo(function FoundationMessageItem({
   msg,
   isMe,
@@ -17,7 +71,7 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
   if (msg.sender === 'system') {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
-        <div style={{ padding: '6px 12px', backgroundColor: 'var(--success-light)', color: 'var(--success-dark)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600 }}>
+        <div style={{ padding: '6px 12px', backgroundColor: 'var(--success-light)', color: 'var(--success-dark)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center', maxWidth: '90%', wordBreak: 'break-word' }}>
           {msg.text}
         </div>
       </div>
@@ -37,21 +91,23 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
           style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} 
         />
       )}
-      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`}>
+      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`} style={{ minWidth: 0 }}>
         {isApplication ? (
           <div style={{
             background: '#ffffff',
             border: '1.5px solid #fed7aa',
             borderRadius: '16px',
-            padding: '16px',
+            padding: '14px',
             boxShadow: '0 4px 14px rgba(249, 115, 22, 0.08)',
-            maxWidth: '440px',
+            maxWidth: '100%',
             width: '100%',
-            textAlign: 'left'
+            boxSizing: 'border-box',
+            textAlign: 'left',
+            overflow: 'hidden'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #ffedd5', paddingBottom: '10px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <FileText size={18} />
                 </div>
                 <div>
@@ -64,34 +120,21 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
               <button 
                 type="button"
                 onClick={handleOpenUserModal}
-                style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, color: 'white', background: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, color: 'white', background: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
               >
                 ดูข้อมูลผู้สมัคร
               </button>
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-line', background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30' }}>
-              {msg.text}
+            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
+              {renderMessageContent(msg.text, isMe, true)}
             </div>
           </div>
         ) : (
-          <div className="message-bubble">
+          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
             )}
-            {msg.text && msg.text.trim() && (
-              <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                {msg.text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
-                  if (part.match(/(https?:\/\/[^\s]+)/)) {
-                    return (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: isMe ? '#ffffff' : '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}>
-                        {part}
-                      </a>
-                    );
-                  }
-                  return part;
-                })}
-              </p>
-            )}
+            {msg.text && msg.text.trim() && renderMessageContent(msg.text, isMe, false)}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
@@ -1415,59 +1458,59 @@ function FoundationChatRoom() {
         )}
       </div>
 
-      {/* Input Form */}
-      <div style={{ position: 'relative', padding: '10px 14px', borderTop: '1px solid var(--gray-200)', backgroundColor: 'white', flexShrink: 0 }}>
+      {/* Input */}
+      <div className="chat-input-wrapper" style={{ position: 'relative', padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF', flexShrink: 0, boxSizing: 'border-box', zIndex: 10 }}>
         {showAttachMenu && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '16px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', padding: '16px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid var(--gray-100)' }}>
+          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '14px 18px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid #E5E7EB' }}>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--success-light)', color: 'var(--success)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--success-light, #ECFDF5)', color: 'var(--success, #059669)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <FileText size={22} />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontWeight: 500 }}>เอกสาร</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>เอกสาร</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={handleShareLocation}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <MapPin size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={handleShareLocation}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <MapPin size={22} />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontWeight: 500 }}>ตำแหน่ง</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ตำแหน่ง</span>
             </div>
           </div>
         )}
-        
+
         {imagePreview && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '16px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 -4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center' }}>
-            <img src={imagePreview} alt="preview" style={{ height: '80px', borderRadius: '8px' }} />
-            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '0', right: '0', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <X size={14} />
+          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB' }}>
+            <img src={imagePreview} alt="preview" style={{ height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
+            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger, #DC2626)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+              <X size={13} />
             </button>
           </div>
         )}
-        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0, padding: '8px', backgroundColor: 'var(--surface-container-low, #fff8f6)', border: '1px solid var(--gray-200)', borderRadius: '9999px' }}>
-          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'var(--text-medium)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}>
-            <PlusCircle size={24} />
+        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, padding: '4px 6px', backgroundColor: 'var(--surface-container-low, #F9FAFB)', border: '1px solid var(--gray-200, #E5E7EB)', borderRadius: '24px' }}>
+          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PlusCircle size={22} />
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'var(--text-medium)' }}>
-            <ImageIcon size={24} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageIcon size={22} />
           </button>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} />
           <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} style={{ display: 'none' }} />
-          
+
           <input 
             type="text" 
             placeholder="พิมพ์ข้อความตอบกลับ..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={isSending}
-            style={{ flex: 1, padding: '8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark)' }}
+            style={{ flex: 1, padding: '6px 8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark, #111827)', fontSize: '16px', fontFamily: 'inherit' }}
           />
           <button 
             type="submit" 
-            className="send-btn"
+            className="btn-send"
             disabled={(!inputText.trim() && !imageFile) || isSending}
-            style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(249,168,38,0.25)' }}
+            style={{ background: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', minWidth: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(217,119,6,0.25)', opacity: (!inputText.trim() && !imageFile) || isSending ? 0.5 : 1 }}
           >
-            {isSending ? <Loader className="spin" size={20} /> : <Send size={20} />}
+            {isSending ? <Loader className="spin" size={18} /> : <Send size={16} />}
           </button>
         </form>
       </div>

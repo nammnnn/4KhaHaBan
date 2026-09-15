@@ -8,13 +8,67 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
 
+const renderMessageContent = (text, isMe, isApplication = false) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: '100%' }}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
+        if (/^[━─\-=_~]{3,}$/.test(trimmed)) {
+          return (
+            <div
+              key={idx}
+              style={{
+                height: '1px',
+                backgroundColor: isApplication ? '#fed7aa' : (isMe ? 'rgba(255,255,255,0.35)' : 'var(--gray-200, #E5E7EB)'),
+                margin: '10px 0',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}
+            />
+          );
+        }
+
+        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+        return (
+          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+            {parts.map((part, pIdx) => {
+              if (part.match(/^https?:\/\/[^\s]+$/)) {
+                return (
+                  <a
+                    key={pIdx}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: isMe ? '#ffffff' : '#2563eb',
+                      textDecoration: 'underline',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {part}
+                  </a>
+                );
+              }
+              return part;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
   const isApplication = msg.text && (msg.text.includes('ใบสมัครขอรับเลี้ยง') || msg.text.startsWith('\uD83D\uDCCB'));
 
   return (
     <div className={`message-row msg-${msg.sender}`} style={{ marginBottom: '16px' }}>
       {!isUser && <img src={avatarUrl} alt="avatar" className="message-avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />}
-      <div className={`message-wrapper msg-${msg.sender}`}>
+      <div className={`message-wrapper msg-${msg.sender}`} style={{ minWidth: 0 }}>
         {isApplication ? (
           <div style={{
             background: '#ffffff',
@@ -25,11 +79,12 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
             maxWidth: '100%',
             width: '100%',
             boxSizing: 'border-box',
-            textAlign: 'left'
+            textAlign: 'left',
+            overflow: 'hidden'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #ffedd5', paddingBottom: '10px', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <FileText size={18} />
                 </div>
                 <div>
@@ -40,29 +95,16 @@ const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-line', background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30' }}>
-              {msg.text}
+            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
+              {renderMessageContent(msg.text, isUser, true)}
             </div>
           </div>
         ) : (
-          <div className="message-bubble">
+          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
             )}
-            {msg.text && msg.text.trim() && (
-              <div style={{ whiteSpace: 'pre-line' }}>
-                {msg.text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
-                  if (part.match(/(https?:\/\/[^\s]+)/)) {
-                    return (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: isUser ? '#ffffff' : '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}>
-                        {part}
-                      </a>
-                    );
-                  }
-                  return part;
-                })}
-              </div>
-            )}
+            {msg.text && msg.text.trim() && renderMessageContent(msg.text, isUser, false)}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
