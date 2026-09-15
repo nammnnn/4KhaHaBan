@@ -285,32 +285,47 @@ function FoundationMatchChat() {
 
           {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
           {animalChips.length > 0 && (
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
               {canScrollLeft && (
-                <button
-                  type="button"
-                  onClick={() => handleScrollChips('left')}
-                  aria-label="เลื่อนซ้าย"
-                  style={{
-                    position: 'absolute',
-                    left: '-8px',
-                    zIndex: 10,
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E5E7EB',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.14)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#374151',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <ChevronLeft size={16} />
-                </button>
+                <div style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '38px',
+                  background: 'linear-gradient(to right, #FFFFFF 70%, transparent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  zIndex: 10,
+                  pointerEvents: 'none'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => handleScrollChips('left')}
+                    aria-label="เลื่อนซ้าย"
+                    style={{
+                      pointerEvents: 'auto',
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      border: '1.5px solid #E5E7EB',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      padding: 0
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = 'var(--primary, #D97706)'; e.currentTarget.style.color = 'var(--primary, #D97706)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#374151'; }}
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                </div>
               )}
 
               <div 
@@ -323,7 +338,12 @@ function FoundationMatchChat() {
                     checkScroll();
                   }
                 }}
-                style={{ flex: 1, padding: '2px 0 6px' }}
+                style={{ 
+                  flex: 1, 
+                  paddingLeft: canScrollLeft ? '32px' : '2px',
+                  paddingRight: canScrollRight ? '32px' : '2px',
+                  boxSizing: 'border-box'
+                }}
               >
                 <button
                   type="button"
@@ -405,30 +425,45 @@ function FoundationMatchChat() {
               </div>
 
               {canScrollRight && (
-                <button
-                  type="button"
-                  onClick={() => handleScrollChips('right')}
-                  aria-label="เลื่อนขวา"
-                  style={{
-                    position: 'absolute',
-                    right: '-8px',
-                    zIndex: 10,
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E5E7EB',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.14)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#374151',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <ChevronRight size={16} />
-                </button>
+                <div style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '38px',
+                  background: 'linear-gradient(to left, #FFFFFF 70%, transparent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  zIndex: 10,
+                  pointerEvents: 'none'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => handleScrollChips('right')}
+                    aria-label="เลื่อนขวา"
+                    style={{
+                      pointerEvents: 'auto',
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      border: '1.5px solid #E5E7EB',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      padding: 0
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F9FAFB'; e.currentTarget.style.borderColor = 'var(--primary, #D97706)'; e.currentTarget.style.color = 'var(--primary, #D97706)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#374151'; }}
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
               )}
             </div>
           )}
