@@ -667,7 +667,12 @@ const AdminDashboard = () => {
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         
         {/* Header Area with Live Pulse & Sync Action */}
-        <div className="admin-header-bar">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="admin-header-bar"
+        >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-dark)', letterSpacing: '-0.02em' }}>
@@ -692,10 +697,15 @@ const AdminDashboard = () => {
             <RotateCcw size={15} className={loading ? 'spin' : ''} />
             <span>ซิงค์ข้อมูล</span>
           </button>
-        </div>
+        </motion.div>
 
         {/* KPI Stats Overview (Modern Cards) */}
-        <div className="admin-kpi-grid">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="admin-kpi-grid"
+        >
           <div className="admin-kpi-card">
             <div className="admin-kpi-icon-wrap" style={{ background: '#F0F9FF' }}>
               <Users size={20} color="#0284C7" />
@@ -731,10 +741,15 @@ const AdminDashboard = () => {
             )}
             <span className="admin-kpi-label">ผู้ดูแลระบบ</span>
           </div>
-        </div>
+        </motion.div>
         
         {/* Action Tabs: Horizontal Scrollable Segmented Bar on Mobile, Grid on Desktop */}
-        <div className="admin-tab-nav">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.08 }}
+          className="admin-tab-nav"
+        >
           {[
             { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} />, color: '#0284C7' },
             { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length, color: '#D97706' },
@@ -795,7 +810,7 @@ const AdminDashboard = () => {
               </button>
             );
           })}
-        </div>
+        </motion.div>
 
       {loading ? (
         activeTab === 'users' ? <UsersTableSkeleton /> :

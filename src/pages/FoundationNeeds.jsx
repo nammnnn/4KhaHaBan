@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Package, 
   Plus, 
@@ -217,7 +218,12 @@ export default function FoundationNeeds() {
       <div style={{ maxWidth: '840px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link
               to="/foundation"
@@ -267,20 +273,25 @@ export default function FoundationNeeds() {
             <Plus size={18} />
             เพิ่มสิ่งของที่ต้องการ
           </button>
-        </div>
+        </motion.div>
 
         {/* Shipping Address Notice Banner */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          padding: '16px 20px',
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            border: '1px solid #E5E7EB',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '14px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}
+        >
           <div style={{
             width: '38px',
             height: '38px',
@@ -324,10 +335,15 @@ export default function FoundationNeeds() {
               <strong>ที่อยู่จัดส่ง:</strong> {foundationInfo?.address || 'สามารถอัปเดตที่อยู่จัดส่งได้ที่เมนูโปรไฟล์มูลนิธิ'}
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Quick Presets Bar */}
-        <div style={{ marginBottom: '24px' }}>
+        {/* Quick Suggestion Presets */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.08 }}
+          style={{ marginBottom: '24px' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
             <Sparkles size={16} color="#D97706" />
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>กดเลือกของใช้ยอดนิยมอย่างรวดเร็ว:</span>
@@ -365,16 +381,21 @@ export default function FoundationNeeds() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Category Filter Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          overflowX: 'auto',
-          paddingBottom: '8px',
-          marginBottom: '20px'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
+          style={{
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            paddingBottom: '8px',
+            marginBottom: '20px'
+          }}
+        >
           <button
             onClick={() => setSelectedCategory('all')}
             style={{
@@ -413,19 +434,24 @@ export default function FoundationNeeds() {
               </button>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* Needs Item Cards */}
         {loading ? (
           <FoundationNeedsSkeleton />
         ) : filteredNeeds.length === 0 ? (
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E5E7EB',
-            padding: '48px 24px',
-            textAlign: 'center'
-          }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.15 }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E5E7EB',
+              padding: '48px 24px',
+              textAlign: 'center'
+            }}
+          >
             <Package size={44} color="#9CA3AF" style={{ margin: '0 auto 12px' }} />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#111827', margin: '0 0 6px 0' }}>
               ยังไม่มีรายการสิ่งของในหมวดหมู่นี้
@@ -448,9 +474,14 @@ export default function FoundationNeeds() {
             >
               เพิ่มสิ่งของแรก
             </button>
-          </div>
+          </motion.div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.15 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
             {filteredNeeds.map(item => {
               const currentUrgency = URGENCY_LEVELS.find(u => u.id === item.urgency) || URGENCY_LEVELS[2];
               const currentCategory = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[0];
@@ -573,7 +604,7 @@ export default function FoundationNeeds() {
                 </div>
               );
             })}
-          </div>
+          </motion.div>
         )}
 
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -239,7 +240,12 @@ function AnimalProfile() {
         <div className="animal-profile-grid">
           
           {/* Left Column: Visual Gallery & Shelter Card */}
-          <div className="animal-profile-col-media">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="animal-profile-col-media"
+          >
             <div className="animal-gallery-showcase">
               <img 
                 src={images[activeImageIndex]} 
@@ -298,10 +304,15 @@ function AnimalProfile() {
 
             {/* Shelter Card on Desktop */}
             {renderShelterCard(true)}
-          </div>
+          </motion.div>
 
           {/* Right Column: Information, Story & Adoption Actions */}
-          <div className="animal-profile-col-info">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.05 }}
+            className="animal-profile-col-info"
+          >
             {/* Header: Name, Age, Distance */}
             <div className="animal-info-header">
               <div className="animal-title-row">
@@ -380,7 +391,7 @@ function AnimalProfile() {
               {renderAdoptButton()}
             </div>
 
-          </div>
+          </motion.div>
         </div>
       </main>
 

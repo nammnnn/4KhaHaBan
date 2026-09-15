@@ -603,12 +603,17 @@ export default function UserProfile() {
         />
 
         {/* Profile Header */}
-        <section style={{ 
-          background: '#FFFFFF',
-          borderRadius: '16px', padding: '24px 32px', display: 'flex', alignItems: 'center', 
-          gap: '24px', marginBottom: '24px', border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-        }}>
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ 
+            background: '#FFFFFF',
+            borderRadius: '16px', padding: '24px 32px', display: 'flex', alignItems: 'center', 
+            gap: '24px', marginBottom: '24px', border: '1px solid #E5E7EB',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+          }}
+        >
           <div style={{ position: 'relative' }}>
             <div style={{ width: '88px', height: '88px', borderRadius: '50%', overflow: 'hidden', border: '3px solid #E5E7EB', backgroundColor: 'var(--gray-100)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               {isUploadingAvatar ? (
@@ -652,15 +657,20 @@ export default function UserProfile() {
               )}
             </div>
           </div>
-        </section>
+        </motion.section>
 
 
         {/* Menu List */}
-        <section style={{ 
-          background: '#FFFFFF',
-          borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '20px'
-        }}>
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          style={{ 
+            background: '#FFFFFF',
+            borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '20px'
+          }}
+        >
           {menuItems.map((item, index) => (
             <div
               key={item.key}
@@ -702,10 +712,13 @@ export default function UserProfile() {
               <ChevronRight size={18} color="var(--gray-300)" />
             </div>
           ))}
-        </section>
+        </motion.section>
 
         {/* Logout Button */}
-        <button
+        <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
           onClick={handleLogout}
           style={{
             width: '100%', height: '44px', backgroundColor: '#FFFFFF', color: '#DC2626',
@@ -718,7 +731,7 @@ export default function UserProfile() {
         >
           <LogOut size={16} />
           ออกจากระบบ
-        </button>
+        </motion.button>
 
       </div>
 

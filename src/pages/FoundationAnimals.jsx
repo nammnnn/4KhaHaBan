@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { PlusCircle, Search, Edit2, Trash2, ChevronLeft, Loader2, Image as ImageIcon } from 'lucide-react';
@@ -87,7 +88,12 @@ const FoundationAnimals = () => {
       <div style={{ maxWidth: '820px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link
               to="/foundation"
@@ -142,10 +148,15 @@ const FoundationAnimals = () => {
             <PlusCircle size={18} />
             <span>เพิ่มสัตว์หาบ้าน</span>
           </Link>
-        </div>
+        </motion.div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}
+        >
           {/* Search */}
           <div style={{ flex: '1 1 240px', position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9CA3AF' }} />
@@ -214,20 +225,25 @@ const FoundationAnimals = () => {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Animal List */}
         {loading ? (
           <FoundationAnimalsSkeleton />
         ) : filteredAnimals.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '56px 20px',
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-          }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            style={{
+              textAlign: 'center',
+              padding: '56px 20px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}
+          >
             <div style={{
               width: '48px',
               height: '48px',
@@ -245,9 +261,14 @@ const FoundationAnimals = () => {
             <p style={{ margin: 0, color: '#6B7280', fontSize: '0.85rem' }}>
               ลองค้นหาด้วยคำอื่น หรือกดปุ่ม "เพิ่มสัตว์หาบ้าน" เพื่อสร้างโปรไฟล์ใหม่
             </p>
-          </div>
+          </motion.div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
             {filteredAnimals.map(animal => (
               <div
                 key={animal.id}
@@ -396,7 +417,7 @@ const FoundationAnimals = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </motion.div>
         )}
 
       </div>

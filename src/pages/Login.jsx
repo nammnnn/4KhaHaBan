@@ -130,7 +130,12 @@ const Login = () => {
     <div className="login-page-container">
 
       {/* Left Panel - Brand Showcase (Desktop) */}
-      <div className="login-desktop-showcase">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="login-desktop-showcase"
+      >
         <div className="login-showcase-inner">
           
           {/* Logo Badge */}
@@ -172,11 +177,16 @@ const Login = () => {
           </div>
 
         </div>
-      </div>
+      </motion.div>
 
       {/* Right Panel - Auth Form */}
       <div className="login-form-panel">
-        <div className="login-form-card">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="login-form-card"
+        >
 
           {/* Mobile Topbar */}
           <div className="login-mobile-topbar">
@@ -516,7 +526,7 @@ const Login = () => {
             )}
           </div>
 
-        </div>
+        </motion.div>
       </div>
     </div>
   );

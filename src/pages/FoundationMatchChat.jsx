@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
@@ -230,7 +231,13 @@ function FoundationMatchChat() {
       
       {/* List Panel */}
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
-        <div className="list-header" style={{ padding: '20px 20px 0' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="list-header"
+          style={{ padding: '20px 20px 0' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h1 className="page-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-dark, #111827)' }}>
               แชทพูดคุย
@@ -478,9 +485,15 @@ function FoundationMatchChat() {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
         
-        <div className="matches-list" style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="matches-list"
+          style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}
+        >
           {filteredMatches.length === 0 ? (
             <div className="empty-state" style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
@@ -626,7 +639,7 @@ function FoundationMatchChat() {
               );
             })
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Chat Panel */}

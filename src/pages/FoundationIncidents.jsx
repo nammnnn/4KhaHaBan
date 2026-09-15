@@ -248,19 +248,24 @@ export default function FoundationIncidents() {
         </div>
 
         {/* Title Card */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E5E7EB',
-          padding: '20px 24px',
-          marginBottom: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E5E7EB',
+            padding: '20px 24px',
+            marginBottom: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{
               width: '46px',
@@ -320,23 +325,28 @@ export default function FoundationIncidents() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Filter Pills - Exactly 5 tabs matching AdminDashboard, strictly single-line nowrap */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
-          marginBottom: '24px',
-          backgroundColor: '#F3F4F6',
-          padding: '4px',
-          borderRadius: '10px',
-          width: 'fit-content',
-          maxWidth: '100%',
-          scrollbarWidth: 'none',
-          WebkitOverflowScrolling: 'touch'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          style={{
+            display: 'flex',
+            gap: '6px',
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            marginBottom: '24px',
+            backgroundColor: '#F3F4F6',
+            padding: '4px',
+            borderRadius: '10px',
+            width: 'fit-content',
+            maxWidth: '100%',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {[
             { id: 'all', label: 'ทั้งหมด', count: incidents.length },
             { id: 'pending', label: 'รอดำเนินการ', count: pendingCount, highlight: pendingCount > 0 },
@@ -381,20 +391,30 @@ export default function FoundationIncidents() {
               </span>
             </button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Content List */}
         {loading ? (
           <FoundationIncidentsSkeleton />
         ) : filtered.length === 0 ? (
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '60px 20px', textAlign: 'center' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '60px 20px', textAlign: 'center' }}
+          >
             <AlertTriangle size={36} color="#9CA3AF" style={{ margin: '0 auto 12px' }} />
             <p style={{ margin: 0, color: '#6B7280', fontSize: '0.95rem' }}>
               {filter === 'my_cases' ? 'คุณยังไม่มีเคสที่รับผิดชอบอยู่ขณะนี้' : 'ไม่พบรายการแจ้งเหตุกู้ภัยในสถานะนี้'}
             </p>
-          </div>
+          </motion.div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+          >
             {filtered.map(inc => {
               const hasCoords = Boolean(inc.latitude && inc.longitude);
               const gmapsUrl = hasCoords 
@@ -788,7 +808,7 @@ export default function FoundationIncidents() {
                 </div>
               );
             })}
-          </div>
+          </motion.div>
         )}
 
       </div>

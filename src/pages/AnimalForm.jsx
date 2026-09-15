@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { ChevronLeft, Save, Upload, X, Loader2, Image as ImageIcon, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
@@ -366,7 +367,12 @@ const AnimalForm = () => {
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}
+        >
           <button
             type="button"
             onClick={() => {
@@ -403,7 +409,7 @@ const AnimalForm = () => {
               กรอกข้อมูลเพื่อแสดงบนฟีดค้นหาและแมตช์กับผู้รับเลี้ยง
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {errorMsg && (
           <div style={{
@@ -441,7 +447,10 @@ const AnimalForm = () => {
           </div>
         )}
 
-        <form
+        <motion.form
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.08 }}
           onSubmit={handleSubmit}
           style={{
             backgroundColor: '#FFFFFF',
@@ -812,7 +821,7 @@ const AnimalForm = () => {
               )}
             </button>
           </div>
-        </form>
+        </motion.form>
       </div>
     </div>
   );

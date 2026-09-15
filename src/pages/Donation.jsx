@@ -290,17 +290,22 @@ function Donation() {
   return (
     <div className="page-container donation-page" style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
       {/* Top Header Card */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        padding: '20px 24px',
-        marginBottom: '20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px'
-      }}>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E5E7EB',
+          padding: '20px 24px',
+          marginBottom: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px'
+        }}
+      >
         <div style={{
           width: '46px',
           height: '46px',
@@ -322,10 +327,15 @@ function Donation() {
             ร่วมส่งต่อความรักและความช่วยเหลือให้กับพวกพ้อง 4 ขาจรจัดผ่านการบริจาคเงินหรือสิ่งของจำเป็น
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Mobile Segmented Tabs (< 1024px) */}
-      <div className="mobile-donation-tabs">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.05 }}
+        className="mobile-donation-tabs"
+      >
         <button 
           type="button"
           className={`mobile-tab-btn ${activeMobileTab === 'money' ? 'active' : ''}`}
@@ -342,13 +352,18 @@ function Donation() {
           <Package size={15} />
           <span>บริจาคของใช้</span>
         </button>
-      </div>
+      </motion.div>
 
       {/* Grid Layout of Donation Cards */}
       <div className="donation-grid">
         
         {/* CARD 1: DONATE MONEY */}
-        <div className={`donation-card-premium ${activeMobileTab !== 'money' ? 'mobile-hidden' : ''}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
+          className={`donation-card-premium ${activeMobileTab !== 'money' ? 'mobile-hidden' : ''}`}
+        >
           <div className="card-header-premium">
             <div className="icon-badge" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
               <Heart size={22} fill="#D97706" />
@@ -478,10 +493,15 @@ function Donation() {
               บริจาคช่วยเหลือจำนวน ฿ {currentAmount.toLocaleString()}
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 2: DONATE ITEMS */}
-        <div className={`donation-card-premium ${activeMobileTab !== 'items' ? 'mobile-hidden' : ''}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.15 }}
+          className={`donation-card-premium ${activeMobileTab !== 'items' ? 'mobile-hidden' : ''}`}
+        >
           <div className="card-header-premium">
             <div className="icon-badge" style={{ backgroundColor: '#ECFDF5', color: '#059669' }}>
               <Package size={22} color="#059669" />
@@ -578,7 +598,7 @@ function Donation() {
               ดูรายการสิ่งของ & ที่อยู่จัดส่ง
             </button>
           </div>
-        </div>
+        </motion.div>
 
       </div>
 

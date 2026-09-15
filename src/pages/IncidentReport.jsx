@@ -238,17 +238,22 @@ function IncidentReport() {
       <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%' }}>
         
         {/* Top Header Card */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E5E7EB',
-          padding: '20px 24px',
-          marginBottom: '16px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E5E7EB',
+            padding: '20px 24px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}
+        >
           <div style={{
             width: '46px',
             height: '46px',
@@ -270,17 +275,22 @@ function IncidentReport() {
               พบเจอน้องหมาหรือน้องแมวเจ็บป่วย บาดเจ็บ หรือต้องการความช่วยเหลือ ปักหมุดแจ้งทีมงานได้ทันที
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Tab Switcher & Live Stats Row (Left Tabs + Right Stats) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '20px'
+          }}
+        >
           {/* Navigation Tabs between Form & My History */}
           <div style={{
             display: 'flex',
@@ -378,7 +388,7 @@ function IncidentReport() {
               <strong style={{ color: '#059669' }}>{incidentStats.resolved} เคส</strong>
             </div>
           </div>
-        </div>
+        </motion.div>
         {activeTab === 'form' ? (
           <>
             {/* Submitted Success Notice Modal / Card */}
@@ -458,13 +468,18 @@ function IncidentReport() {
               </motion.div>
             ) : (
               /* Emergency Reporting Form */
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E5E7EB',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                overflow: 'hidden'
-              }}>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.1 }}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E5E7EB',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  overflow: 'hidden'
+                }}
+              >
                 {/* 3 Step Minimal Stepper Header */}
                 <div style={{
                   backgroundColor: '#FFFFFF',
@@ -858,19 +873,24 @@ function IncidentReport() {
                     {isSubmitting ? 'กำลังส่งข้อมูลแจ้งเหตุ...' : 'ส่งข้อมูลแจ้งเหตุกู้ภัยด่วน'}
                   </button>
                 </form>
-              </div>
+              </motion.div>
             )}
           </>
         ) : (
           /* User Reports History Tab */
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '20px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-            overflow: 'hidden',
-            padding: '20px'
-          }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+              overflow: 'hidden',
+              padding: '20px'
+            }}
+          >
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1F2937', margin: '0 0 16px' }}>
               ประวัติเคสที่คุณเคยแจ้ง
             </h2>
@@ -1017,7 +1037,7 @@ function IncidentReport() {
                 })}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
       </div>
