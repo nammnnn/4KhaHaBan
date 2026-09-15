@@ -655,10 +655,20 @@ function FoundationChatRoom() {
   }
 
   return (
-    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="chat-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+      <div className="chat-header" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 14px',
+        borderBottom: '1px solid var(--gray-200, #E5E7EB)',
+        backgroundColor: '#FFFFFF',
+        flexShrink: 0,
+        zIndex: 10,
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           <button 
             className="chat-back-btn" 
             onClick={() => navigate('/foundation/matches')} 
@@ -667,22 +677,22 @@ function FoundationChatRoom() {
             <ChevronLeft size={20} />
           </button>
           
-          <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, margin: 0 }}>
+          <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, margin: 0, flex: 1 }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <img 
                 src={adopterAvatar} 
                 alt={adopterName} 
                 className="chat-avatar" 
                 onError={() => setAdopterImgErr(true)}
-                style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
+                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
               />
               <span style={{ position: 'absolute', bottom: '1px', right: '1px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', border: '2px solid #FFFFFF' }}></span>
             </div>
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {adopterName}
               </h2>
-              <p style={{ fontSize: '0.78rem', color: '#6B7280', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <p style={{ fontSize: '0.75rem', color: '#059669', margin: '1px 0 0', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
                 กำลังออนไลน์
               </p>
             </div>
@@ -739,99 +749,114 @@ function FoundationChatRoom() {
 
       {/* Action Bar for Pending / Approved / Rejected Matches */}
       {match && match.status === 'pending' && (
-        <div className="pending-approval-card">
-          <div className="pending-card-content">
-            <div className="pending-icon">
-              <Clock size={20} />
+        <div className="pending-approval-card" style={{ margin: '8px 12px', padding: '12px', borderRadius: '12px', boxSizing: 'border-box', flexShrink: 0 }}>
+          <div className="pending-card-content" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div className="pending-icon" style={{ width: '32px', height: '32px', minWidth: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock size={16} />
             </div>
-            <div className="pending-text">
-              <h4>รอการพิจารณาอนุมัติ</h4>
-              <p>กรุณาตรวจสอบข้อมูลก่อนอนุมัติให้ผู้สนใจเริ่มสนทนา</p>
+            <div className="pending-text" style={{ flex: 1, minWidth: 0 }}>
+              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700 }}>รอการพิจารณาอนุมัติ</h4>
+              <p style={{ margin: '1px 0 0', fontSize: '0.75rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>ตรวจสอบข้อมูลก่อนอนุมัติให้เริ่มสนทนา</p>
             </div>
           </div>
-          <div className="pending-actions" style={{ flexDirection: 'column', gap: '8px' }}>
-            <button className="pending-btn" style={{ width: '100%', background: 'var(--gray-100)', color: 'var(--text-dark)' }} onClick={handleOpenUserModal}>
-              <Info size={18} /> ตรวจสอบข้อมูลผู้ขอรับเลี้ยง
+          <div className="pending-actions" style={{ display: 'flex', gap: '6px' }}>
+            <button className="pending-btn" style={{ flex: 1, padding: '6px 10px', fontSize: '0.78rem', background: 'var(--gray-100)', color: 'var(--text-dark)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }} onClick={handleOpenUserModal}>
+              <Info size={14} /> ดูข้อมูลผู้ขอ
             </button>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="pending-btn decline" onClick={handleDecline}>
-                <XCircle size={18} /> ปฏิเสธ
-              </button>
-              <button className="pending-btn approve" onClick={handleApprove}>
-                <CheckCircle size={18} /> อนุมัติ
-              </button>
-            </div>
+            <button className="pending-btn decline" style={{ padding: '6px 10px', fontSize: '0.78rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleDecline}>
+              <XCircle size={14} /> ปฏิเสธ
+            </button>
+            <button className="pending-btn approve" style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleApprove}>
+              <CheckCircle size={14} /> อนุมัติ
+            </button>
           </div>
         </div>
       )}
 
       {match && match.status === 'approved' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#ECFDF5', borderBottom: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontSize: '0.84rem', fontWeight: 600 }}>
-            <CheckCircle size={18} color="#059669" />
-            <span>อนุมัติคำขอรับเลี้ยงแล้ว • พูดคุยและนัดหมายวันส่งมอบได้ในแชทนี้</span>
+        <div style={{
+          padding: '8px 14px',
+          backgroundColor: '#ECFDF5',
+          borderBottom: '1px solid #A7F3D0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          flexWrap: 'wrap',
+          boxSizing: 'border-box',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#047857', fontSize: '0.8rem', fontWeight: 600, minWidth: 0, flex: '1 1 auto' }}>
+            <CheckCircle size={16} color="#059669" style={{ flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              อนุมัติแล้ว • นัดหมายส่งมอบในแชทนี้
+            </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <button 
               type="button"
               onClick={handleDecline}
+              title="ยกเลิกคำขอรับเลี้ยง"
               style={{ 
-                padding: '6px 13px', fontSize: '0.82rem', fontWeight: 600, 
+                padding: '5px 10px', fontSize: '0.78rem', fontWeight: 600, 
                 color: '#DC2626', backgroundColor: '#FFFFFF', border: '1px solid #FCA5A5', 
                 borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-                alignItems: 'center', gap: '6px', transition: 'all 0.15s ease' 
+                alignItems: 'center', gap: '4px', transition: 'all 0.15s ease' 
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
             >
-              <XCircle size={15} /> ยกเลิกคำขอรับเลี้ยง
+              <XCircle size={14} />
+              <span>ยกเลิก</span>
             </button>
             <button 
               type="button"
               onClick={() => setShowHandoverModal(true)}
               style={{ 
-                padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, 
+                padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, 
                 color: '#FFFFFF', backgroundColor: '#15803D', border: 'none', 
                 borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-                alignItems: 'center', gap: '6px', boxShadow: '0 1px 3px rgba(21,128,61,0.2)' 
+                alignItems: 'center', gap: '5px', boxShadow: '0 1px 3px rgba(21,128,61,0.2)' 
               }}
             >
-              <Check size={16} /> ยืนยันการส่งมอบสัตว์เลี้ยง
+              <Check size={15} />
+              <span>ยืนยันการส่งมอบ</span>
             </button>
           </div>
         </div>
       )}
 
       {match && (match.status === 'adopted' || match.status === 'completed') && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803D', fontSize: '0.84rem', fontWeight: 600 }}>
-            <CheckCircle2 size={18} color="#16A34A" />
-            <span>ส่งมอบสัตว์เลี้ยงสำเร็จแล้ว • น้องอยู่กับผู้รับเลี้ยงแล้ว (ติดตามสถานะทุก 2 เดือน)</span>
+        <div style={{ padding: '8px 14px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', fontSize: '0.8rem', fontWeight: 600 }}>
+            <CheckCircle2 size={16} color="#16A34A" style={{ flexShrink: 0 }} />
+            <span>ส่งมอบสำเร็จแล้ว • ติดตามสถานะสุขภาวะ</span>
           </div>
           <button 
             type="button"
             onClick={() => navigate(`/adoption/timeline/${matchId}`)}
             style={{ 
-              padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700, 
+              padding: '5px 10px', fontSize: '0.78rem', fontWeight: 700, 
               color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0', 
               borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-              alignItems: 'center', gap: '6px' 
+              alignItems: 'center', gap: '4px' 
             }}
           >
-            <Clock size={16} /> ประวัติการติดตามสถานะ
+            <Clock size={14} />
+            <span>ประวัติติดตาม</span>
           </button>
         </div>
       )}
 
       {match && match.status === 'rejected' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#B91C1C', fontSize: '0.85rem', fontWeight: 600 }}>
-            <XCircle size={18} color="#DC2626" />
-            <span>ปฏิเสธคำขอรับเลี้ยงนี้แล้ว • บันทึกผลการพิจารณาเรียบร้อยแล้ว</span>
+        <div style={{ padding: '8px 14px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#B91C1C', fontSize: '0.8rem', fontWeight: 600 }}>
+            <XCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
+            <span>ปฏิเสธคำขอรับเลี้ยงแล้ว</span>
           </div>
           <button 
             onClick={handleApprove}
-            style={{ padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ padding: '5px 10px', fontSize: '0.78rem', fontWeight: 600, color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             เปลี่ยนใจอนุมัติ
           </button>
@@ -1352,8 +1377,7 @@ function FoundationChatRoom() {
       </AnimatePresence>
 
       {/* Messages */}
-      {/* Messages */}
-      <div className="chat-messages" style={{ padding: '24px 24px' }}>
+      <div className="chat-messages" style={{ padding: '14px 14px', flex: 1, overflowY: 'auto' }}>
         {messages.length === 0 && (
           <div className="chat-empty-state">
             <p>เริ่มบทสนทนากับผู้สนใจรับเลี้ยง</p>
@@ -1392,7 +1416,7 @@ function FoundationChatRoom() {
       </div>
 
       {/* Input Form */}
-      <div style={{ position: 'relative', padding: '16px', borderTop: '1px solid var(--gray-200)', backgroundColor: 'white' }}>
+      <div style={{ position: 'relative', padding: '10px 14px', borderTop: '1px solid var(--gray-200)', backgroundColor: 'white', flexShrink: 0 }}>
         {showAttachMenu && (
           <div style={{ position: 'absolute', bottom: '100%', left: '16px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', padding: '16px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid var(--gray-100)' }}>
 

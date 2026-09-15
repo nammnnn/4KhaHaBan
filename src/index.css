@@ -190,10 +190,14 @@ button {
   }
   .app-container:has(.chat-room-container) .main-content,
   .app-container:has(.animal-profile-page) .main-content {
+    padding: 0 !important;
     padding-bottom: 0 !important;
+    margin: 0 !important;
   }
   .app-container:has(.chat-room-container) .main-content {
     overflow: hidden !important;
+    height: 100% !important;
+    height: 100dvh !important;
   }
 }
 

@@ -91,7 +91,7 @@ function MatchChat() {
   const rejectedCount = matches.filter(m => m.status === 'rejected').length;
 
   return (
-    <div className="page-container match-page matches-split-view">
+    <div className="match-page matches-split-view">
       
       {/* List Panel */}
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>

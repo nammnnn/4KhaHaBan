@@ -699,21 +699,13 @@ export const api = {
     // 2. Clear unread flag in Supabase
     if (supabase) {
       try {
-        const updateFields = { unread: 0 };
-        if (role === 'shelter' || role === 'foundation') {
-          updateFields.unread_shelter = 0;
-        } else {
-          updateFields.unread_user = 0;
-        }
-
         const { error } = await supabase
           .from('matches')
-          .update(updateFields)
-          .eq('id', matchId)
-          .gt('unread', 0);
+          .update({ unread: 0 })
+          .eq('id', matchId);
 
         if (error) {
-          await supabase.from('matches').update({ unread: 0 }).eq('id', matchId).gt('unread', 0);
+          console.warn('Could not mark match as read in DB:', error.message);
         }
       } catch (err) {
         console.warn('Could not mark match as read in DB:', err);
