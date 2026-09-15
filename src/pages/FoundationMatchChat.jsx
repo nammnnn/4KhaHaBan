@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
-import { Heart, Clock, Loader, ArrowLeft, Search, XCircle, CheckCircle, PawPrint, User } from 'lucide-react';
+import { Heart, Clock, Loader, ArrowLeft, Search, XCircle, CheckCircle, PawPrint, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
 import FoundationChatRoom from './FoundationChatRoom';
 
@@ -20,6 +20,18 @@ function FoundationMatchChat() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('active'); // 'active', 'pending', or 'rejected'
   const [selectedAnimalId, setSelectedAnimalId] = useState('all');
+
+  const chipsRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    if (chipsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = chipsRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    }
+  }, []);
 
   // Reset selected animal filter whenever active tab changes
   useEffect(() => {
@@ -108,6 +120,23 @@ function FoundationMatchChat() {
       }))
       .filter(item => item.animal);
   }, [matches, activeTab, animalData]);
+
+  useEffect(() => {
+    checkScroll();
+    const handleResize = () => checkScroll();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [checkScroll, animalChips]);
+
+  const handleScrollChips = (direction) => {
+    if (chipsRef.current) {
+      chipsRef.current.scrollBy({
+        left: direction === 'left' ? -200 : 200,
+        behavior: 'smooth'
+      });
+      setTimeout(checkScroll, 220);
+    }
+  };
 
   if (loading) {
     return <ChatListSkeleton />;
@@ -256,84 +285,151 @@ function FoundationMatchChat() {
 
           {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
           {animalChips.length > 0 && (
-            <div className="animal-filter-chips">
-              <button
-                type="button"
-                onClick={() => setSelectedAnimalId('all')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  border: selectedAnimalId === 'all' ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
-                  backgroundColor: selectedAnimalId === 'all' ? 'var(--primary, #D97706)' : '#FFFFFF',
-                  color: selectedAnimalId === 'all' ? '#FFFFFF' : '#4B5563',
-                  boxShadow: selectedAnimalId === 'all' ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
-                  transition: 'all 0.15s ease',
-                  flexShrink: 0
-                }}
-              >
-                <PawPrint size={13} />
-                <span>ทั้งหมด</span>
-                <span style={{ 
-                  fontSize: '0.72rem', 
-                  padding: '1px 6px', 
-                  borderRadius: '10px', 
-                  backgroundColor: selectedAnimalId === 'all' ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                  color: selectedAnimalId === 'all' ? '#FFFFFF' : '#6B7280'
-                }}>
-                  {activeTab === 'active' ? activeCount : activeTab === 'pending' ? pendingCount : rejectedCount}
-                </span>
-              </button>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+              {canScrollLeft && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollChips('left')}
+                  aria-label="เลื่อนซ้าย"
+                  style={{
+                    position: 'absolute',
+                    left: '-8px',
+                    zIndex: 10,
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.14)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+              )}
 
-              {animalChips.map(item => {
-                const isSelected = selectedAnimalId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedAnimalId(isSelected ? 'all' : item.id)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '4px 11px 4px 5px',
-                      borderRadius: '20px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      border: isSelected ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
-                      backgroundColor: isSelected ? 'var(--primary, #D97706)' : '#FFFFFF',
-                      color: isSelected ? '#FFFFFF' : '#4B5563',
-                      boxShadow: isSelected ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
-                      transition: 'all 0.15s ease',
-                      flexShrink: 0
-                    }}
-                  >
-                    <img 
-                      src={item.animal.images?.[0] || 'https://via.placeholder.com/60'} 
-                      alt={item.animal.name}
-                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <span>{item.animal.name}</span>
-                    <span style={{ 
-                      fontSize: '0.72rem', 
-                      padding: '1px 6px', 
-                      borderRadius: '10px', 
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                      color: isSelected ? '#FFFFFF' : '#6B7280'
-                    }}>
-                      {item.count}
-                    </span>
-                  </button>
-                );
-              })}
+              <div 
+                ref={chipsRef}
+                className="animal-filter-chips"
+                onScroll={checkScroll}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && chipsRef.current) {
+                    chipsRef.current.scrollLeft += e.deltaY;
+                    checkScroll();
+                  }
+                }}
+                style={{ flex: 1, padding: '2px 0 6px' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnimalId('all')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    border: selectedAnimalId === 'all' ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
+                    backgroundColor: selectedAnimalId === 'all' ? 'var(--primary, #D97706)' : '#FFFFFF',
+                    color: selectedAnimalId === 'all' ? '#FFFFFF' : '#4B5563',
+                    boxShadow: selectedAnimalId === 'all' ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0
+                  }}
+                >
+                  <PawPrint size={13} />
+                  <span>ทั้งหมด</span>
+                  <span style={{ 
+                    fontSize: '0.72rem', 
+                    padding: '1px 6px', 
+                    borderRadius: '10px', 
+                    backgroundColor: selectedAnimalId === 'all' ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
+                    color: selectedAnimalId === 'all' ? '#FFFFFF' : '#6B7280'
+                  }}>
+                    {activeTab === 'active' ? activeCount : activeTab === 'pending' ? pendingCount : rejectedCount}
+                  </span>
+                </button>
+
+                {animalChips.map(item => {
+                  const isSelected = selectedAnimalId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedAnimalId(isSelected ? 'all' : item.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 11px 4px 5px',
+                        borderRadius: '20px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        border: isSelected ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
+                        backgroundColor: isSelected ? 'var(--primary, #D97706)' : '#FFFFFF',
+                        color: isSelected ? '#FFFFFF' : '#4B5563',
+                        boxShadow: isSelected ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
+                        transition: 'all 0.15s ease',
+                        flexShrink: 0
+                      }}
+                    >
+                      <img 
+                        src={item.animal.images?.[0] || 'https://via.placeholder.com/60'} 
+                        alt={item.animal.name}
+                        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                      <span>{item.animal.name}</span>
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        padding: '1px 6px', 
+                        borderRadius: '10px', 
+                        backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
+                        color: isSelected ? '#FFFFFF' : '#6B7280'
+                      }}>
+                        {item.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollChips('right')}
+                  aria-label="เลื่อนขวา"
+                  style={{
+                    position: 'absolute',
+                    right: '-8px',
+                    zIndex: 10,
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.14)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              )}
             </div>
           )}
         </div>
