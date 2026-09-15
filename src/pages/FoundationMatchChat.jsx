@@ -334,19 +334,17 @@ function FoundationMatchChat() {
           {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
           {animalChips.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0 12px', width: '100%' }}>
-              {/* Left Scroll Button */}
-              {hasOverflow && (
+              {/* Left Scroll Button (แสดงเฉพาะเมื่อมีการเลื่อนไปทางขวาแล้ว) */}
+              {canScrollLeft && (
                 <button
                   type="button"
                   onClick={() => handleScrollChips('left')}
-                  disabled={!canScrollLeft}
                   aria-label="เลื่อนซ้าย"
                   className="chip-scroll-btn"
                   style={{
-                    boxShadow: canScrollLeft ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                    color: canScrollLeft ? 'var(--primary, #D97706)' : '#D1D5DB',
-                    cursor: canScrollLeft ? 'pointer' : 'default',
-                    opacity: canScrollLeft ? 1 : 0.25
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                    color: 'var(--primary, #D97706)',
+                    cursor: 'pointer'
                   }}
                 >
                   <ChevronLeft size={16} />
@@ -374,7 +372,7 @@ function FoundationMatchChat() {
                   alignItems: 'center',
                   gap: '8px',
                   overflowX: 'auto',
-                  padding: '4px 2px',
+                  padding: '4px 0',
                   boxSizing: 'border-box'
                 }}
               >
@@ -462,19 +460,17 @@ function FoundationMatchChat() {
                 })}
               </div>
 
-              {/* Right Scroll Button */}
-              {hasOverflow && (
+              {/* Right Scroll Button (แสดงเฉพาะเมื่อมีเนื้อหาที่เลื่อนไปทางขวาได้) */}
+              {canScrollRight && (
                 <button
                   type="button"
                   onClick={() => handleScrollChips('right')}
-                  disabled={!canScrollRight}
                   aria-label="เลื่อนขวา"
                   className="chip-scroll-btn"
                   style={{
-                    boxShadow: canScrollRight ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                    color: canScrollRight ? 'var(--primary, #D97706)' : '#D1D5DB',
-                    cursor: canScrollRight ? 'pointer' : 'default',
-                    opacity: canScrollRight ? 1 : 0.25
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                    color: 'var(--primary, #D97706)',
+                    cursor: 'pointer'
                   }}
                 >
                   <ChevronRight size={16} />
