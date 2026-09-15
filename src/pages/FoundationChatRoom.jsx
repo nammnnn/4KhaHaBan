@@ -130,7 +130,7 @@ const FoundationMessageItem = memo(function FoundationMessageItem({
             </div>
           </div>
         ) : (
-          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+          <div className="message-bubble" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
             )}

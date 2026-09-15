@@ -2017,7 +2017,7 @@
   width: max-content;
   max-width: 100%;
   word-break: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .msg-user .message-bubble {
@@ -2487,7 +2487,7 @@
   margin-bottom: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   word-break: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .message-wrapper.msg-user .message-bubble {
