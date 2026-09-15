@@ -86,11 +86,7 @@ function FoundationMatchChat() {
     };
   }, [user?.id]);
 
-  if (loading) {
-    return <ChatListSkeleton />;
-  }
-
-  // Animals with application count in current active tab
+  // Animals with application count in current active tab (must be before any early returns)
   const animalChips = useMemo(() => {
     const counts = {};
     matches.forEach(m => {
@@ -112,6 +108,10 @@ function FoundationMatchChat() {
       }))
       .filter(item => item.animal);
   }, [matches, activeTab, animalData]);
+
+  if (loading) {
+    return <ChatListSkeleton />;
+  }
 
   // Filter logic
   const filteredMatches = matches.filter(match => {
