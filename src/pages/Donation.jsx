@@ -3,33 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Heart, 
   Package, 
-  AlertTriangle, 
   QrCode, 
   Copy, 
   Check, 
   X, 
   ShieldCheck, 
-  MapPin, 
-  Camera, 
   ChevronRight, 
   Info,
   Sparkles,
-  Phone,
-  User,
   PiggyBank,
   Loader,
-  Upload,
-  Dog,
-  Cat,
-  ExternalLink,
-  Search
+  Upload
 } from 'lucide-react';
-import { searchCoordinatesFromAddress, getAddressFromCoordinates } from '../lib/geo';
 
 // Auth and DB
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
+import { DonationSkeleton } from '../components/Skeletons';
 
 // PromptPay
 import { QRCodeSVG } from 'qrcode.react';
@@ -115,42 +106,13 @@ const CustomDropdown = ({ options, value, onChange }) => {
 function Donation() {
   const { user, profile } = useAuth();
 
-  // Phone number auto-formatter (e.g. 081-234-5678 or 02-123-4567)
-  const formatPhoneNumber = (val) => {
-    if (!val) return '';
-    const digits = val.replace(/\D/g, '').slice(0, 10);
-    if (digits.startsWith('02')) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-      return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
-    } else {
-      if (digits.length <= 3) return digits;
-      if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-    }
-  };
-
   // State variables
   const [billingCycle, setBillingCycle] = useState('once'); // 'once' or 'monthly'
   const [selectedMoneyTier, setSelectedMoneyTier] = useState(1); // index 0, 1, 2, 3, 4 (custom)
   const [customAmount, setCustomAmount] = useState('');
   const [copiedAddress, setCopiedAddress] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // 'payment', 'items', 'report'
-  const [activeMobileTab, setActiveMobileTab] = useState('money'); // 'money' | 'items' | 'report'
-  
-  // Incident Report Form States
-  const [reportStep, setReportStep] = useState(1);
-  const [animalType, setAnimalType] = useState('dog');
-  const [symptoms, setSymptoms] = useState('');
-  const [locationText, setLocationText] = useState('');
-  const [reporterName, setReporterName] = useState('');
-  const [reporterPhone, setReporterPhone] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [coordinates, setCoordinates] = useState(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // 'payment', 'items'
+  const [activeMobileTab, setActiveMobileTab] = useState('money'); // 'money' | 'items'
   
   // Payment Slip States
   const [slipFile, setSlipFile] = useState(null);
@@ -159,10 +121,7 @@ function Donation() {
 
   // Success states
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [reportSuccess, setReportSuccess] = useState(false);
 
-  // Incident Stats
-  const [incidentStats, setIncidentStats] = useState({ inProgress: 0, resolved: 0 });
   const [foundations, setFoundations] = useState([]);
   const [selectedFoundationId, setSelectedFoundationId] = useState('');
   const [loadingFoundations, setLoadingFoundations] = useState(true);
@@ -170,34 +129,6 @@ function Donation() {
   const foundationOptions = foundations.length > 0
     ? foundations.map(f => ({ value: f.id, label: f.full_name }))
     : [{ value: '', label: loadingFoundations ? 'กำลังโหลดรายชื่อมูลนิธิ...' : 'ไม่พบรายชื่อมูลนิธิ' }];
-
-  useEffect(() => {
-    let channel = null;
-    const fetchStats = async () => {
-      const stats = await api.getIncidentStats();
-      setIncidentStats(stats);
-    };
-    fetchStats();
-
-    if (supabase) {
-      channel = supabase
-        .channel('realtime_incident_stats')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'incident_reports' },
-          () => {
-            fetchStats();
-          }
-        )
-      .subscribe();
-    }
-
-    return () => {
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [reportSuccess]);
 
   useEffect(() => {
     let isMounted = true;
@@ -292,119 +223,9 @@ function Donation() {
   const openModal = (type) => {
     setActiveModal(type);
     setPaymentSuccess(false);
-    setReportSuccess(false);
-    setReportStep(1);
-    // Clear form with profile prefill if available
-    setSymptoms('');
-    setLocationText('');
-    setReporterName(profile?.full_name || '');
-    setReporterPhone(profile?.phone ? formatPhoneNumber(profile.phone) : '');
-    setSelectedImage(null);
-    setImageFile(null);
-    setCoordinates(null);
-    setIsGettingLocation(false);
-    setIsSubmittingReport(false);
     setSlipFile(null);
     setSlipPreview(null);
     setIsSubmittingPayment(false);
-  };
-
-  const handleImageUpload = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setSelectedImage(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSearchLocation = async () => {
-    const query = locationText.trim();
-    if (!query) {
-      alert('กรุณากรอกชื่อสถานที่หรือที่อยู่ก่อนกดค้นหาพิกัด');
-      return;
-    }
-    setIsSearchingLocation(true);
-    try {
-      const geoResult = await searchCoordinatesFromAddress(query);
-      if (geoResult) {
-        setCoordinates({ latitude: geoResult.latitude, longitude: geoResult.longitude });
-      } else {
-        alert('ไม่พบพิกัดจากสถานที่นี้ กรุณาระบุชื่อตำบล อำเภอ หรือจังหวัดให้ชัดเจน หรือกดดึงพิกัด GPS อัตโนมัติ');
-      }
-    } catch (err) {
-      console.warn('Geocoding error:', err);
-    } finally {
-      setIsSearchingLocation(false);
-    }
-  };
-
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert('เบราว์เซอร์ของคุณไม่รองรับการดึงพิกัด GPS');
-      return;
-    }
-    setIsGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setCoordinates({ latitude, longitude });
-
-        let resolvedAddress = '';
-        try {
-          const rev = await getAddressFromCoordinates(latitude, longitude);
-          if (rev && rev.formattedAddress) {
-            resolvedAddress = rev.formattedAddress;
-          }
-        } catch (e) {
-          console.warn('Reverse geocode error:', e);
-        }
-
-        if (resolvedAddress) {
-          setLocationText(resolvedAddress);
-        } else {
-          setLocationText(`พิกัด GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        }
-        setIsGettingLocation(false);
-      },
-      (err) => {
-        setIsGettingLocation(false);
-        console.warn('Geolocation error:', err);
-        alert('ไม่สามารถดึงพิกัดอัตโนมัติได้ กรุณาพิมพ์สถานที่พบเห็นด้วยตนเอง');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  const handleReportSubmit = async (e) => {
-    e.preventDefault();
-    if (!symptoms.trim() || !locationText.trim()) {
-      alert('กรุณากรอกอาการและสถานที่พบเห็น');
-      return;
-    }
-    const cleanPhone = reporterPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 9 || cleanPhone.length > 10) {
-      alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง (9 หรือ 10 หลัก)');
-      return;
-    }
-    setIsSubmittingReport(true);
-    try {
-      await api.submitIncidentReport({
-        userId: user?.id,
-        animalType,
-        symptoms,
-        locationText,
-        latitude: coordinates?.latitude,
-        longitude: coordinates?.longitude,
-        reporterName,
-        reporterPhone
-      }, imageFile);
-      setReportSuccess(true);
-    } catch (err) {
-      console.error('Report submit error:', err);
-      alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
-    } finally {
-      setIsSubmittingReport(false);
-    }
   };
 
   const handleSlipSelect = (e) => {
@@ -462,26 +283,46 @@ function Donation() {
     }
   };
 
+  if (loadingFoundations) {
+    return <DonationSkeleton />;
+  }
+
   return (
-    <div className="page-container donation-page">
-      {/* Hero Banner */}
-      <motion.div 
-        className="donation-hero fade-in-up"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="hero-emoji" style={{ background: 'transparent', boxShadow: 'none', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '12px', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PiggyBank size={32} color="#D97706" />
-          </div>
+    <div className="page-container donation-page" style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
+      {/* Top Header Card */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        border: '1px solid #E5E7EB',
+        padding: '20px 24px',
+        marginBottom: '20px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px'
+      }}>
+        <div style={{
+          width: '46px',
+          height: '46px',
+          borderRadius: '12px',
+          backgroundColor: '#FEF3C7',
+          color: '#D97706',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          <PiggyBank size={24} color="#D97706" />
         </div>
-        <h1 className="page-title hero-title">สนับสนุนโครงการและแจ้งขอความช่วยเหลือ</h1>
-        <p className="hero-subtitle">
-          ร่วมส่งต่อความรักและความช่วยเหลือให้กับพวกพ้อง 4 ขาจรจัด <br className="hidden md:block" />
-          เพื่อช่วยให้พวกเขามีชีวิตใหม่ ร่างกายแข็งแรง และพร้อมรอคอยบ้านที่อบอุ่น
-        </p>
-      </motion.div>
+        <div>
+          <h1 style={{ margin: '0 0 4px', fontSize: '1.35rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
+            สนับสนุนโครงการและบริจาคช่วยเหลือ
+          </h1>
+          <p style={{ margin: 0, color: '#6B7280', fontSize: '0.875rem' }}>
+            ร่วมส่งต่อความรักและความช่วยเหลือให้กับพวกพ้อง 4 ขาจรจัดผ่านการบริจาคเงินหรือสิ่งของจำเป็น
+          </p>
+        </div>
+      </div>
 
       {/* Mobile Segmented Tabs (< 1024px) */}
       <div className="mobile-donation-tabs">
@@ -501,29 +342,16 @@ function Donation() {
           <Package size={15} />
           <span>บริจาคของใช้</span>
         </button>
-        <button 
-          type="button"
-          className={`mobile-tab-btn report-tab ${activeMobileTab === 'report' ? 'active' : ''}`}
-          onClick={() => setActiveMobileTab('report')}
-        >
-          <AlertTriangle size={15} />
-          <span>แจ้งเบาะแส</span>
-        </button>
       </div>
 
       {/* Grid Layout of Donation Cards */}
       <div className="donation-grid">
         
         {/* CARD 1: DONATE MONEY */}
-        <motion.div 
-          className={`donation-card-premium ${activeMobileTab !== 'money' ? 'mobile-hidden' : ''}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
-          <div className="card-header-premium bg-primary-gradient">
-            <div className="icon-badge">
-              <Heart size={24} color="var(--primary)" fill="var(--primary)" />
+        <div className={`donation-card-premium ${activeMobileTab !== 'money' ? 'mobile-hidden' : ''}`}>
+          <div className="card-header-premium">
+            <div className="icon-badge" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
+              <Heart size={22} fill="#D97706" />
             </div>
             <div className="card-header-titles">
               <span className="premium-tag">การช่วยชีวิต</span>
@@ -616,40 +444,31 @@ function Donation() {
             </div>
 
             {/* Selected Impact Description */}
-            <AnimatePresence mode="wait">
-              <motion.div 
-                key={`${billingCycle}-${selectedMoneyTier}`}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.2 }}
-                className="tier-impact-box"
-              >
-                {selectedMoneyTier < 4 ? (
-                  <>
-                    <div className="impact-header">
-                      <span className="impact-badge"><ShieldCheck size={14} /> ผลลัพธ์จากการสนับสนุน</span>
-                      <strong>฿ {currentTiers[selectedMoneyTier].amount}</strong>
-                    </div>
-                    <p className="impact-desc-text">{currentTiers[selectedMoneyTier].desc}</p>
-                  </>
-                ) : (
-                  <div className="custom-amount-input-container">
-                    <span className="currency-symbol">฿</span>
-                    <input 
-                      type="number"
-                      placeholder="ระบุจำนวนเงิน (เช่น 200)"
-                      value={customAmount}
-                      onChange={(e) => setCustomAmount(e.target.value)}
-                      className="custom-input-field"
-                      min="1"
-                      step="1"
-                    />
-                    <span className="input-helper">ขั้นต่ำ 1 บาท</span>
+            <div className="tier-impact-box">
+              {selectedMoneyTier < 4 ? (
+                <>
+                  <div className="impact-header">
+                    <span className="impact-badge"><ShieldCheck size={14} /> ผลลัพธ์จากการสนับสนุน</span>
+                    <strong>฿ {currentTiers[selectedMoneyTier].amount}</strong>
                   </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                  <p className="impact-desc-text">{currentTiers[selectedMoneyTier].desc}</p>
+                </>
+              ) : (
+                <div className="custom-amount-input-container">
+                  <span className="currency-symbol">฿</span>
+                  <input 
+                    type="number"
+                    placeholder="ระบุจำนวนเงิน (เช่น 200)"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="custom-input-field"
+                    min="1"
+                    step="1"
+                  />
+                  <span className="input-helper">ขั้นต่ำ 1 บาท</span>
+                </div>
+              )}
+            </div>
 
             <button 
               className="btn btn-primary btn-full premium-action-btn"
@@ -659,22 +478,17 @@ function Donation() {
               บริจาคช่วยเหลือจำนวน ฿ {currentAmount.toLocaleString()}
             </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* CARD 2: DONATE ITEMS */}
-        <motion.div 
-          className={`donation-card-premium ${activeMobileTab !== 'items' ? 'mobile-hidden' : ''}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <div className="card-header-premium bg-secondary-gradient">
-            <div className="icon-badge">
-              <Package size={24} color="#059669" />
+        <div className={`donation-card-premium ${activeMobileTab !== 'items' ? 'mobile-hidden' : ''}`}>
+          <div className="card-header-premium">
+            <div className="icon-badge" style={{ backgroundColor: '#ECFDF5', color: '#059669' }}>
+              <Package size={22} color="#059669" />
             </div>
             <div className="card-header-titles">
               <span className="premium-tag secondary-tag">สิ่งของจำเป็น</span>
-              <h2>บริจาคของใช้ของแห้ง</h2>
+              <h2>บริจาคของใช้จำเป็น</h2>
             </div>
           </div>
           
@@ -764,70 +578,7 @@ function Donation() {
               ดูรายการสิ่งของ & ที่อยู่จัดส่ง
             </button>
           </div>
-        </motion.div>
-
-        {/* CARD 3: REPORT STRAY ANIMAL */}
-        <motion.div 
-          id="report-card-section"
-          className={`donation-card-premium ${activeMobileTab !== 'report' ? 'mobile-hidden' : ''}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <div className="card-header-premium bg-danger-gradient">
-            <div className="icon-badge">
-              <AlertTriangle size={26} color="var(--danger)" />
-            </div>
-            <div className="card-header-titles">
-              <span className="premium-tag danger-tag">หน่วยกู้ภัย</span>
-              <h2>แจ้งเบาะแสสัตว์จรจัด</h2>
-            </div>
-          </div>
-          
-          <div className="premium-card-body">
-            <p className="description-text">พบเจอสุนัขหรือแมวป่วย บาดเจ็บ โดนทิ้ง หรือต้องการการช่วยเหลือเร่งด่วนในพื้นที่</p>
-
-            <div className="case-tracker-box">
-              <div className="tracker-header">
-                <h3>สถิติการช่วยเหลือสัปดาห์นี้</h3>
-                <span className="tracker-badge">อัปเดตเรียลไทม์</span>
-              </div>
-              <div className="tracker-stats-grid">
-                <div className="tracker-stat">
-                  <span className="stat-num text-danger">{incidentStats.inProgress}</span>
-                  <span className="stat-desc">กำลังดำเนินการ</span>
-                </div>
-                <div className="tracker-stat">
-                  <span className="stat-num text-success">{incidentStats.resolved}</span>
-                  <span className="stat-desc">เคสช่วยสำเร็จ</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="report-rules">
-              <div className="rule-step">
-                <div className="step-num">1</div>
-                <div className="step-text">ถ่ายภาพและบันทึกอาการ</div>
-              </div>
-              <div className="rule-step">
-                <div className="step-num">2</div>
-                <div className="step-text">ปักหมุดพิกัดเพื่อนำทาง</div>
-              </div>
-              <div className="rule-step">
-                <div className="step-num">3</div>
-                <div className="step-text">ส่งข้อมูลเพื่อให้ทีมงานกู้ชีพเข้าพื้นที่</div>
-              </div>
-            </div>
-
-            <button 
-              className="btn btn-danger btn-full premium-action-btn"
-              style={{ background: 'var(--danger)', color: '#fff' }}
-              onClick={() => openModal('report')}
-            >
-              แจ้งเบาะแสและพิกัดช่วยเหลือ
-            </button>
-          </div>
-        </motion.div>
+        </div>
 
       </div>
 
@@ -866,7 +617,7 @@ function Donation() {
                       <div className="payment-summary-slip">
                         <div className="slip-row">
                           <span>ประเภทการบริจาค:</span>
-                          <strong>{billingCycle === 'once' ? 'บริจาคแบบครั้งเดียว' : 'อุปถัมภ์รายเดือนต่อเนื่อง'}</strong>
+                          <strong>เงินบริจาคสมทบทุน (โอนตรง)</strong>
                         </div>
                         <div className="slip-row">
                           <span>วัตถุประสงค์:</span>
@@ -1077,331 +828,6 @@ function Donation() {
                       รับทราบและตกลง
                     </button>
                   </div>
-                </div>
-              )}
-
-              {/* MODAL CONTENT 3: REPORT STRAY ANIMAL */}
-              {activeModal === 'report' && (
-                <div className="modal-inner">
-                  {!reportSuccess ? (
-                    <form onSubmit={handleReportSubmit} className="report-multi-step-form">
-                      <h2 className="modal-title">แจ้งกู้ภัยกู้ชีพสัตว์จรจัด</h2>
-                      <p className="modal-subtitle">โปรดแจ้งข้อมูลเบื้องต้นและพิกัดเพื่อให้เจ้าหน้าที่อาสาวางแผนเข้าช่วยเหลือได้ถูกต้อง</p>
-
-                      {/* Steps Progress Header */}
-                      <div className="form-steps-indicator">
-                        <div className={`form-step-dot ${reportStep >= 1 ? 'active' : ''}`}>1. ข้อมูลสัตว์</div>
-                        <div className="step-dot-line" />
-                        <div className={`form-step-dot ${reportStep >= 2 ? 'active' : ''}`}>2. พิกัดและภาพ</div>
-                        <div className="step-dot-line" />
-                        <div className={`form-step-dot ${reportStep >= 3 ? 'active' : ''}`}>3. ข้อมูลผู้แจ้ง</div>
-                      </div>
-
-                      {/* Step 1 Content: Animal Info */}
-                      {reportStep === 1 && (
-                        <motion.div 
-                          className="step-body"
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                        >
-                          <div className="form-group">
-                            <label className="form-label">ประเภทของสัตว์ที่พบเจอ</label>
-                            <div className="animal-type-select-grid">
-                              <button 
-                                type="button" 
-                                className={`type-btn-select ${animalType === 'dog' ? 'selected' : ''}`}
-                                onClick={() => setAnimalType('dog')}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                              >
-                                <Dog size={16} /> สุนัข
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`type-btn-select ${animalType === 'cat' ? 'selected' : ''}`}
-                                onClick={() => setAnimalType('cat')}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                              >
-                                <Cat size={16} /> แมว
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`type-btn-select ${animalType === 'other' ? 'selected' : ''}`}
-                                onClick={() => setAnimalType('other')}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                              >
-                                <Heart size={16} /> สัตว์ประเภทอื่น
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label">อาการหรือลักษณะของสัตว์ (เช่น บาดเจ็บหนัก, ถูกมัดทิ้งไว้, ป่วยซูบผอม)</label>
-                            <textarea 
-                              className="form-textarea-input"
-                              placeholder="เช่น สุนัขเพศผู้ มีแผลลึกกว้างบริเวณข้อเท้าหลังด้านขวา เดินกะเผลก มีอาการระแวงคนมาก..."
-                              rows={4}
-                              value={symptoms}
-                              onChange={(e) => setSymptoms(e.target.value)}
-                              required
-                            />
-                          </div>
-
-                          <div className="modal-buttons-row">
-                            <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>ยกเลิก</button>
-                            <button 
-                              type="button" 
-                              className="btn btn-primary"
-                              disabled={!symptoms.trim()}
-                              onClick={() => setReportStep(2)}
-                            >
-                              ขั้นตอนถัดไป <ChevronRight size={16} />
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Step 2 Content: Location & Image */}
-                      {reportStep === 2 && (
-                        <motion.div 
-                          className="step-body"
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                        >
-                          <div className="form-group">
-                            <label className="form-label">ระบุพิกัดสถานที่พบเจอ (อธิบายจุดสังเกตเด่นๆ)</label>
-                            <input 
-                              type="text" 
-                              className="form-text-input" 
-                              placeholder="เช่น หลังตึกแถวตลาดกลาง ซอย 3 ข้างเสาไฟต้นใหญ่"
-                              value={locationText}
-                              onChange={(e) => setLocationText(e.target.value)}
-                              required
-                            />
-                            <div className="map-button-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                              <button 
-                                type="button" 
-                                className="btn btn-secondary btn-sm" 
-                                style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={handleGetLocation}
-                                disabled={isGettingLocation}
-                              >
-                                {isGettingLocation ? <Loader className="spin" size={14} /> : <MapPin size={14} color="var(--primary)" />}
-                                {isGettingLocation ? 'กำลังดึงพิกัด...' : 'ใช้พิกัดปัจจุบัน'}
-                              </button>
-
-                              <button 
-                                type="button" 
-                                className="btn btn-secondary btn-sm" 
-                                style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={handleSearchLocation}
-                                disabled={isSearchingLocation || !locationText.trim()}
-                              >
-                                {isSearchingLocation ? <Loader className="spin" size={14} /> : <Search size={14} color="var(--primary)" />}
-                                {isSearchingLocation ? 'กำลังค้นหา...' : 'ค้นหาตำแหน่งจากข้อความนี้'}
-                              </button>
-                            </div>
-
-                            {/* Google Maps Preview for Reporter */}
-                            {coordinates && (
-                              <div style={{ marginTop: '12px', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid #fed7aa', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                                <iframe
-                                  title="Google Maps Location"
-                                  width="100%"
-                                  height="150"
-                                  style={{ border: 0, display: 'block' }}
-                                  loading="lazy"
-                                  src={`https://maps.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}&z=16&output=embed`}
-                                />
-                                <div style={{ padding: '8px 12px', background: '#fffaf5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #ffedd5' }}>
-                                  <div style={{ fontSize: '0.8rem', color: '#78716c', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 500 }}>
-                                    <MapPin size={15} color="#ea580c" />
-                                    <span>พิกัด GPS: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}</span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => window.open(`https://www.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}`, '_blank')}
-                                    style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ea580c', background: '#ffedd5', border: 'none', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  >
-                                    <span>เปิดใน Google Maps</span>
-                                    <ExternalLink size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                            {!coordinates && locationText.trim() && (
-                              <div style={{ marginTop: '8px' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`, '_blank')}
-                                  style={{ fontSize: '0.8rem', color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  <MapPin size={13} />
-                                  <span>ตรวจสอบพิกัดนี้บน Google Maps</span>
-                                  <ExternalLink size={12} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label">ภาพถ่ายสถานการณ์ (ถ้ามี เพื่อช่วยประเมินการเข้าพื้นที่)</label>
-                            <div className="image-uploader-box">
-                              {selectedImage ? (
-                                <div className="uploaded-preview-container">
-                                  <img loading="lazy" src={selectedImage} alt="Animal Preview" className="uploaded-image-preview" />
-                                  <button aria-label="Remove image" type="button" className="delete-image-btn" onClick={() => { setSelectedImage(null); setImageFile(null); }}>
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <label className="upload-placeholder-label">
-                                  <Camera size={28} className="text-light" />
-                                  <span>คลิกเลือกรูปภาพ</span>
-                                  <span style={{ fontSize: 'var(--typography-label-fontSize)', color: 'var(--text-light)' }}>รองรับ JPG, PNG (สูงสุด 5MB)</span>
-                                  <input type="file" accept="image/*" className="hidden-file-input" onChange={handleImageUpload} />
-                                </label>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="modal-buttons-row">
-                            <button type="button" className="btn btn-secondary" onClick={() => setReportStep(1)}>ย้อนกลับ</button>
-                            <button 
-                              type="button" 
-                              className="btn btn-primary"
-                              disabled={!locationText.trim()}
-                              onClick={() => setReportStep(3)}
-                            >
-                              ขั้นตอนถัดไป <ChevronRight size={16} />
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Step 3 Content: Contact Info */}
-                      {reportStep === 3 && (
-                        <motion.div 
-                          className="step-body"
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                        >
-                          <div className="form-group">
-                            <label className="form-label" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                              ชื่อผู้แจ้งเหตุช่วยเหลือ (สำหรับประสานงาน) <span style={{ color: '#DC2626' }}>*</span>
-                            </label>
-                            <div style={{ position: 'relative' }}>
-                              <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                              <input 
-                                type="text" 
-                                className="form-text-input" 
-                                style={{
-                                  width: '100%',
-                                  height: '44px',
-                                  backgroundColor: '#FFFFFF',
-                                  border: '1px solid #D1D5DB',
-                                  borderRadius: '8px',
-                                  padding: '0 14px 0 42px',
-                                  fontSize: '0.95rem',
-                                  color: '#111827',
-                                  outline: 'none',
-                                  boxSizing: 'border-box',
-                                  transition: 'border-color 0.15s, box-shadow 0.15s'
-                                }}
-                                onFocus={e => {
-                                  e.target.style.borderColor = 'var(--primary)';
-                                  e.target.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.12)';
-                                }}
-                                onBlur={e => {
-                                  e.target.style.borderColor = '#D1D5DB';
-                                  e.target.style.boxShadow = 'none';
-                                }}
-                                placeholder="เช่น สมชาย ใจดี"
-                                value={reporterName}
-                                onChange={(e) => setReporterName(e.target.value)}
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                              เบอร์โทรติดต่อกลับ (เพื่อสอบถามเส้นทางเมื่อถึงพื้นที่) <span style={{ color: '#DC2626' }}>*</span>
-                            </label>
-                            <div style={{ position: 'relative' }}>
-                              <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                              <input 
-                                type="tel" 
-                                className="form-text-input" 
-                                style={{
-                                  width: '100%',
-                                  height: '44px',
-                                  backgroundColor: '#FFFFFF',
-                                  border: '1px solid #D1D5DB',
-                                  borderRadius: '8px',
-                                  padding: '0 14px 0 42px',
-                                  fontSize: '0.95rem',
-                                  color: '#111827',
-                                  outline: 'none',
-                                  boxSizing: 'border-box',
-                                  transition: 'border-color 0.15s, box-shadow 0.15s'
-                                }}
-                                onFocus={e => {
-                                  e.target.style.borderColor = 'var(--primary)';
-                                  e.target.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.12)';
-                                }}
-                                onBlur={e => {
-                                  e.target.style.borderColor = '#D1D5DB';
-                                  e.target.style.boxShadow = 'none';
-                                }}
-                                placeholder="เช่น 0812345678 หรือ 021234567"
-                                value={reporterPhone}
-                                onChange={(e) => setReporterPhone(formatPhoneNumber(e.target.value))}
-                                maxLength={12}
-                                required
-                              />
-                            </div>
-                            <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                              พิมพ์เฉพาะตัวเลขได้ ระบบจะจัดรูปแบบขีด (-) ให้อัตโนมัติ
-                            </span>
-                          </div>
-
-                          <div className="modal-buttons-row">
-                            <button type="button" className="btn btn-secondary" disabled={isSubmittingReport} onClick={() => setReportStep(2)}>ย้อนกลับ</button>
-                            <button 
-                              type="submit" 
-                              className="btn btn-danger"
-                              style={{ background: 'var(--danger)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                              disabled={!reporterName.trim() || !reporterPhone.trim() || isSubmittingReport}
-                            >
-                              {isSubmittingReport ? <Loader className="spin" size={16} /> : <Check size={16} />}
-                              {isSubmittingReport ? 'กำลังส่งข้อมูล...' : 'ส่งรายงานเหตุช่วยเหลือฉุกเฉิน'}
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </form>
-                  ) : (
-                    <motion.div 
-                      className="success-state-container"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                    >
-                      <div className="success-icon-wrapper-glow bg-danger-glow" style={{ background: 'transparent' }}>
-                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(255, 82, 82, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                          <AlertTriangle size={40} color="var(--danger)" />
-                        </div>
-                      </div>
-                      <h2 className="success-title">รับแจ้งข้อมูลเหตุช่วยเหลือเรียบร้อย!</h2>
-                      <p className="success-desc">
-                        ข้อมูลการแจ้งเหตุสัตว์จรจัดได้รับเข้าระบบกู้ชีพจำลองแล้ว 
-                        เจ้าหน้าที่อาสาในเขตอำเภอเมืองได้รับการกระตุ้นเตือนพิกัดแล้ว 
-                        เราขอชื่นชมในความเมตตาและหัวใจฮีโร่ของคุณที่สังเกตและช่วยส่งเรื่องช่วยเหลือพวกเขา!
-                      </p>
-                      <button className="btn btn-primary" style={{ minWidth: '150px' }} onClick={() => setActiveModal(null)}>
-                        ปิดหน้าต่าง
-                      </button>
-                    </motion.div>
-                  )}
                 </div>
               )}
 

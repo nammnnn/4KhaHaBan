@@ -62,6 +62,7 @@ const MatchChat = React.lazy(() => import('./pages/MatchChat'));
 const ChatRoom = React.lazy(() => import('./pages/ChatRoom'));
 const UserProfile = React.lazy(() => import('./pages/UserProfile'));
 const Donation = React.lazy(() => import('./pages/Donation'));
+const IncidentReport = React.lazy(() => import('./pages/IncidentReport'));
 const AnimalProfile = React.lazy(() => import('./pages/AnimalProfile'));
 const Login = React.lazy(() => import('./pages/Login'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -85,6 +86,7 @@ import {
   ChatListSkeleton,
   ChatRoomSkeleton,
   DonationSkeleton,
+  IncidentReportSkeleton,
   UserProfileSkeleton,
   FoundationDashboardSkeleton,
   FoundationAnimalsSkeleton,
@@ -126,6 +128,9 @@ const PageLoader = () => {
   }
   if (path.startsWith('/foundation/animals')) {
     return <FoundationAnimalsSkeleton />;
+  }
+  if (path.startsWith('/report')) {
+    return <IncidentReportSkeleton />;
   }
   if (path.startsWith('/foundation/incidents')) {
     return <FoundationIncidentsSkeleton />;
@@ -219,6 +224,7 @@ function App() {
                       
                       <Route path="/matches" element={<MatchChat />} />
                       <Route path="/chat/:matchId" element={<MatchChat />} />
+                      <Route path="/report" element={<IncidentReport />} />
                       <Route path="/donation" element={<Donation />} />
                       <Route path="/profile" element={<UserProfile />} />
                       <Route path="/verify-user" element={<UserVerification />} />

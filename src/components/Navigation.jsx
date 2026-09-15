@@ -193,7 +193,7 @@ export function Navigation() {
       window.removeEventListener('chatReadUpdated', handleUpdate);
     };
   }, [matches, user?.id, isFoundationApproved, location.pathname]);
-  
+
   const isActive = (path) => location.pathname === path;
 
   // Hide navbar on login, onboarding
@@ -219,9 +219,9 @@ export function Navigation() {
             <Home size={24} />
             <span>หน้าแรก</span>
           </Link>
-          <Link 
-            to="/matches" 
-            className={`nav-item ${isActive('/matches') || location.pathname.startsWith('/chat') ? 'active' : ''}`} 
+          <Link
+            to="/matches"
+            className={`nav-item ${isActive('/matches') || location.pathname.startsWith('/chat') ? 'active' : ''}`}
             aria-label="แชท"
           >
             <div className="relative flex justify-center">
@@ -233,6 +233,10 @@ export function Navigation() {
               )}
             </div>
             <span>แชท</span>
+          </Link>
+          <Link to="/report" className={`nav-item ${isActive('/report') ? 'active' : ''}`} aria-label="แจ้งเหตุกู้ภัย">
+            <AlertTriangle size={24} />
+            <span>แจ้งเหตุ</span>
           </Link>
           <Link to="/donation" className={`nav-item ${isActive('/donation') ? 'active' : ''}`} aria-label="บริจาคช่วยเหลือ">
             <HandHeart size={24} />
@@ -300,7 +304,7 @@ export function Navigation() {
           </Link>
         </>
       )}
-      
+
       {/* Super Admin */}
       {role === 'super_admin' && (
         <Link to="/admin" className={`nav-item ${isActive('/admin') ? 'active' : ''}`} aria-label="ระบบจัดการผู้ใช้งาน">
@@ -308,22 +312,22 @@ export function Navigation() {
           <span>ระบบจัดการ</span>
         </Link>
       )}
-      
+
       {/* Profile / Login */}
       {user ? (
         <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`} aria-label="โปรไฟล์ผู้ใช้งาน">
           {avatarUrl && !imgError ? (
-            <img 
-              src={avatarUrl} 
-              alt="Profile" 
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} 
+            <img
+              src={avatarUrl}
+              alt="Profile"
+              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
               onError={() => setImgError(true)}
             />
           ) : (
-            <img 
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D97706&color=fff`} 
-              alt="Profile Default" 
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} 
+            <img
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D97706&color=fff`}
+              alt="Profile Default"
+              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
             />
           )}
           <span>โปรไฟล์</span>

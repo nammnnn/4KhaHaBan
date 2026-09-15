@@ -533,45 +533,6 @@ export default function UserProfile() {
 
   const roleBadge = getRoleBadgeClasses(role);
 
-  const getBentoCards = (r) => {
-    if (r === 'foundation') {
-      return [
-        {
-          key: 'animals-in-care', icon: <Building2 size={24} />,
-          title: 'สัตว์ในความดูแล', actionLabel: 'ดูรายการทั้งหมด', 
-          bgIcon: '#ECFDF5', colorIcon: '#059669',
-          onClick: () => navigate('/foundation/animals'),
-        },
-        {
-          key: 'pending-requests', icon: <ClipboardList size={24} />,
-          title: 'คำขอรับเลี้ยงที่รอตอบ', actionLabel: 'ตรวจสอบคำขอ', 
-          bgIcon: '#FEF3C7', colorIcon: '#D97706',
-          onClick: () => navigate('/foundation/matches'),
-        },
-      ];
-    }
-    if (r === 'super_admin') {
-      return [];
-    }
-    // default: regular user
-    return [
-      {
-        key: 'adoption-status', icon: <Heart size={24} />,
-        title: 'สถานะการขอรับเลี้ยง', actionLabel: 'ติดตามคำขอของคุณ', 
-        bgIcon: '#FEF3C7', colorIcon: '#D97706',
-        onClick: () => navigate('/matches'),
-      },
-      {
-        key: 'donation-history', icon: <PiggyBank size={24} />,
-        title: 'ร่วมสนับสนุนโครงการ', actionLabel: 'ดูยอดบริจาค & ช่วยเหลือ', 
-        bgIcon: '#ECFDF5', colorIcon: '#059669',
-        onClick: () => navigate('/donation'),
-      },
-    ];
-  };
-
-  const bentoCards = getBentoCards(role);
-
   const menuItems = [
     {
       key: 'settings', label: 'การตั้งค่าบัญชี', desc: '',
@@ -693,37 +654,6 @@ export default function UserProfile() {
           </div>
         </section>
 
-        {/* Bento Grid Actions */}
-        {bentoCards.length > 0 && (
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            {bentoCards.map(card => (
-              <div
-                key={card.key}
-                onClick={card.onClick}
-                className="group"
-                style={{
-                  background: '#FFFFFF',
-                  padding: '20px', borderRadius: '16px', display: 'flex', alignItems: 'center', 
-                  justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s',
-                  border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#D97706'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: card.bgIcon, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.colorIcon }}>
-                    {card.icon}
-                  </div>
-                  <div>
-                    <h3 style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>{card.title}</h3>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-medium)' }}>{card.actionLabel}</p>
-                  </div>
-                </div>
-                <ChevronRight size={20} color="var(--gray-300)" />
-              </div>
-            ))}
-          </section>
-        )}
 
         {/* Menu List */}
         <section style={{ 

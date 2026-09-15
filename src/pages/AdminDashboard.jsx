@@ -2,11 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles } from 'lucide-react';
+import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles, Building2, Star, Banknote, PiggyBank, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Import Lucide Icons
-import { Building2, Star, Banknote } from 'lucide-react';
 
 const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -84,7 +81,7 @@ const AdminDashboard = () => {
   const [auditLogs, setAuditLogs] = useState([]);
   const [donations, setDonations] = useState([]);
   const [donationFilter, setDonationFilter] = useState('all');
-  const [updatingDonationId, setUpdatingDonationId] = useState(null);
+  const [donationSearch, setDonationSearch] = useState('');
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -353,27 +350,6 @@ const AdminDashboard = () => {
       showToast('ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง', 'error');
     } finally {
       setUpdatingIncidentId(null);
-    }
-  };
-
-  const handleUpdateDonationStatus = async (donationId, newStatus) => {
-    setUpdatingDonationId(donationId);
-    try {
-      await api.updateDonationStatus(donationId, newStatus);
-      setDonations(prev => prev.map(d => d.id === donationId ? { ...d, status: newStatus } : d));
-      showToast(
-        newStatus === 'completed' 
-          ? 'อนุมัติสลิปและบันทึกยอดบริจาคสำเร็จ' 
-          : newStatus === 'rejected' 
-            ? 'ปฏิเสธรายการบริจาคนี้แล้ว' 
-            : 'เปลี่ยนสถานะเป็นรอตรวจสอบแล้ว',
-        newStatus === 'completed' ? 'success' : 'info'
-      );
-    } catch (err) {
-      console.error('Failed to update donation status:', err);
-      showToast('ไม่สามารถอัปเดตสถานะได้: ' + (err.message || 'เกิดข้อผิดพลาด'), 'error');
-    } finally {
-      setUpdatingDonationId(null);
     }
   };
 
@@ -687,69 +663,86 @@ const AdminDashboard = () => {
   });
 
   return (
-    <div className="page-container" style={{ padding: '24px 16px 100px', backgroundColor: 'var(--background, #FAF8F5)', minHeight: '100dvh' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="admin-shell-container">
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         
-        {/* Header Area */}
-        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        {/* Header Area with Live Pulse & Sync Action */}
+        <div className="admin-header-bar">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-dark)', letterSpacing: '-0.02em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-dark)', letterSpacing: '-0.02em' }}>
                 สวัสดี, {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'ผู้ดูแลระบบ'}
               </h1>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: '#FEF2F2',
-                color: '#DC2626',
-                border: '1px solid #FCA5A5',
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                fontSize: '0.72rem',
-                fontWeight: 700
-              }}>
-                <Shield size={12} /> ผู้ดูแลระบบ
+              <span className="admin-badge-pulse">
+                <span className="admin-pulse-dot" />
+                <Shield size={13} /> ผู้ดูแลระบบ
               </span>
             </div>
-            <p style={{ margin: '4px 0 0', color: 'var(--text-medium)', fontSize: '0.86rem' }}>
-              ระบบจัดการและตรวจสอบสำหรับผู้ดูแลระบบ 4 ขาหาบ้าน
+            <p style={{ margin: '4px 0 0', color: 'var(--text-medium)', fontSize: '0.84rem' }}>
+              ศูนย์ควบคุมและตรวจสอบระบบ 4 ขาหาบ้าน
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => fetchAllData()}
+            className="admin-refresh-btn"
+            title="รีเฟรชข้อมูลทั้งหมด"
+          >
+            <RotateCcw size={15} className={loading ? 'spin' : ''} />
+            <span>ซิงค์ข้อมูล</span>
+          </button>
         </div>
 
-        {/* KPI Stats (3-Column balanced layout on both Mobile & Desktop) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
-          <StatCard 
-            icon={<div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#F0F9FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} color="#0284C7" /></div>} 
-            count={totalCount} 
-            label="ผู้ใช้ทั้งหมด" 
-            loading={loading && profiles.length === 0}
-          />
-          <StatCard 
-            icon={<div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} color="#D97706" /></div>} 
-            count={foundationCount} 
-            label="มูลนิธิ" 
-            loading={loading && profiles.length === 0}
-          />
-          <StatCard 
-            icon={<div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Shield size={18} color="#059669" /></div>} 
-            count={superAdminCount} 
-            label="ผู้ดูแลระบบ" 
-            loading={loading && profiles.length === 0}
-          />
+        {/* KPI Stats Overview (Modern Cards) */}
+        <div className="admin-kpi-grid">
+          <div className="admin-kpi-card">
+            <div className="admin-kpi-icon-wrap" style={{ background: '#F0F9FF' }}>
+              <Users size={20} color="#0284C7" />
+            </div>
+            {loading && profiles.length === 0 ? (
+              <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '3px 0' }} />
+            ) : (
+              <span className="admin-kpi-count">{totalCount}</span>
+            )}
+            <span className="admin-kpi-label">ผู้ใช้ทั้งหมด</span>
+          </div>
+
+          <div className="admin-kpi-card">
+            <div className="admin-kpi-icon-wrap" style={{ background: '#FEF3C7' }}>
+              <Building2 size={20} color="#D97706" />
+            </div>
+            {loading && profiles.length === 0 ? (
+              <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '3px 0' }} />
+            ) : (
+              <span className="admin-kpi-count">{foundationCount}</span>
+            )}
+            <span className="admin-kpi-label">มูลนิธิ</span>
+          </div>
+
+          <div className="admin-kpi-card">
+            <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+              <Shield size={20} color="#059669" />
+            </div>
+            {loading && profiles.length === 0 ? (
+              <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '3px 0' }} />
+            ) : (
+              <span className="admin-kpi-count">{superAdminCount}</span>
+            )}
+            <span className="admin-kpi-label">ผู้ดูแลระบบ</span>
+          </div>
         </div>
         
-        {/* Action Tabs: Horizontal Scrollable App-Pills on Mobile, Grid on Desktop */}
-        <div className="admin-tabs-scroll" style={{ marginBottom: '20px' }}>
+        {/* Action Tabs: Horizontal Scrollable Segmented Bar on Mobile, Grid on Desktop */}
+        <div className="admin-tab-nav">
           {[
-            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={18} />, color: '#0284C7' },
-            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={18} />, badge: pendingFoundations.length, color: '#D97706' },
-            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={18} />, badge: incidents.filter(i => i.status === 'pending').length, color: '#DC2626' },
-            { id: 'donations', label: 'เงินบริจาค', icon: <Banknote size={18} />, color: '#059669' },
-            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={18} />, badge: unreadSupportCount, color: '#7C3AED' },
-            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={18} />, color: '#DC2626' },
-            { id: 'logs', label: 'กิจกรรม', icon: <Star size={18} />, color: '#4B5563' }
+            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} />, color: '#0284C7' },
+            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length, color: '#D97706' },
+            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={17} />, badge: incidents.filter(i => i.status === 'pending').length, color: '#DC2626' },
+            { id: 'donations', label: 'ประวัติบริจาค', icon: <Banknote size={17} />, color: '#059669' },
+            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount, color: '#7C3AED' },
+            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} />, color: '#DC2626' },
+            { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} />, color: '#4B5563' }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -758,30 +751,18 @@ const AdminDashboard = () => {
                 onClick={() => {
                   setActiveTab(tab.id);
                   activeTabRef.current = tab.id;
-                  // รีเซ็ต badge และบันทึกเวลาที่ admin ดูล่าสุดเมื่อคลิกเข้า tab แจ้งเรื่อง
                   if (tab.id === 'support') {
                     setUnreadSupportCount(0);
                     localStorage.setItem('admin_support_last_read', new Date().toISOString());
                   }
                 }}
+                className="admin-tab-pill"
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '7px',
-                  padding: '9px 14px',
                   backgroundColor: isActive ? tab.color : '#FFFFFF',
                   color: isActive ? '#FFFFFF' : '#374151',
-                  borderRadius: '12px',
                   border: isActive ? `1.5px solid ${tab.color}` : '1px solid #E5E7EB',
                   boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.02)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  position: 'relative',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.84rem',
-                  fontWeight: isActive ? 600 : 500
+                  fontWeight: isActive ? 700 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#FFFFFF' : tab.color }}>
@@ -792,18 +773,23 @@ const AdminDashboard = () => {
                   <span style={{
                     backgroundColor: isActive ? '#FFFFFF' : '#DC2626',
                     color: isActive ? tab.color : '#FFFFFF',
-                    minWidth: '18px',
-                    height: '18px',
+                    minWidth: '20px',
+                    height: '20px',
                     borderRadius: '9999px',
-                    padding: '0 5px',
+                    padding: tab.badge > 9 ? '0 6px' : '0',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.7rem',
+                    fontSize: '0.72rem',
                     fontWeight: 700,
-                    marginLeft: '2px'
+                    lineHeight: 1,
+                    marginLeft: '4px',
+                    flexShrink: 0,
+                    boxSizing: 'border-box'
                   }}>
-                    {tab.badge}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, transform: 'translateY(-0.5px)' }}>
+                      {tab.badge}
+                    </span>
                   </span>
                 )}
               </button>
@@ -1026,7 +1012,7 @@ const AdminDashboard = () => {
                   </div>
                   
                   {/* Actions Section */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '240px' }}>
+                  <div className="admin-approval-actions">
                     {!docUrls[foundation.id] ? (
                       <button 
                         onClick={() => fetchDocuments(foundation.id)}
@@ -1091,124 +1077,203 @@ const AdminDashboard = () => {
         </div>
       ) : activeTab === 'donations' ? (
         <>
-          {/* KPI Stats */}
           {(() => {
-            const verifiedTotal = donations
-              .filter(d => d.status === 'completed')
-              .reduce((sum, d) => sum + Number(d.amount), 0);
-            const pendingCount = donations.filter(d => d.status === 'pending_verification').length;
-            const completedCount = donations.filter(d => d.status === 'completed').length;
-            const rejectedCount = donations.filter(d => d.status === 'rejected').length;
+            const totalAmount = donations.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+            const slipCount = donations.filter(d => d.slip_url).length;
 
             const filteredDonations = donations.filter(d => {
-              if (donationFilter === 'all') return true;
-              return d.status === donationFilter;
+              // Search query
+              if (donationSearch.trim()) {
+                const q = donationSearch.toLowerCase();
+                const donorName = (d.profiles?.full_name || '').toLowerCase();
+                const donorEmail = (d.profiles?.email || '').toLowerCase();
+                const foundationName = (d.foundation?.full_name || '').toLowerCase();
+                if (!donorName.includes(q) && !donorEmail.includes(q) && !foundationName.includes(q)) {
+                  return false;
+                }
+              }
+
+              // Filter
+              if (donationFilter === 'has_slip') return !!d.slip_url;
+              if (donationFilter === 'no_slip') return !d.slip_url;
+              return true;
             });
 
             return (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  <StatCard 
-                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Banknote size={22} color="#059669" /></div>} 
-                    count={`฿ ${verifiedTotal.toLocaleString()}`} 
-                    label="ยอดบริจาคที่อนุมัติแล้ว (ยอดจริง)" 
-                  />
-                  <StatCard 
-                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={22} color="#D97706" /></div>} 
-                    count={`${pendingCount} รายการ`} 
-                    label="รอตรวจสอบสลิป" 
-                  />
-                  <StatCard 
-                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={22} color="#2563EB" /></div>} 
-                    count={`${completedCount} รายการ`} 
-                    label="อนุมัติแล้ว" 
-                  />
-                  <StatCard 
-                    icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={22} color="#4B5563" /></div>} 
-                    count={`${donations.length} รายการ`} 
-                    label="รายการทั้งหมด" 
-                  />
+                {/* 3 Summary KPI Cards: Clean, Meaningful, Non-redundant */}
+                <div className="admin-kpi-grid">
+                  <div className="admin-kpi-card">
+                    <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+                      <Banknote size={20} color="#059669" />
+                    </div>
+                    <span className="admin-kpi-count">฿ {totalAmount.toLocaleString()}</span>
+                    <span className="admin-kpi-label">ยอดแจ้งบริจาครวม</span>
+                  </div>
+
+                  <div className="admin-kpi-card">
+                    <div className="admin-kpi-icon-wrap" style={{ background: '#FEF3C7' }}>
+                      <PiggyBank size={20} color="#D97706" />
+                    </div>
+                    <span className="admin-kpi-count">{donations.length}</span>
+                    <span className="admin-kpi-label">รายการแจ้งโอนทั้งหมด</span>
+                  </div>
+
+                  <div className="admin-kpi-card">
+                    <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
+                      <FileCheck size={20} color="#2563EB" />
+                    </div>
+                    <span className="admin-kpi-count">{slipCount}</span>
+                    <span className="admin-kpi-label">แนบหลักฐานสลิป</span>
+                  </div>
                 </div>
 
-                {/* Status Filter Tabs */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  {[
-                    { id: 'all', label: 'ทั้งหมด', count: donations.length },
-                    { id: 'pending_verification', label: 'รอตรวจสอบสลิป', count: pendingCount, highlight: pendingCount > 0 },
-                    { id: 'completed', label: 'อนุมัติแล้ว', count: completedCount },
-                    { id: 'rejected', label: 'ปฏิเสธ', count: rejectedCount }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setDonationFilter(tab.id)}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        border: donationFilter === tab.id ? '1px solid #D97706' : '1px solid #E5E7EB',
-                        backgroundColor: donationFilter === tab.id ? '#FEF3C7' : '#FFFFFF',
-                        color: donationFilter === tab.id ? '#B45309' : '#4B5563',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <span>{tab.label}</span>
-                      <span style={{
-                        padding: '2px 7px',
-                        borderRadius: '10px',
-                        fontSize: '0.75rem',
-                        backgroundColor: tab.highlight ? '#DC2626' : (donationFilter === tab.id ? '#D97706' : '#F3F4F6'),
-                        color: tab.highlight || donationFilter === tab.id ? '#FFFFFF' : '#6B7280'
-                      }}>
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                {/* Main Data Container */}
+                <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--gray-200)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+                  {/* Toolbar: Search & Filter */}
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gray-200)', backgroundColor: '#FAFAFA' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+                        <Search size={16} style={{ position: 'absolute', left: '14px', top: '12px', color: 'var(--text-light)' }} />
+                        <input 
+                          type="text" 
+                          placeholder="ค้นหาผู้บริจาค, อีเมล หรือมูลนิธิ..." 
+                          value={donationSearch} 
+                          onChange={(e) => setDonationSearch(e.target.value)}
+                          style={{ width: '100%', height: '38px', padding: '0 14px 0 38px', borderRadius: '8px', border: '1px solid var(--gray-200)', backgroundColor: 'white', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ width: '160px', flexShrink: 0 }}>
+                        <CustomDropdown
+                          value={donationFilter} 
+                          onChange={(val) => setDonationFilter(val)}
+                          buttonStyle={{ height: '38px', padding: '0 12px', borderRadius: '8px', backgroundColor: 'white', fontSize: '0.85rem' }}
+                          options={[
+                            { value: 'all', label: 'ทั้งหมด' },
+                            { value: 'has_slip', label: 'มีสลิปแนบ' },
+                            { value: 'no_slip', label: 'ไม่มีสลิป' }
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
                   {filteredDonations.length > 0 ? (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)', textAlign: 'left' }}>
-                            <th style={{ padding: '16px' }}>วันที่</th>
-                            <th style={{ padding: '16px' }}>ผู้บริจาค</th>
-                            <th style={{ padding: '16px' }}>จำนวนเงิน</th>
-                            <th style={{ padding: '16px' }}>รูปแบบ</th>
-                            <th style={{ padding: '16px' }}>บริจาคให้</th>
-                            <th style={{ padding: '16px' }}>หลักฐานสลิป</th>
-                            <th style={{ padding: '16px' }}>สถานะ</th>
-                            <th style={{ padding: '16px', textAlign: 'center' }}>จัดการ (แอดมิน)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredDonations.map((don) => {
-                            const isUpdating = updatingDonationId === don.id;
-                            return (
-                              <tr key={don.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
-                                <td style={{ padding: '16px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>
+                    <>
+                      {/* Mobile Card List (< 768px) */}
+                      <div className="admin-donations-mobile-list">
+                        {filteredDonations.map((don) => (
+                          <div 
+                            key={don.id}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '12px',
+                              border: '1px solid #E5E7EB',
+                              padding: '14px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                            }}
+                          >
+                            {/* Card Header: User info & Date */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-dark)' }}>
+                                  {don.profiles?.full_name || 'ผู้ใช้งาน'}
+                                </div>
+                                <div style={{ fontSize: '0.76rem', color: '#6B7280' }}>
+                                  {don.profiles?.email || '-'}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>
+                                {new Date(don.created_at).toLocaleString('th-TH')}
+                              </div>
+                            </div>
+
+                            {/* Amount & Foundation Info */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'var(--gray-50)', borderRadius: '8px' }}>
+                              <div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>ยอดแจ้งบริจาค</div>
+                                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.15rem' }}>
+                                  ฿ {Number(don.amount).toLocaleString()}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>บริจาคให้</div>
+                                <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-dark)', marginTop: '2px' }}>
+                                  {don.foundation?.full_name || '-'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Slip Viewer Button */}
+                            {don.slip_url ? (
+                              <button 
+                                type="button"
+                                onClick={() => setReportProofImage(don.slip_url)}
+                                style={{
+                                  width: '100%',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  padding: '8px 12px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #D1D5DB',
+                                  backgroundColor: '#FFFFFF',
+                                  color: 'var(--primary, #D97706)',
+                                  fontWeight: 600,
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s'
+                                }}
+                              >
+                                <Eye size={15} /> ดูหลักฐานสลิป
+                              </button>
+                            ) : (
+                              <div style={{ fontSize: '0.76rem', color: '#9CA3AF', textAlign: 'center', padding: '4px' }}>
+                                ไม่มีการแนบสลิป
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop Table (>= 768px) */}
+                      <div className="admin-donations-desktop-table" style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                          <thead style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid var(--gray-200)' }}>
+                            <tr style={{ textAlign: 'left' }}>
+                              <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', whiteSpace: 'nowrap' }}>วันที่แจ้งโอน</th>
+                              <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', whiteSpace: 'nowrap' }}>ผู้บริจาค</th>
+                              <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', whiteSpace: 'nowrap' }}>ยอดเงิน</th>
+                              <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', whiteSpace: 'nowrap' }}>บริจาคให้</th>
+                              <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', textAlign: 'center', whiteSpace: 'nowrap' }}>หลักฐานสลิป</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredDonations.map((don) => (
+                              <tr 
+                                key={don.id} 
+                                style={{ borderBottom: '1px solid var(--gray-100)', transition: 'background-color 0.15s' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--gray-50)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <td style={{ padding: '14px 18px', color: 'var(--text-medium)', whiteSpace: 'nowrap', fontSize: '0.84rem' }}>
                                   {new Date(don.created_at).toLocaleString('th-TH')}
                                 </td>
-                                <td style={{ padding: '16px', fontWeight: 500 }}>
-                                  <div>{don.profiles?.full_name || 'ผู้ใช้งาน'}</div>
+                                <td style={{ padding: '14px 18px', fontWeight: 500 }}>
+                                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{don.profiles?.full_name || 'ผู้ใช้งาน'}</div>
                                   <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>{don.profiles?.email || '-'}</div>
                                 </td>
-                                <td style={{ padding: '16px', fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', whiteSpace: 'nowrap' }}>
                                   ฿ {Number(don.amount).toLocaleString()}
                                 </td>
-                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#F3F4F6', color: '#4B5563' }}>
-                                    {don.billing_cycle === 'once' ? 'ครั้งเดียว' : 'รายเดือน'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '16px', color: 'var(--text-medium)', fontSize: '0.85rem' }}>
+                                <td style={{ padding: '14px 18px', color: 'var(--text-medium)', fontSize: '0.84rem' }}>
                                   {don.foundation?.full_name || '-'}
                                 </td>
-                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                   {don.slip_url ? (
                                     <button 
                                       type="button"
@@ -1217,113 +1282,45 @@ const AdminDashboard = () => {
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: '5px',
-                                        padding: '5px 10px',
+                                        padding: '5px 12px',
                                         borderRadius: '6px',
                                         border: '1px solid #D1D5DB',
                                         backgroundColor: '#FFFFFF',
-                                        color: '#D97706',
+                                        color: 'var(--primary, #D97706)',
                                         fontWeight: 600,
-                                        fontSize: '0.82rem',
-                                        cursor: 'pointer'
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s'
                                       }}
                                     >
                                       <Eye size={14} /> ดูสลิป
                                     </button>
                                   ) : (
-                                    <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 500 }}>ไม่มีสลิป</span>
+                                    <span style={{ 
+                                      display: 'inline-flex', 
+                                      alignItems: 'center', 
+                                      padding: '3px 8px', 
+                                      borderRadius: '6px', 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 500, 
+                                      backgroundColor: '#F3F4F6', 
+                                      color: '#9CA3AF', 
+                                      border: '1px solid #E5E7EB' 
+                                    }}>
+                                      ไม่มีสลิป
+                                    </span>
                                   )}
                                 </td>
-                                <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
-                                  <span style={{ 
-                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                    backgroundColor: don.status === 'completed' ? '#ECFDF5' : don.status === 'rejected' ? '#FEF2F2' : '#FEF3C7',
-                                    color: don.status === 'completed' ? '#059669' : don.status === 'rejected' ? '#DC2626' : '#D97706',
-                                    border: `1px solid ${don.status === 'completed' ? '#A7F3D0' : don.status === 'rejected' ? '#FECACA' : '#FCD34D'}`
-                                  }}>
-                                    {don.status === 'completed' ? 'อนุมัติแล้ว' : don.status === 'rejected' ? 'ปฏิเสธ' : 'รอตรวจสอบ'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                  <div style={{ display: 'inline-flex', gap: '6px' }}>
-                                    {don.status !== 'completed' && (
-                                      <button
-                                        disabled={isUpdating}
-                                        onClick={() => handleUpdateDonationStatus(don.id, 'completed')}
-                                        title="อนุมัติสลิปและนับยอดเงินเข้าโครงการ"
-                                        style={{
-                                          padding: '5px 10px',
-                                          borderRadius: '6px',
-                                          fontSize: '0.78rem',
-                                          fontWeight: 600,
-                                          cursor: 'pointer',
-                                          backgroundColor: '#059669',
-                                          color: '#FFFFFF',
-                                          border: 'none',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px'
-                                        }}
-                                      >
-                                        <CheckCircle2 size={13} /> อนุมัติ
-                                      </button>
-                                    )}
-
-                                    {don.status !== 'rejected' && (
-                                      <button
-                                        disabled={isUpdating}
-                                        onClick={() => handleUpdateDonationStatus(don.id, 'rejected')}
-                                        title="ปฏิเสธสลิป (สลิปปลอม/ไม่มียอดจริง)"
-                                        style={{
-                                          padding: '5px 10px',
-                                          borderRadius: '6px',
-                                          fontSize: '0.78rem',
-                                          fontWeight: 600,
-                                          cursor: 'pointer',
-                                          backgroundColor: '#FFFFFF',
-                                          color: '#DC2626',
-                                          border: '1px solid #FCA5A5',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px'
-                                        }}
-                                      >
-                                        <X size={13} /> ปฏิเสธ
-                                      </button>
-                                    )}
-
-                                    {don.status === 'completed' && (
-                                      <button
-                                        disabled={isUpdating}
-                                        onClick={() => handleUpdateDonationStatus(don.id, 'pending_verification')}
-                                        title="เปลี่ยนกลับเป็นรอตรวจสอบ"
-                                        style={{
-                                          padding: '5px 8px',
-                                          borderRadius: '6px',
-                                          fontSize: '0.75rem',
-                                          fontWeight: 500,
-                                          cursor: 'pointer',
-                                          backgroundColor: '#FFFFFF',
-                                          color: '#6B7280',
-                                          border: '1px solid #D1D5DB',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '3px'
-                                        }}
-                                      >
-                                        <RotateCcw size={12} /> แก้ไข
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   ) : (
-                    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-medium)' }}>
-                      ไม่พบข้อมูลการบริจาคในสถานะนี้
+                    <div style={{ padding: '56px 20px', textAlign: 'center', color: 'var(--text-light)', fontSize: '0.9rem' }}>
+                      <Banknote size={36} color="#D1D5DB" style={{ margin: '0 auto 10px', display: 'block' }} />
+                      <span>ไม่พบประวัติรายการบริจาคที่ตรงกับเงื่อนไข</span>
                     </div>
                   )}
                 </div>
@@ -1332,11 +1329,16 @@ const AdminDashboard = () => {
           })()}
         </>
       ) : activeTab === 'support' ? (
-        <div style={{ display: 'flex', gap: '24px', height: '600px' }}>
+        <div className="admin-support-container">
           {/* Chat List */}
-          <div style={{ width: '320px', backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--gray-200)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>รายการแจ้งเรื่อง</h3>
+          <div className={`admin-support-list ${selectedSupportChat ? 'has-selected' : ''}`}>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-dark)' }}>รายการแจ้งเรื่อง</h3>
+              {supportChats.length > 0 && (
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-medium)', backgroundColor: 'var(--gray-200)', padding: '2px 8px', borderRadius: '10px' }}>
+                  {supportChats.length} รายการ
+                </span>
+              )}
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {supportChats.length > 0 ? supportChats.map(chat => (
@@ -1344,39 +1346,71 @@ const AdminDashboard = () => {
                   key={chat.id} 
                   onClick={() => fetchSupportMessages(chat.id)}
                   style={{ 
-                    padding: '16px', borderBottom: '1px solid var(--gray-100)', cursor: 'pointer',
-                    backgroundColor: selectedSupportChat === chat.id ? 'var(--primary-light)' : 'white'
+                    padding: '14px 16px', borderBottom: '1px solid var(--gray-100)', cursor: 'pointer',
+                    backgroundColor: selectedSupportChat === chat.id ? 'var(--primary-light)' : 'white',
+                    transition: 'background-color 0.15s'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {chat.profiles?.avatar_url ? (
-                      <img src={chat.profiles.avatar_url} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <img src={chat.profiles.avatar_url} alt="avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--gray-200)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'var(--gray-200)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', color: 'var(--text-dark)' }}>
                         {chat.profiles?.full_name?.charAt(0) || 'U'}
                       </div>
                     )}
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{chat.profiles?.full_name || 'ผู้ใช้งาน'}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-medium)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-dark)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {chat.profiles?.full_name || 'ผู้ใช้งาน'}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-medium)', marginTop: '2px' }}>
                         {new Date(chat.updated_at).toLocaleString('th-TH')}
                       </div>
                     </div>
                   </div>
                 </div>
               )) : (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-medium)' }}>ไม่มีการแจ้งเรื่อง</div>
+                <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-medium)' }}>ไม่มีการแจ้งเรื่อง</div>
               )}
             </div>
           </div>
           
           {/* Chat Window */}
-          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--gray-200)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className={`admin-support-chat-window ${selectedSupportChat ? '' : 'no-selected'}`}>
             {selectedSupportChat ? (
               <>
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <MessageSquare size={20} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>สนทนา</h3>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSupportChat(null)}
+                    className="admin-support-back-btn"
+                    style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: 'var(--text-dark)' }}
+                    title="กลับไปหน้ารายการ"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                  {(() => {
+                    const activeChatObj = supportChats.find(c => c.id === selectedSupportChat);
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                        {activeChatObj?.profiles?.avatar_url ? (
+                          <img src={activeChatObj.profiles.avatar_url} alt="avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--gray-200)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                            {activeChatObj?.profiles?.full_name?.charAt(0) || 'U'}
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-dark)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {activeChatObj?.profiles?.full_name || 'สนทนา'}
+                          </h3>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-medium)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {activeChatObj?.profiles?.email || 'กำลังสนทนากับผู้ใช้'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 
                 <div style={{ flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#fdfdfd' }}>
@@ -1452,33 +1486,28 @@ const AdminDashboard = () => {
       ) : activeTab === 'reports' ? (
         <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--gray-200)', overflow: 'hidden' }}>
           {reports.length > 0 ? (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>วันที่</th>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>ผู้รายงาน</th>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>ผู้ถูกรายงาน</th>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>เหตุผล</th>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>สถานะ</th>
-                  <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>จัดการ</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Mobile Card List (< 768px) */}
+              <div className="admin-reports-mobile-list">
                 {reports.map(report => (
-                  <tr key={report.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
-                    <td style={{ padding: '16px', color: 'var(--text-medium)', fontSize: '0.9rem' }}>
-                      {new Date(report.created_at).toLocaleString('th-TH')}
-                    </td>
-                    <td style={{ padding: '16px', fontWeight: 500 }}>
-                      {report.reporter?.full_name || 'Unknown User'}
-                    </td>
-                    <td style={{ padding: '16px', fontWeight: 500, color: 'var(--danger)' }}>
-                      {report.reported?.full_name || 'Unknown User'}
-                    </td>
-                    <td style={{ padding: '16px', color: 'var(--text-dark)' }}>
-                      {report.reason}
-                    </td>
-                    <td style={{ padding: '16px' }}>
+                  <div 
+                    key={report.id}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1px solid #E5E7EB',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    {/* Header: Date & Status Selector */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-medium)' }}>
+                        {new Date(report.created_at).toLocaleString('th-TH')}
+                      </span>
                       <select 
                         value={report.status}
                         onChange={async (e) => {
@@ -1492,7 +1521,7 @@ const AdminDashboard = () => {
                           }
                         }}
                         style={{ 
-                          padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
+                          padding: '5px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 600,
                           backgroundColor: report.status === 'resolved' ? '#ECFDF5' : '#FEF3C7',
                           color: report.status === 'resolved' ? '#059669' : '#D97706',
                           border: `1px solid ${report.status === 'resolved' ? '#A7F3D0' : '#FCD34D'}`,
@@ -1504,52 +1533,178 @@ const AdminDashboard = () => {
                         <option value="resolved">RESOLVED</option>
                         <option value="dismissed">DISMISSED</option>
                       </select>
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {report.image_url && (
-                          <button 
-                            onClick={() => setReportProofImage(report.image_url)}
-                            style={{ padding: '6px 12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                            ดูหลักฐาน
-                          </button>
-                        )}
-                        <button 
-                          onClick={async () => {
-                            setReportChatHistoryModal({ isOpen: true, messages: [], loading: true });
-                            const match = await api.getMatchBetweenUsers(report.reporter_id, report.reported_id);
-                            if (match) {
-                              const msgs = await api.getMessages(match.id);
-                              setReportChatHistoryModal({ isOpen: true, messages: msgs, loading: false });
-                            } else {
-                              setReportChatHistoryModal({ isOpen: true, messages: [], loading: false });
-                            }
-                          }}
-                          style={{ padding: '6px 12px', backgroundColor: 'var(--gray-200)', color: 'var(--text-dark)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                          ดูแชท
-                        </button>
-                        <button 
-                          onClick={async () => {
-                            if(window.confirm(`ยืนยันการแบนบัญชี ${report.reported?.full_name || 'นี้'} หรือไม่?`)) {
-                              try {
-                                await api.banUser(report.reported_id);
-                                await api.updateReportStatus(report.id, 'resolved');
-                                setReports(reports.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
-                                showToast('ระงับบัญชีเรียบร้อยแล้ว', 'success');
-                              } catch (error) {
-                                showToast('ไม่สามารถระงับบัญชีได้', 'error');
-                              }
-                            }
-                          }}
-                          style={{ padding: '6px 12px', backgroundColor: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                          แบนบัญชี
-                        </button>
+                    </div>
+
+                    {/* Target & Reporter Info */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.88rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-medium)', fontSize: '0.8rem' }}>ผู้ถูกรายงาน: </span>
+                        <span style={{ fontWeight: 700, color: 'var(--danger)' }}>{report.reported?.full_name || 'Unknown User'}</span>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span style={{ color: 'var(--text-medium)', fontSize: '0.8rem' }}>ผู้รายงาน: </span>
+                        <span style={{ fontWeight: 500, color: 'var(--text-dark)' }}>{report.reporter?.full_name || 'Unknown User'}</span>
+                      </div>
+                    </div>
+
+                    {/* Reason Box */}
+                    <div style={{ backgroundColor: 'var(--gray-50)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.84rem', color: 'var(--text-dark)', lineHeight: 1.4 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-medium)', fontSize: '0.78rem', display: 'block', marginBottom: '2px' }}>เหตุผลการรายงาน:</span>
+                      {report.reason}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                      {report.image_url && (
+                        <button 
+                          type="button"
+                          onClick={() => setReportProofImage(report.image_url)}
+                          style={{ flex: 1, minWidth: '90px', padding: '8px 10px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          ดูหลักฐาน
+                        </button>
+                      )}
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          setReportChatHistoryModal({ isOpen: true, messages: [], loading: true });
+                          const match = await api.getMatchBetweenUsers(report.reporter_id, report.reported_id);
+                          if (match) {
+                            const msgs = await api.getMessages(match.id);
+                            setReportChatHistoryModal({ isOpen: true, messages: msgs, loading: false });
+                          } else {
+                            setReportChatHistoryModal({ isOpen: true, messages: [], loading: false });
+                          }
+                        }}
+                        style={{ flex: 1, minWidth: '80px', padding: '8px 10px', backgroundColor: 'var(--gray-200)', color: 'var(--text-dark)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        ดูแชท
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          if(window.confirm(`ยืนยันการแบนบัญชี ${report.reported?.full_name || 'นี้'} หรือไม่?`)) {
+                            try {
+                              await api.banUser(report.reported_id);
+                              await api.updateReportStatus(report.id, 'resolved');
+                              setReports(reports.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
+                              showToast('ระงับบัญชีเรียบร้อยแล้ว', 'success');
+                            } catch (error) {
+                              showToast('ไม่สามารถระงับบัญชีได้', 'error');
+                            }
+                          }
+                        }}
+                        style={{ flex: 1, minWidth: '85px', padding: '8px 10px', backgroundColor: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        แบนบัญชี
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop Table (>= 768px) */}
+              <div className="admin-reports-desktop-table" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>วันที่</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>ผู้รายงาน</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>ผู้ถูกรายงาน</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>เหตุผล</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>สถานะ</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-medium)', fontWeight: 600, fontSize: '0.85rem' }}>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.map(report => (
+                      <tr key={report.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                        <td style={{ padding: '16px', color: 'var(--text-medium)', fontSize: '0.9rem' }}>
+                          {new Date(report.created_at).toLocaleString('th-TH')}
+                        </td>
+                        <td style={{ padding: '16px', fontWeight: 500 }}>
+                          {report.reporter?.full_name || 'Unknown User'}
+                        </td>
+                        <td style={{ padding: '16px', fontWeight: 500, color: 'var(--danger)' }}>
+                          {report.reported?.full_name || 'Unknown User'}
+                        </td>
+                        <td style={{ padding: '16px', color: 'var(--text-dark)' }}>
+                          {report.reason}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <select 
+                            value={report.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value;
+                              try {
+                                await api.updateReportStatus(report.id, newStatus);
+                                setReports(reports.map(r => r.id === report.id ? { ...r, status: newStatus } : r));
+                                showToast('อัปเดตสถานะเรียบร้อยแล้ว', 'success');
+                              } catch (error) {
+                                showToast('เกิดข้อผิดพลาดในการอัปเดต', 'error');
+                              }
+                            }}
+                            style={{ 
+                              padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
+                              backgroundColor: report.status === 'resolved' ? '#ECFDF5' : '#FEF3C7',
+                              color: report.status === 'resolved' ? '#059669' : '#D97706',
+                              border: `1px solid ${report.status === 'resolved' ? '#A7F3D0' : '#FCD34D'}`,
+                              outline: 'none', cursor: 'pointer'
+                            }}
+                          >
+                            <option value="pending">PENDING</option>
+                            <option value="investigating">INVESTIGATING</option>
+                            <option value="resolved">RESOLVED</option>
+                            <option value="dismissed">DISMISSED</option>
+                          </select>
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {report.image_url && (
+                              <button 
+                                onClick={() => setReportProofImage(report.image_url)}
+                                style={{ padding: '6px 12px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                                ดูหลักฐาน
+                              </button>
+                            )}
+                            <button 
+                              onClick={async () => {
+                                setReportChatHistoryModal({ isOpen: true, messages: [], loading: true });
+                                const match = await api.getMatchBetweenUsers(report.reporter_id, report.reported_id);
+                                if (match) {
+                                  const msgs = await api.getMessages(match.id);
+                                  setReportChatHistoryModal({ isOpen: true, messages: msgs, loading: false });
+                                } else {
+                                  setReportChatHistoryModal({ isOpen: true, messages: [], loading: false });
+                                }
+                              }}
+                              style={{ padding: '6px 12px', backgroundColor: 'var(--gray-200)', color: 'var(--text-dark)', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              ดูแชท
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                if(window.confirm(`ยืนยันการแบนบัญชี ${report.reported?.full_name || 'นี้'} หรือไม่?`)) {
+                                  try {
+                                    await api.banUser(report.reported_id);
+                                    await api.updateReportStatus(report.id, 'resolved');
+                                    setReports(reports.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
+                                    showToast('ระงับบัญชีเรียบร้อยแล้ว', 'success');
+                                  } catch (error) {
+                                    showToast('ไม่สามารถระงับบัญชีได้', 'error');
+                                  }
+                                }
+                              }}
+                              style={{ padding: '6px 12px', backgroundColor: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              แบนบัญชี
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-medium)' }}>
               ไม่มีรายงานผู้ใช้
@@ -1972,38 +2127,89 @@ const AdminDashboard = () => {
         /* Audit Logs Tab */
         <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
           {auditLogs.length > 0 ? (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '2px solid var(--gray-200)', textAlign: 'left' }}>
-                  <th style={{ padding: '16px' }}>เวลา</th>
-                  <th style={{ padding: '16px' }}>แอดมิน</th>
-                  <th style={{ padding: '16px' }}>การกระทำ</th>
-                  <th style={{ padding: '16px' }}>รายละเอียด</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
-                    <td style={{ padding: '16px', color: 'var(--text-medium)' }}>{new Date(log.created_at).toLocaleString('th-TH')}</td>
-                    <td style={{ padding: '16px', fontWeight: 500 }}>{log.admin?.full_name || log.admin?.email || 'Unknown'}</td>
-                    <td style={{ padding: '16px' }}>
-                      <span style={{ 
-                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
-                        backgroundColor: log.action === 'APPROVE_FOUNDATION' ? '#ECFDF5' : log.action === 'REJECT_FOUNDATION' ? '#FEF2F2' : '#FEF3C7',
-                        color: log.action === 'APPROVE_FOUNDATION' ? '#059669' : log.action === 'REJECT_FOUNDATION' ? '#DC2626' : '#D97706',
-                        border: `1px solid ${log.action === 'APPROVE_FOUNDATION' ? '#A7F3D0' : log.action === 'REJECT_FOUNDATION' ? '#FCA5A5' : '#FCD34D'}`
-                      }}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px', color: 'var(--text-medium)' }}>
-                      Target: {log.target_id.slice(0, 8)}... <br/>
-                      {log.detail && <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{JSON.stringify(log.detail)}</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              {/* Mobile Timeline View (< 768px) */}
+              <div className="admin-logs-mobile-feed">
+                <div className="admin-timeline-feed">
+                  {auditLogs.map((log) => {
+                    const isApprove = log.action === 'APPROVE_FOUNDATION';
+                    const isReject = log.action === 'REJECT_FOUNDATION';
+                    const isRole = log.action === 'UPDATE_ROLE';
+                    const iconBg = isApprove ? '#ECFDF5' : isReject ? '#FEF2F2' : isRole ? '#EFF6FF' : '#F3F4F6';
+                    const iconColor = isApprove ? '#059669' : isReject ? '#DC2626' : isRole ? '#2563EB' : '#4B5563';
+                    const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : log.action;
+
+                    return (
+                      <div key={log.id} className="admin-timeline-item">
+                        <div className="admin-timeline-line" />
+                        <div className="admin-timeline-icon" style={{ backgroundColor: iconBg, color: iconColor }}>
+                          {isApprove ? <CheckCircle2 size={18} /> : isReject ? <XCircle size={18} /> : isRole ? <ShieldCheck size={18} /> : <Clock size={18} />}
+                        </div>
+                        <div className="admin-timeline-content">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: iconColor }}>
+                              {actionLabel}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-medium)' }}>
+                              {new Date(log.created_at).toLocaleString('th-TH')}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-dark)', marginBottom: '4px' }}>
+                            ดำเนินการโดย: <strong>{log.admin?.full_name || log.admin?.email || 'ผู้ดูแลระบบ'}</strong>
+                          </div>
+                          {log.target_id && (
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-light)', fontFamily: 'monospace' }}>
+                              เป้าหมาย ID: {log.target_id.slice(0, 12)}...
+                            </div>
+                          )}
+                          {log.detail && (
+                            <div style={{ marginTop: '6px', padding: '6px 8px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #E5E7EB', fontSize: '0.74rem', color: '#4B5563', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                              {JSON.stringify(log.detail)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Desktop Table (>= 768px) */}
+              <div className="admin-logs-desktop-table" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '2px solid var(--gray-200)', textAlign: 'left' }}>
+                      <th style={{ padding: '16px' }}>เวลา</th>
+                      <th style={{ padding: '16px' }}>แอดมิน</th>
+                      <th style={{ padding: '16px' }}>การกระทำ</th>
+                      <th style={{ padding: '16px' }}>รายละเอียด</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.map((log) => (
+                      <tr key={log.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                        <td style={{ padding: '16px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('th-TH')}</td>
+                        <td style={{ padding: '16px', fontWeight: 500 }}>{log.admin?.full_name || log.admin?.email || 'Unknown'}</td>
+                        <td style={{ padding: '16px' }}>
+                          <span style={{ 
+                            padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
+                            backgroundColor: log.action === 'APPROVE_FOUNDATION' ? '#ECFDF5' : log.action === 'REJECT_FOUNDATION' ? '#FEF2F2' : '#FEF3C7',
+                            color: log.action === 'APPROVE_FOUNDATION' ? '#059669' : log.action === 'REJECT_FOUNDATION' ? '#DC2626' : '#D97706',
+                            border: `1px solid ${log.action === 'APPROVE_FOUNDATION' ? '#A7F3D0' : log.action === 'REJECT_FOUNDATION' ? '#FCA5A5' : '#FCD34D'}`
+                          }}>
+                            {log.action}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', color: 'var(--text-medium)' }}>
+                          Target: {log.target_id.slice(0, 8)}... <br/>
+                          {log.detail && <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{JSON.stringify(log.detail)}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-medium)' }}>
               ยังไม่มีบันทึกการทำงาน
@@ -2191,22 +2397,18 @@ const AdminDashboard = () => {
 
 // Helper Components
 const StatCard = ({ icon, count, label, loading }) => (
-  <div style={{
-    backgroundColor: 'white', padding: '16px', borderRadius: '12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)', border: '1px solid #E5E7EB',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center'
-  }}>
-    <div style={{ marginBottom: '10px' }}>
+  <div className="admin-stat-card">
+    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {icon}
     </div>
     {loading ? (
-      <div className="skeleton" style={{ width: '56px', height: '26px', borderRadius: '6px', margin: '3px 0 5px' }} />
+      <div className="skeleton" style={{ width: '64px', height: '24px', borderRadius: '6px', margin: '4px 0 6px' }} />
     ) : (
-      <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>
+      <span className="admin-stat-card-count">
         {count}
       </span>
     )}
-    <span style={{ fontSize: '0.825rem', color: 'var(--text-medium)', marginTop: '6px' }}>
+    <span className="admin-stat-card-label">
       {label}
     </span>
   </div>
@@ -2305,42 +2507,55 @@ const ApprovalsTabSkeleton = () => (
 
 const DonationsTabSkeleton = () => (
   <>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-      <StatCard 
-        icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Banknote size={22} color="#059669" /></div>} 
-        label="ยอดบริจาครวม" 
-        loading={true} 
-      />
-      <StatCard 
-        icon={<div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={22} color="#D97706" /></div>} 
-        label="จำนวนครั้งที่บริจาค" 
-        loading={true} 
-      />
+    <div className="admin-kpi-grid" style={{ marginBottom: '18px' }}>
+      <div className="admin-kpi-card">
+        <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+          <Banknote size={20} color="#059669" />
+        </div>
+        <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
+        <span className="admin-kpi-label">ยอดแจ้งบริจาครวม</span>
+      </div>
+      <div className="admin-kpi-card">
+        <div className="admin-kpi-icon-wrap" style={{ background: '#FEF3C7' }}>
+          <PiggyBank size={20} color="#D97706" />
+        </div>
+        <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
+        <span className="admin-kpi-label">รายการแจ้งโอนทั้งหมด</span>
+      </div>
+      <div className="admin-kpi-card">
+        <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
+          <FileCheck size={20} color="#2563EB" />
+        </div>
+        <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
+        <span className="admin-kpi-label">แนบหลักฐานสลิป</span>
+      </div>
     </div>
 
-    <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+    <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--gray-200)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--gray-200)', backgroundColor: '#FAFAFA' }}>
+        <div className="skeleton" style={{ width: '280px', maxWidth: '100%', height: '38px', borderRadius: '8px' }} />
+      </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-        <thead>
-          <tr style={{ backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)', textAlign: 'left' }}>
-            <th style={{ padding: '16px' }}>วันที่</th>
-            <th style={{ padding: '16px' }}>ผู้บริจาค</th>
-            <th style={{ padding: '16px' }}>จำนวนเงิน</th>
-            <th style={{ padding: '16px' }}>รูปแบบ</th>
-            <th style={{ padding: '16px' }}>บริจาคให้</th>
-            <th style={{ padding: '16px' }}>สลิป</th>
-            <th style={{ padding: '16px' }}>สถานะ</th>
+        <thead style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid var(--gray-200)' }}>
+          <tr style={{ textAlign: 'left' }}>
+            <th style={{ padding: '14px 16px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem' }}>วันที่แจ้งโอน</th>
+            <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem' }}>ผู้บริจาค</th>
+            <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem' }}>ยอดเงิน</th>
+            <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem' }}>บริจาคให้</th>
+            <th style={{ padding: '14px 18px', color: 'var(--text-light)', fontWeight: 600, fontSize: '0.84rem', textAlign: 'center' }}>หลักฐานสลิป</th>
           </tr>
         </thead>
         <tbody>
           {[1, 2, 3, 4, 5].map(i => (
             <tr key={i} style={{ borderBottom: '1px solid var(--gray-100)' }}>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '110px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '100px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '80px', height: '16px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '60px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '90px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton skeleton-text" style={{ width: '50px' }} /></td>
-              <td style={{ padding: '16px' }}><div className="skeleton" style={{ width: '70px', height: '22px', borderRadius: '4px' }} /></td>
+              <td style={{ padding: '14px 18px' }}><div className="skeleton skeleton-text" style={{ width: '110px' }} /></td>
+              <td style={{ padding: '14px 18px' }}>
+                <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }} />
+                <div className="skeleton skeleton-text" style={{ width: '150px', height: '12px', marginTop: '4px' }} />
+              </td>
+              <td style={{ padding: '14px 18px' }}><div className="skeleton skeleton-text" style={{ width: '70px', height: '18px' }} /></td>
+              <td style={{ padding: '14px 18px' }}><div className="skeleton skeleton-text" style={{ width: '100px' }} /></td>
+              <td style={{ padding: '14px 18px', textAlign: 'center' }}><div className="skeleton" style={{ width: '75px', height: '28px', borderRadius: '6px', margin: '0 auto' }} /></td>
             </tr>
           ))}
         </tbody>
@@ -2399,17 +2614,30 @@ const SupportChatSkeleton = () => (
 );
 
 const SupportChatMessagesSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-    {[
-      { align: 'flex-start', width: '55%', height: '48px' },
-      { align: 'flex-end', width: '65%', height: '60px' },
-      { align: 'flex-start', width: '45%', height: '42px' },
-      { align: 'flex-end', width: '50%', height: '52px' }
-    ].map((item, idx) => (
-      <div key={idx} style={{ display: 'flex', justifyContent: item.align }}>
-        <div className="skeleton" style={{ width: item.width, height: item.height, borderRadius: '16px' }} />
-      </div>
-    ))}
+  <div style={{ flex: 1, minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px 0' }}>
+    <div style={{
+      width: '44px',
+      height: '44px',
+      borderRadius: '50%',
+      backgroundColor: '#FFFFFF',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: '1px solid #F3F4F6'
+    }}>
+      <div style={{
+        width: '20px',
+        height: '20px',
+        border: '2.5px solid #F3F4F6',
+        borderTopColor: 'var(--primary, #D97706)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+    </div>
+    <span style={{ fontSize: '0.84rem', color: '#9CA3AF', fontWeight: 500 }}>
+      กำลังโหลดข้อความ...
+    </span>
   </div>
 );
 
@@ -2476,19 +2704,30 @@ const AuditLogsSkeleton = () => (
 );
 
 const ChatModalSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-    {[
-      { align: 'flex-start', width: '60%', height: '56px' },
-      { align: 'flex-end', width: '70%', height: '68px' },
-      { align: 'flex-start', width: '50%', height: '48px' },
-      { align: 'flex-end', width: '65%', height: '62px' }
-    ].map((item, idx) => (
-      <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: item.align }}>
-        <div className="skeleton skeleton-text" style={{ width: '50px', height: '10px', marginBottom: '4px' }} />
-        <div className="skeleton" style={{ width: item.width, height: item.height, borderRadius: '12px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '40px', height: '9px', marginTop: '4px' }} />
-      </div>
-    ))}
+  <div style={{ minHeight: '260px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px 0' }}>
+    <div style={{
+      width: '44px',
+      height: '44px',
+      borderRadius: '50%',
+      backgroundColor: '#FFFFFF',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: '1px solid #F3F4F6'
+    }}>
+      <div style={{
+        width: '20px',
+        height: '20px',
+        border: '2.5px solid #F3F4F6',
+        borderTopColor: 'var(--primary, #D97706)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+    </div>
+    <span style={{ fontSize: '0.84rem', color: '#9CA3AF', fontWeight: 500 }}>
+      กำลังโหลดประวัติการสนทนา...
+    </span>
   </div>
 );
 
