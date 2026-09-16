@@ -81,6 +81,7 @@ const AdoptionFollowup = React.lazy(() => import('./pages/AdoptionFollowup'));
 const AdoptionTimeline = React.lazy(() => import('./pages/AdoptionTimeline'));
 
 import {
+  FeedPageSkeleton,
   FeedCardSkeleton,
   AnimalProfileSkeleton,
   ChatListSkeleton,
@@ -105,7 +106,7 @@ const PageLoader = () => {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   if (path === '/' || path.startsWith('/feed')) {
-    return <FeedCardSkeleton />;
+    return <FeedPageSkeleton />;
   }
   if (path.startsWith('/login')) {
     return <LoginSkeleton />;

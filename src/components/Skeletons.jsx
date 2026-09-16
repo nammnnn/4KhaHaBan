@@ -8,15 +8,15 @@ import '../pages/Login.css';
 
 // 1. Swipe Card Deck Skeleton (Feed)
 export const FeedCardSkeleton = () => (
-  <>
+  <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
     {/* Second card background in stack */}
     <div
       className="swipe-card"
       style={{
         backgroundColor: '#E2E8F0',
-        borderRadius: '20px',
+        borderRadius: '22px',
         border: '1px solid rgba(0,0,0,0.06)',
-        transform: 'scale(0.95) translateY(8px)',
+        transform: 'scale(0.96) translateY(0)',
         opacity: 0.5,
         zIndex: 1,
         pointerEvents: 'none'
@@ -28,7 +28,7 @@ export const FeedCardSkeleton = () => (
       className="swipe-card"
       style={{
         backgroundColor: '#1E293B',
-        borderRadius: '20px',
+        borderRadius: '22px',
         overflow: 'hidden',
         border: '1px solid rgba(0,0,0,0.08)',
         boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
@@ -91,7 +91,35 @@ export const FeedCardSkeleton = () => (
         </div>
       </div>
     </div>
-  </>
+  </div>
+);
+
+// 1.1 Full Feed Page Skeleton (Feed Page Suspense Fallback)
+export const FeedPageSkeleton = () => (
+  <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
+    {/* Top Bar */}
+    <div className="feed-header">
+      <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
+        4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
+      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px' }} />
+        <div className="skeleton" style={{ width: '72px', height: '36px', borderRadius: '20px' }} />
+      </div>
+    </div>
+
+    {/* Card Stack */}
+    <div className="card-stack-container">
+      <FeedCardSkeleton />
+    </div>
+
+    {/* Swiper Actions */}
+    <div className="swiper-actions">
+      <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+    </div>
+  </div>
 );
 
 // 2. Chat List & Split View Skeleton (MatchChat, FoundationMatchChat) - Responsive Desktop & Mobile
