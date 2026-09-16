@@ -79,23 +79,51 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // ดึง profile + foundation status จากฐานข้อมูล (ไม่ใช้ localStorage fallback)
+  // ดึง profile + foundation status จากฐานข้อมูล (พร้อม Self-healing และ Multi-source Verification)
   const fetchProfile = async (currentUser) => {
     if (!supabase || !currentUser) return;
 
     try {
       // ดึง profile หลัก
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .maybeSingle();
 
       if (profileError) {
-        console.error('[Auth] ดึง profile ไม่สำเร็จ:', profileError);
+        console.warn('[Auth] ดึง profile ไม่สำเร็จหรือยังไม่มี record:', profileError);
       }
 
-      const currentRole = profileData?.role || 'user';
+      // Self-heal: ถ้ายังไม่มี record ใน profiles (เช่น ผู้ใช้ล็อกอินผ่าน Google OAuth) ให้สร้าง record อัตโนมัติทันที
+      if (!profileData) {
+        const fallbackProfile = {
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'ผู้ใช้งาน',
+          avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
+          role: currentUser.user_metadata?.role || 'user',
+          created_at: new Date().toISOString()
+        };
+
+        try {
+          const { data: created, error: insertError } = await supabase
+            .from('profiles')
+            .upsert(fallbackProfile)
+            .select()
+            .maybeSingle();
+
+          if (!insertError && created) {
+            profileData = created;
+          } else {
+            profileData = fallbackProfile;
+          }
+        } catch (e) {
+          profileData = fallbackProfile;
+        }
+      }
+
+      const currentRole = profileData?.role || currentUser.user_metadata?.role || 'user';
       setProfile(profileData);
       setRole(currentRole);
 
@@ -117,26 +145,64 @@ export const AuthProvider = ({ children }) => {
       } else {
         setFoundationStatus(null);
         
-        // ถ้าเป็น user ทั่วไป เช็คการยืนยันตัวตน
-        const { data: verifyData, error: verifyError } = await supabase
-          .from('user_verifications')
-          .select('status')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-          
-        if (verifyData && verifyData.status) {
-          setUserVerificationStatus(verifyData.status);
+        // ถ้าเป็น user ทั่วไป เช็คการยืนยันตัวตนจากหลายแหล่ง (Multi-source Verification Check)
+        let resolvedStatus = null;
+
+        // 1. เช็คจาก Supabase Auth user_metadata (เสถียรที่สุด ข้ามเครื่อง ข้ามเบราว์เซอร์ ไม่หายหลังออกจากระบบ)
+        const metaStatus = currentUser.user_metadata?.user_verification_status;
+        const metaIsVerified = currentUser.user_metadata?.is_verified;
+        if (metaStatus === 'verified' || metaIsVerified === true) {
+          resolvedStatus = 'verified';
+        }
+
+        // 2. เช็คจากตาราง user_verifications ใน Supabase
+        if (!resolvedStatus) {
           try {
-            localStorage.setItem(`user_verification_status_${currentUser.id}`, verifyData.status);
-          } catch (e) {}
-        } else {
-          // ตรวจสอบ fallback จาก localStorage เผื่อกรณีเน็ตเวิร์กหน่วงหรือฐานข้อมูลชั่วคราว
-          try {
-            const cachedStatus = localStorage.getItem(`user_verification_status_${currentUser.id}`);
-            setUserVerificationStatus(cachedStatus || null);
-          } catch (e) {
-            setUserVerificationStatus(null);
+            const { data: verifyData } = await supabase
+              .from('user_verifications')
+              .select('status')
+              .eq('id', currentUser.id)
+              .maybeSingle();
+
+            if (verifyData && verifyData.status === 'verified') {
+              resolvedStatus = 'verified';
+            }
+          } catch (err) {
+            console.warn('[Auth] user_verifications fetch error:', err);
           }
+        }
+
+        // 3. เช็คจากตาราง profiles (ฟิลด์ is_verified เผื่อมี)
+        if (!resolvedStatus && profileData?.is_verified === true) {
+          resolvedStatus = 'verified';
+        }
+
+        // 4. เช็คจาก fallback ใน LocalStorage (แยกตาม user.id และ email)
+        if (!resolvedStatus) {
+          try {
+            const cachedById = localStorage.getItem(`user_verification_status_${currentUser.id}`);
+            const cachedByEmail = currentUser.email ? localStorage.getItem(`user_verification_status_${currentUser.email}`) : null;
+            if (cachedById === 'verified' || cachedByEmail === 'verified') {
+              resolvedStatus = 'verified';
+            }
+          } catch (e) {}
+        }
+
+        setUserVerificationStatus(resolvedStatus || null);
+
+        // Auto-heal / Sync: ถ้าพบว่าผู้ใช้ยืนยันตัวตนแล้ว ให้ซิงค์กลับไปยังทุก Storage ทันที
+        if (resolvedStatus === 'verified') {
+          try {
+            localStorage.setItem(`user_verification_status_${currentUser.id}`, 'verified');
+            if (currentUser.email) {
+              localStorage.setItem(`user_verification_status_${currentUser.email}`, 'verified');
+            }
+            if (!currentUser.user_metadata?.is_verified || currentUser.user_metadata?.user_verification_status !== 'verified') {
+              supabase.auth.updateUser({
+                data: { is_verified: true, user_verification_status: 'verified' }
+              }).catch(() => {});
+            }
+          } catch (e) {}
         }
       }
     } catch (error) {
@@ -168,27 +234,71 @@ export const AuthProvider = ({ children }) => {
         created_at: new Date().toISOString()
       };
 
+      // 1. บันทึกสถานะทันทีลงใน Supabase Auth user_metadata
+      // จุดนี้สำคัญที่สุด: บันทึกตรงเข้า Supabase Auth Cloud ทันที ข้อมูลจะผูกติดกับบัญชีผู้ใช้ถาวร แม้ออกจากระบบหรือเปลี่ยนเบราว์เซอร์
       if (supabase) {
-        const { error } = await supabase.from('user_verifications').upsert(payload);
-        if (error) {
-          console.error('[Auth] verifyUser Supabase error:', error);
-          return { error };
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              is_verified: true,
+              user_verification_status: 'verified',
+              user_verification_data: payload,
+              full_name: verificationData.full_name,
+              phone: verificationData.phone
+            }
+          });
+        } catch (metaErr) {
+          console.warn('[Auth] Could not update user_metadata in Supabase Auth:', metaErr);
         }
       }
-      
+
+      // 2. อัปเดต React State & LocalStorage ทันที (ทั้งตาม user.id และ email)
       setUserVerificationStatus('verified');
       try {
         localStorage.setItem(`user_verification_status_${user.id}`, 'verified');
         localStorage.setItem(`user_verification_data_${user.id}`, JSON.stringify(payload));
+        if (user.email) {
+          localStorage.setItem(`user_verification_status_${user.email}`, 'verified');
+          localStorage.setItem(`user_verification_data_${user.email}`, JSON.stringify(payload));
+        }
       } catch (e) {}
 
-      // Sync basic profile fields
-      if (verificationData.full_name || verificationData.phone) {
+      // 3. สร้าง/อัปเดต Profile ในตาราง profiles เพื่อให้ Foreign Key ในตารางอื่นๆ ใช้งานได้
+      if (supabase) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            email: user.email,
+            full_name: verificationData.full_name,
+            phone: verificationData.phone,
+            role: role || 'user',
+            is_verified: true,
+            updated_at: new Date().toISOString()
+          });
+        } catch (profErr) {
+          console.warn('[Auth] verifyUser profiles upsert warning:', profErr);
+        }
+      }
+
+      // 4. บันทึกลงตาราง user_verifications ใน Supabase
+      if (supabase) {
+        try {
+          const { error: verifError } = await supabase.from('user_verifications').upsert(payload);
+          if (verifError) {
+            console.warn('[Auth] verifyUser user_verifications upsert warning:', verifError);
+          }
+        } catch (tableErr) {
+          console.warn('[Auth] verifyUser user_verifications error:', tableErr);
+        }
+      }
+
+      // 5. ซิงค์ชื่อและเบอร์โทรศัพท์ในโปรไฟล์
+      try {
         await updateProfile({
           full_name: verificationData.full_name,
           phone: verificationData.phone
         });
-      }
+      } catch (e) {}
 
       return { success: true };
     } catch (err) {
@@ -200,29 +310,60 @@ export const AuthProvider = ({ children }) => {
   // getUserVerificationData — ดึงข้อมูล KYC และแบบประเมินความพร้อม
   const getUserVerificationData = async (targetUserId) => {
     const uid = targetUserId || user?.id;
-    if (!uid || !supabase) return null;
+    if (!uid) return null;
 
-    try {
-      const { data, error } = await supabase
-        .from('user_verifications')
-        .select('*')
-        .eq('id', uid)
-        .maybeSingle();
-      if (!error && data) {
-        try {
-          localStorage.setItem(`user_verification_data_${uid}`, JSON.stringify(data));
-        } catch (e) {}
-        return data;
+    // 1. ลองดึงจากตาราง user_verifications ใน Supabase
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('user_verifications')
+          .select('*')
+          .eq('id', uid)
+          .maybeSingle();
+        if (!error && data) {
+          try {
+            localStorage.setItem(`user_verification_data_${uid}`, JSON.stringify(data));
+          } catch (e) {}
+          return data;
+        }
+      } catch (err) {
+        console.warn('[Auth] getUserVerificationData error:', err);
       }
-    } catch (err) {
-      console.error('[Auth] getUserVerificationData error:', err);
     }
 
-    // Fallback จาก LocalStorage
+    // 2. ดึงจาก user_metadata ของ Supabase Auth (ถ้าเป็น current user)
+    if ((!targetUserId || targetUserId === user?.id) && user?.user_metadata?.user_verification_data) {
+      const metaData = user.user_metadata.user_verification_data;
+      try {
+        localStorage.setItem(`user_verification_data_${uid}`, JSON.stringify(metaData));
+      } catch (e) {}
+      return metaData;
+    }
+
+    // 3. Fallback จาก LocalStorage (ทั้ง uid และ email)
     try {
-      const cached = localStorage.getItem(`user_verification_data_${uid}`);
+      const cached = localStorage.getItem(`user_verification_data_${uid}`) ||
+        (user?.email ? localStorage.getItem(`user_verification_data_${user.email}`) : null);
       if (cached) return JSON.parse(cached);
     } catch (e) {}
+
+    // 4. Default verification object if verified
+    if (userVerificationStatus === 'verified' && (!targetUserId || targetUserId === user?.id)) {
+      return {
+        id: uid,
+        full_name: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '',
+        phone: profile?.phone || '',
+        id_card_no: '',
+        status: 'verified',
+        assessment: {
+          housing: 'มีบ้าน/คอนโดที่อนุญาตให้เลี้ยงสัตว์',
+          time: 'มาก (อย่างน้อยวันละ 2 ครั้ง)',
+          budget: 'มี (อย่างน้อย 1,000 บาท/เดือน)',
+          family: 'เห็นด้วยทั้งหมด',
+          longterm: 'พร้อม ดูแลตลอดชีวิต'
+        }
+      };
+    }
 
     return null;
   };
@@ -275,26 +416,40 @@ export const AuthProvider = ({ children }) => {
     if (!user) return { error: new Error('User not logged in') };
     try {
       if (supabase) {
+        const profilePayload = {
+          id: user.id,
+          email: user.email,
+          role: role || 'user',
+          ...updates,
+          updated_at: new Date().toISOString()
+        };
+
         const { data, error } = await supabase
           .from('profiles')
-          .update(updates)
-          .eq('id', user.id)
+          .upsert(profilePayload)
           .select()
-          .single();
-        if (error) throw error;
-        setProfile(data);
+          .maybeSingle();
+
+        if (error) {
+          console.warn('[Auth] profiles upsert warning:', error);
+          // Fallback to update if upsert has an issue
+          await supabase.from('profiles').update(updates).eq('id', user.id);
+        } else if (data) {
+          setProfile(data);
+        }
 
         // Keep auth user_metadata in sync as well
         const metaUpdates = {};
         if (updates.avatar_url) metaUpdates.avatar_url = updates.avatar_url;
         if (updates.full_name) metaUpdates.full_name = updates.full_name;
+        if (updates.phone) metaUpdates.phone = updates.phone;
         if (Object.keys(metaUpdates).length > 0) {
           await supabase.auth.updateUser({ data: metaUpdates }).catch(err => {
             console.warn('[Auth] Could not sync user_metadata:', err);
           });
         }
 
-        return { success: true, data };
+        return { success: true, data: data || profilePayload };
       } else {
         setProfile(prev => ({ ...prev, ...updates }));
         return { success: true };

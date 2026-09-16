@@ -100,11 +100,14 @@ export default function UserVerification() {
     const loadExisting = async () => {
       if (user) {
         const existingData = await getUserVerificationData(user.id);
+        const resolvedName = existingData?.full_name || profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+        const resolvedPhone = existingData?.phone || profile?.phone || user?.user_metadata?.phone || '';
+
         if (existingData) {
           setFormData({
-            full_name: existingData.full_name || profile?.full_name || '',
+            full_name: resolvedName,
             id_card_no: existingData.id_card_no ? formatIdCard(existingData.id_card_no) : '',
-            phone: existingData.phone ? formatPhone(existingData.phone) : (profile?.phone || '')
+            phone: resolvedPhone ? formatPhone(resolvedPhone) : ''
           });
           if (existingData.assessment) {
             setAssessment(prev => ({
@@ -112,11 +115,11 @@ export default function UserVerification() {
               ...existingData.assessment
             }));
           }
-        } else if (profile) {
+        } else {
           setFormData(prev => ({
             ...prev,
-            full_name: profile.full_name || '',
-            phone: profile.phone ? formatPhone(profile.phone) : ''
+            full_name: resolvedName,
+            phone: resolvedPhone ? formatPhone(resolvedPhone) : ''
           }));
         }
       }
