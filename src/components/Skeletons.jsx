@@ -49,7 +49,7 @@ export const FeedCardSkeleton = () => (
             backgroundColor: 'rgba(255,255,255,0.94)',
             padding: '4px 10px',
             borderRadius: '20px',
-            border: '1px solid #A7F3D0',
+            border: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
             gap: '6px'
@@ -164,8 +164,7 @@ export const ChatListSkeleton = () => {
                 padding: '12px 14px',
                 borderRadius: '16px',
                 border: '1px solid #F3F4F6',
-                backgroundColor: i === 1 ? '#FFFBEB' : '#FFFFFF',
-                borderLeft: i === 1 ? '3px solid #D97706' : '1px solid #F3F4F6'
+                backgroundColor: '#FFFFFF'
               }}
             >
               <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
