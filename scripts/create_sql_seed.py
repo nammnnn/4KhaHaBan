@@ -34,12 +34,14 @@ sql_lines = [
     "  DELETE FROM public.animals WHERE shelter = '4 ขาหาบ้าน' OR name IN ('น้องทองแดง', 'ส้มจี๊ด', 'พี่เบิ้ม', 'ไข่ตุ๋น', 'หมูปิ้ง', 'มูมู่', 'บราวนี่', 'กะทิ', 'โคล่า', 'ปีโป้');",
     '',
     '  -- 3. อัปเดตข้อมูลมูลนิธิใน foundation_profiles',
-    '  INSERT INTO public.foundation_profiles (id, foundation_name, verification_status, contact_phone, address, promptpay_number)',
-    "  VALUES (foundation_uuid, foundation_title, 'approved', '0812345678', 'บางละมุง ชลบุรี ประเทศไทย (Saved Souls Foundation)', '0812345678')",
+    '  INSERT INTO public.foundation_profiles (id, foundation_name, verification_status, contact_phone, address, promptpay_number, latitude, longitude)',
+    "  VALUES (foundation_uuid, foundation_title, 'approved', '0812345678', 'ขก.4064 บ้านบะยาว ต.โคกงาม อ.บ้านฝาง จ.ขอนแก่น 40270 (Saved Souls Foundation - Animal Sanctuary)', '0812345678', 16.566265, 102.606929)",
     '  ON CONFLICT (id) DO UPDATE SET',
     '    foundation_name = EXCLUDED.foundation_name,',
     '    verification_status = EXCLUDED.verification_status,',
-    '    address = EXCLUDED.address;',
+    '    address = EXCLUDED.address,',
+    '    latitude = EXCLUDED.latitude,',
+    '    longitude = EXCLUDED.longitude;',
     '',
     '  -- 4. นำเข้าข้อมูลสัตว์เลี้ยงจริงทั้งหมด',
     '  INSERT INTO public.animals (',
@@ -47,11 +49,14 @@ sql_lines = [
     '  ) VALUES '
 ]
 
+cdn_base = 'https://bahayuvgxwlciaqtcpkt.supabase.co/storage/v1/object/public/animal-images/'
+
 value_clauses = []
 for a in animals:
     name_esc = a['name'].replace("'", "''")
     story_esc = a['story'].replace("'", "''")
-    images_pg = "ARRAY[" + ", ".join(f"'{img}'" for img in a['images']) + "]"
+    cdn_imgs = [f"'{cdn_base}{img.replace('/animals/', '')}'" for img in a['images']]
+    images_pg = "ARRAY[" + ", ".join(cdn_imgs) + "]"
     tags_pg = "ARRAY[" + ", ".join(f"'{t}'" for t in a['tags']) + "]"
     
     val = (

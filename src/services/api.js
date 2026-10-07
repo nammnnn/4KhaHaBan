@@ -25,8 +25,16 @@ export function normalizeAnimalImages(animal) {
     }
     return finalUrl;
   });
+  // Ensure exact coordinates for Saved Souls Foundation sanctuary (Khon Kaen: https://maps.app.goo.gl/pYghdDaM9qLNkWTw6)
+  const isSavedSouls = animal.shelter?.includes('Saved Souls') || animal.shelter === 'มูลนิธิ Saved Souls Foundation';
+  const hasLegacyCoords = !animal.latitude || !animal.longitude || (Math.abs(animal.latitude - 12.9276) < 0.01 && Math.abs(animal.longitude - 100.9238) < 0.01);
+  const finalLat = (isSavedSouls || hasLegacyCoords) ? 16.566265 : animal.latitude;
+  const finalLng = (isSavedSouls || hasLegacyCoords) ? 102.606929 : animal.longitude;
+
   return {
     ...animal,
+    latitude: finalLat,
+    longitude: finalLng,
     images: normalizedImages.length > 0 ? normalizedImages : [`${SUPABASE_STORAGE_URL}/cat_p1_1.jpg?v=3`]
   };
 }
