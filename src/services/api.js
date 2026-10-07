@@ -1,33 +1,75 @@
 import { supabase } from './supabaseClient';
+import { mockAnimals } from '../mockData';
 
 // In-memory caches for ultra-fast instant lookups (0ms latency on repeated accesses)
 const animalCache = new Map();
 const userVerifCache = new Map();
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL
 
+const SUPABASE_STORAGE_URL = 'https://bahayuvgxwlciaqtcpkt.supabase.co/storage/v1/object/public/animal-images';
+
+export function normalizeAnimalImages(animal) {
+  if (!animal) return animal;
+  const rawImages = Array.isArray(animal.images) ? animal.images : (animal.images ? [animal.images] : []);
+  const normalizedImages = rawImages.map(img => {
+    let finalUrl = img;
+    if (typeof img === 'string') {
+      if (img.startsWith('/animals/')) {
+        const filename = img.replace('/animals/', '');
+        finalUrl = `${SUPABASE_STORAGE_URL}/${filename}`;
+      }
+      // Add cache-buster to ensure the browser loads the new sharp HD image immediately
+      if (finalUrl.includes('supabase.co/storage/v1/object/public/animal-images') && !finalUrl.includes('?')) {
+        finalUrl = `${finalUrl}?v=2`;
+      }
+    }
+    return finalUrl;
+  });
+  return {
+    ...animal,
+    images: normalizedImages.length > 0 ? normalizedImages : [`${SUPABASE_STORAGE_URL}/cat_p1_1.jpg?v=2`]
+  };
+}
+
 export const api = {
   /**
    * Fetch all available animals for adoption
    */
   async getAnimals(userId) {
-    if (!supabase) return [];
-    
     try {
-      const { data, error } = await supabase.from('animals').select('*');
-      if (error) {
-        console.error("Error fetching animals from Supabase:", error);
-        return [];
-      }
-      
-      let allAnimals = (data || []).filter(a => a.status === 'available');
+      let allAnimals = [];
 
-      // Warm in-memory cache for 0ms transitions to profile/chat
-      if (allAnimals.length > 0) {
-        const now = Date.now();
-        allAnimals.forEach(a => {
-          if (a && a.id) animalCache.set(a.id, { data: a, timestamp: now });
-        });
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('animals').select('*');
+        if (!error && data && data.length > 0) {
+          const availableDb = data.filter(a => a.status === 'available');
+          // If the DB only contains legacy 15 mock data ('4 ขาหาบ้าน'), prioritize the real Saved Souls Foundation dataset
+          const isLegacy = availableDb.every(a => a.shelter === '4 ขาหาบ้าน' || a.name === 'น้องทองแดง' || a.name === 'ส้มจี๊ด');
+          if (!isLegacy && availableDb.length > 0) {
+            allAnimals = availableDb;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch from Supabase, using real Saved Souls Foundation dataset:", err);
       }
+    }
+
+    // Fallback to real Saved Souls Foundation dataset (cats & dogs)
+    if (allAnimals.length === 0) {
+      allAnimals = [...mockAnimals];
+    }
+
+    // Always ensure all images point directly to Supabase Storage CDN
+    allAnimals = allAnimals.map(normalizeAnimalImages);
+
+    // Warm in-memory cache for 0ms transitions to profile/chat
+    if (allAnimals.length > 0) {
+      const now = Date.now();
+      allAnimals.forEach(a => {
+        if (a && a.id) animalCache.set(a.id, { data: a, timestamp: now });
+      });
+    }
       
       // Filter out already swiped animals if userId is provided
       if (userId && userId !== '00000000-0000-0000-0000-000000000000') {
@@ -101,15 +143,27 @@ export const api = {
       return cached.data;
     }
 
-    if (!supabase) throw new Error('Supabase not connected');
-    
-    const { data, error } = await supabase.from('animals').select('*').eq('id', id).single();
-    if (error || !data) {
-      throw new Error('Animal not found');
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('animals').select('*').eq('id', id).single();
+        if (!error && data) {
+          const normalized = normalizeAnimalImages(data);
+          animalCache.set(id, { data: normalized, timestamp: Date.now() });
+          return normalized;
+        }
+      } catch (e) {
+        // Fallback to local mockAnimals
+      }
     }
 
-    animalCache.set(id, { data, timestamp: Date.now() });
-    return data;
+    const localFound = mockAnimals.find(a => a.id === id);
+    if (localFound) {
+      const normalized = normalizeAnimalImages(localFound);
+      animalCache.set(id, { data: normalized, timestamp: Date.now() });
+      return normalized;
+    }
+
+    throw new Error('Animal not found');
   },
 
   /**

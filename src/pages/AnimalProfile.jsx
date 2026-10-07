@@ -257,6 +257,21 @@ function AnimalProfile() {
                 src={images[activeImageIndex]} 
                 alt={animal.name} 
                 className="animal-gallery-main-img" 
+                onError={(e) => {
+                  const currentSrc = e.currentTarget.src || '';
+                  if (currentSrc.endsWith('.jpeg')) {
+                    e.currentTarget.src = currentSrc.replace(/\.jpeg$/, '.jpg');
+                    return;
+                  }
+                  if (currentSrc.endsWith('.jpg')) {
+                    e.currentTarget.src = currentSrc.replace(/\.jpg$/, '.jpeg');
+                    return;
+                  }
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = animal?.type === 'cat'
+                    ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800'
+                    : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800';
+                }}
               />
 
               {/* Status Badge */}
@@ -377,7 +392,33 @@ function AnimalProfile() {
                 <FileText size={18} color="var(--primary, #D97706)" /> เรื่องราวของ {animal.name}
               </h2>
               <div className="animal-story-content">
-                <p>{animal.story || `ยังไม่มีข้อมูลเรื่องราวเพิ่มเติมสำหรับ ${animal.name}`}</p>
+                {animal.story && animal.story.includes('English:') ? (
+                  <div className="animal-story-bilingual">
+                    {(() => {
+                      const parts = animal.story.split('English:');
+                      const thText = (parts[0] || '').replace(/^ไทย:\s*/, '').trim();
+                      const enText = (parts[1] || '').trim();
+                      return (
+                        <>
+                          <div style={{ marginBottom: '14px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.76rem', fontWeight: 600, color: '#92400E', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', marginBottom: '6px' }}>
+                              ภาษาไทย
+                            </span>
+                            <p style={{ margin: '4px 0 0', whiteSpace: 'pre-line' }}>{thText}</p>
+                          </div>
+                          <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '12px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.76rem', fontWeight: 600, color: '#374151', backgroundColor: '#F3F4F6', padding: '2px 8px', borderRadius: '6px', marginBottom: '6px' }}>
+                              English
+                            </span>
+                            <p style={{ margin: '4px 0 0', whiteSpace: 'pre-line' }}>{enText}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p>{animal.story || `ยังไม่มีข้อมูลเรื่องราวเพิ่มเติมสำหรับ ${animal.name}`}</p>
+                )}
               </div>
             </div>
 

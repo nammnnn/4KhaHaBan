@@ -117,6 +117,21 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
           loading={isFront ? "eager" : "lazy"} 
           decoding="async" 
           fetchPriority={isFront ? "high" : "auto"}
+          onError={(e) => {
+            const currentSrc = e.currentTarget.src || '';
+            if (currentSrc.endsWith('.jpeg')) {
+              e.currentTarget.src = currentSrc.replace(/\.jpeg$/, '.jpg');
+              return;
+            }
+            if (currentSrc.endsWith('.jpg')) {
+              e.currentTarget.src = currentSrc.replace(/\.jpg$/, '.jpeg');
+              return;
+            }
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = animal?.type === 'cat'
+              ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800'
+              : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800';
+          }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
         
@@ -319,7 +334,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
               flex: 1,
               paddingRight: '8px'
             }}>
-              {animal.description || 'รอผู้ใจดีมารับเลี้ยงอยู่นะครับ สุนัขตัวนี้ต้องการบ้านที่อบอุ่น'}
+              {animal.description || animal.story || 'รอผู้ใจดีมารับเลี้ยงอยู่นะครับ สัตว์ตัวนี้ต้องการบ้านที่อบอุ่น'}
             </p>
             <span style={{
               fontSize: '0.74rem',

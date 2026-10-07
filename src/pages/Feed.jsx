@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert } from 'lucide-react';
+import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard } from '../components/SwipeCard';
 import { FilterModal } from '../components/FilterModal';
@@ -114,21 +114,26 @@ function Feed() {
         }
       }
 
-      // จัดเรียงน้องที่อยู่ใกล้ตัวผู้ใช้มากที่สุดขึ้นมาก่อน
-      filteredData.sort((a, b) => {
-        if (a.distanceKm === null) return 1;
-        if (b.distanceKm === null) return -1;
-        return a.distanceKm - b.distanceKm;
-      });
+      // สุ่มสลับลำดับสัตว์เลี้ยง (Shuffle) เพื่อให้หน้า Feed มีความหลากหลาย ไม่ซ้ำซาก
+      const randomized = [...filteredData].sort(() => Math.random() - 0.5);
       
-      poolRef.current = filteredData;
-      setCards(filteredData.map(makeCard));
+      poolRef.current = randomized;
+      setCards(randomized.map(makeCard));
       setHistory([]);
       setPendingMatch(null);
     } catch (error) {
       console.error("Failed to fetch animals", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShuffle = () => {
+    const source = poolRef.current.length > 0 ? poolRef.current : cards;
+    if (source.length > 0) {
+      const reshuffled = [...source].sort(() => Math.random() - 0.5);
+      setCards(reshuffled.map(makeCard));
+      setHistory([]);
     }
   };
 
@@ -286,6 +291,29 @@ function Feed() {
             ) : (
               <MapPin size={16} />
             )}
+          </button>
+
+          <button
+            className="filter-btn"
+            onClick={handleShuffle}
+            title="สุ่มสลับการ์ดสัตว์เลี้ยงใหม่"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 11px',
+              borderRadius: '20px',
+              backgroundColor: '#FFFBEB',
+              border: '1px solid #FDE68A',
+              color: '#92400E',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Shuffle size={14} color="#D97706" />
+            <span>สุ่มใหม่</span>
           </button>
 
           <button
