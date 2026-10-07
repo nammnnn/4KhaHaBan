@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert, Shuffle } from 'lucide-react';
+import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard } from '../components/SwipeCard';
 import { FilterModal } from '../components/FilterModal';
@@ -128,14 +128,6 @@ function Feed() {
     }
   };
 
-  const handleShuffle = () => {
-    const source = poolRef.current.length > 0 ? poolRef.current : cards;
-    if (source.length > 0) {
-      const reshuffled = [...source].sort(() => Math.random() - 0.5);
-      setCards(reshuffled.map(makeCard));
-      setHistory([]);
-    }
-  };
 
   useEffect(() => {
     loadAnimals();
@@ -293,28 +285,6 @@ function Feed() {
             )}
           </button>
 
-          <button
-            className="filter-btn"
-            onClick={handleShuffle}
-            title="สุ่มสลับการ์ดสัตว์เลี้ยงใหม่"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 11px',
-              borderRadius: '20px',
-              backgroundColor: '#FFFBEB',
-              border: '1px solid #FDE68A',
-              color: '#92400E',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Shuffle size={14} color="#D97706" />
-            <span>สุ่มใหม่</span>
-          </button>
 
           <button
             className="filter-btn"
