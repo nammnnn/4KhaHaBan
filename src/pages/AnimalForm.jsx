@@ -335,7 +335,7 @@ const AnimalForm = () => {
       } else {
         const { error } = await supabase
           .from('animals')
-          .insert([payload]);
+          .insert([{ ...payload, status: 'available' }]);
         if (error) throw error;
       }
 
