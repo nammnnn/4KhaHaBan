@@ -18,16 +18,16 @@ export function normalizeAnimalImages(animal) {
         const filename = img.replace('/animals/', '');
         finalUrl = `${SUPABASE_STORAGE_URL}/${filename}`;
       }
-      // Add cache-buster to ensure the browser loads the new sharp HD image immediately
+      // Add cache-buster to ensure the browser loads the latest raw authentic image immediately
       if (finalUrl.includes('supabase.co/storage/v1/object/public/animal-images') && !finalUrl.includes('?')) {
-        finalUrl = `${finalUrl}?v=2`;
+        finalUrl = `${finalUrl}?v=3`;
       }
     }
     return finalUrl;
   });
   return {
     ...animal,
-    images: normalizedImages.length > 0 ? normalizedImages : [`${SUPABASE_STORAGE_URL}/cat_p1_1.jpg?v=2`]
+    images: normalizedImages.length > 0 ? normalizedImages : [`${SUPABASE_STORAGE_URL}/cat_p1_1.jpg?v=3`]
   };
 }
 

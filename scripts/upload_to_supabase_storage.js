@@ -38,33 +38,29 @@ async function main() {
   let successCount = 0;
   let failCount = 0;
 
-  for (let i = 0; i < allFiles.length; i++) {
-    const filename = allFiles[i];
-    const filePath = path.join(animalsDir, filename);
-    const fileBuffer = fs.readFileSync(filePath);
-    const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
+  const BATCH_SIZE = 15;
+  for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
+    const batch = allFiles.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(async (filename) => {
+      const filePath = path.join(animalsDir, filename);
+      const fileBuffer = fs.readFileSync(filePath);
+      const contentType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(filename, fileBuffer, {
-        contentType,
-        upsert: true
-      });
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filename, fileBuffer, {
+          contentType,
+          upsert: true
+        });
 
-    if (error) {
-      console.error(`Failed to upload ${filename}:`, error.message);
-      failCount++;
-      if (error.message.includes('row-level security')) {
-        console.error('\n*** ERROR: Row-Level Security blocked upload! ***');
-        console.error('Please run supabase/setup_storage_policy.sql in Supabase SQL Editor first.\n');
-        process.exit(1);
+      if (error) {
+        console.error(`Failed to upload ${filename}:`, error.message);
+        failCount++;
+      } else {
+        successCount++;
       }
-    } else {
-      successCount++;
-      if (successCount % 20 === 0 || i === allFiles.length - 1) {
-        console.log(`Uploaded ${successCount}/${allFiles.length} images...`);
-      }
-    }
+    }));
+    console.log(`Uploaded ${successCount}/${allFiles.length} images...`);
   }
 
   console.log(`\nUpload complete! Successfully uploaded ${successCount} images (${failCount} failed).`);
