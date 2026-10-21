@@ -112,6 +112,9 @@ export default {
   'filters.nationwide': 'ทั่วประเทศ',
   'filters.animalType': 'ชนิดสัตว์',
   'filters.all': 'ทั้งหมด',
+  'filters.living': 'การใช้ชีวิต',
+  'filters.livingHint': 'แสดงเฉพาะน้องที่ตรงทุกข้อที่เลือก',
+  'pf.filters.livingCount': '+{n} เงื่อนไข',
   'filters.search': 'ค้นหาเลย',
 
   // Location sheet

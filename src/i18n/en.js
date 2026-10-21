@@ -112,6 +112,9 @@ export default {
   'filters.nationwide': 'Nationwide',
   'filters.animalType': 'Type',
   'filters.all': 'All',
+  'filters.living': 'Lifestyle',
+  'filters.livingHint': 'Only shows pets that match everything you pick',
+  'pf.filters.livingCount': '+{n} more',
   'filters.search': 'Search',
 
   // Location sheet

@@ -625,7 +625,8 @@ export default function UserProfile() {
       ? t('pf.filters.anyDistance')
       : t('filters.km', { n: searchPrefs.maxDistance });
     // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
-    return [...(picked.length ? picked : [t('pf.filters.all')]), distance].join(' · ');
+    const living = searchPrefs.living?.length ? [t('pf.filters.livingCount', { n: searchPrefs.living.length })] : [];
+    return [...(picked.length ? picked : [t('pf.filters.all')]), distance, ...living].join(' · ');
   })();
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));

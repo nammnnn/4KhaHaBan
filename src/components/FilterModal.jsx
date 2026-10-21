@@ -1,29 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, SlidersHorizontal, MapPin, Search } from 'lucide-react';
+import { X, SlidersHorizontal, MapPin, Search, Check } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './FilterModal.css';
 import { useI18n } from '../i18n';
+import { FILTERABLE_TAG_IDS, tagById } from '../lib/tags';
 
-export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocation, onSetLocation }) {
+export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocation, onSetLocation, tagCounts }) {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   
   const [maxDistance, setMaxDistance] = useState(100);
   const [animalType, setAnimalType] = useState('all');
   const [gender, setGender] = useState('all');
+  const [living, setLiving] = useState([]); // standard tag ids, all must match
 
   useEffect(() => {
     if (isOpen && currentFilters) {
       setMaxDistance(currentFilters.maxDistance || 100);
       setAnimalType(currentFilters.animalType || 'all');
       setGender(currentFilters.gender || 'all');
+      setLiving(currentFilters.living || []);
     }
   }, [isOpen, currentFilters]);
 
+  // Without counts (e.g. before the first load) show every option
+  const lifestyleIds = FILTERABLE_TAG_IDS.filter((id) => !tagCounts || tagCounts[id] === undefined || tagCounts[id] > 0 || living.includes(id));
+
   const handleApply = async () => {
-    const newFilters = { maxDistance, animalType, gender };
+    const newFilters = { maxDistance, animalType, gender, living };
     await api.updateUserPreferences(user?.id, newFilters);
     onApply(newFilters);
     onClose();
@@ -133,6 +139,35 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
                 </div>
               </div>
             </div>
+
+            {/* Living — standard tags (DESIGN.md §7.19). Options no animal has yet are hidden,
+                so people don't filter themselves into an empty deck. */}
+            {lifestyleIds.length > 0 && (
+            <div className="filter-section">
+              <div className="filter-section-header">
+                <label>{t('filters.living')}</label>
+              </div>
+              <p className="filter-hint">{t('filters.livingHint')}</p>
+              <div className="filter-chips">
+                {lifestyleIds.map((id) => {
+                  const tag = tagById(id);
+                  const on = living.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className="ui-chip"
+                      aria-pressed={on}
+                      onClick={() => setLiving(on ? living.filter((x) => x !== id) : [...living, id])}
+                    >
+                      {on && <Check size={16} aria-hidden="true" />}
+                      {lang === 'en' ? tag.en : tag.th}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            )}
 
             <div className="filter-modal-footer">
               <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} onClick={handleApply}>

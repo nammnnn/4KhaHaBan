@@ -114,3 +114,17 @@ export function buildStoredTags(ids = [], custom = []) {
     .map((c) => (c.en && c.en.trim() ? `${c.th.trim()}${CUSTOM_SEPARATOR}${c.en.trim()}` : c.th.trim()));
   return [...standard, ...extra];
 }
+
+// Living tags adopters can filter by in the feed (what fits their home)
+export const FILTERABLE_TAG_IDS = ['good-with-kids', 'good-with-dogs', 'good-with-cats', 'apartment-ok', 'leash-trained', 'litter-trained'];
+
+/** True when the animal has every one of the required standard tag ids. */
+export function hasAllTags(rawTags = [], requiredIds = []) {
+  if (!requiredIds.length) return true;
+  const have = new Set((rawTags || []).map((t) => resolveTag(t)?.id).filter(Boolean));
+  return requiredIds.every((id) => have.has(id));
+}
+
+export function tagById(id) {
+  return BY_ID.get(id) || null;
+}

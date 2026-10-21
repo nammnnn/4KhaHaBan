@@ -4,6 +4,7 @@ import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAl
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwipeCard } from '../components/SwipeCard';
 import { displayNames } from '../lib/animal';
+import { hasAllTags, FILTERABLE_TAG_IDS } from '../lib/tags';
 import { useI18n, localizeDistance } from '../i18n';
 import { Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
@@ -75,6 +76,7 @@ function Feed() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const locSourceRef = useRef(null); // 'gps' | 'manual'
   const loadSeqRef = useRef(0);       // ignore results from superseded loads
+  const [tagCounts, setTagCounts] = useState({}); // lifestyle tag id -> animals available, for the filter sheet
   const hasSwipedRef = useRef(false); // once the user starts swiping, don't reshuffle the deck
   
   const navigate = useNavigate();
@@ -125,11 +127,13 @@ function Feed() {
       if (forcedCoords) setUserCoords(forcedCoords);
 
       const animalsWithDistance = (data || []).map((animal) => withDistance(animal, activeCoords));
+      setTagCounts(Object.fromEntries(FILTERABLE_TAG_IDS.map((id) => [id, (data || []).filter((a) => hasAllTags(a.tags, [id])).length])));
 
       // กรองตามเงื่อนไข ชนิด เพศ และระยะทางจริง
       let filteredData = animalsWithDistance.filter(animal => {
         if (currentFilters.animalType && currentFilters.animalType !== 'all' && animal.type !== currentFilters.animalType) return false;
         if (currentFilters.gender && currentFilters.gender !== 'all' && animal.gender !== currentFilters.gender) return false;
+        if (!hasAllTags(animal.tags, currentFilters.living)) return false;
         if (currentFilters.maxDistance && currentFilters.maxDistance < 300 && animal.distanceKm !== null) {
           if (animal.distanceKm > currentFilters.maxDistance) {
             return false;
@@ -144,6 +148,7 @@ function Feed() {
         const typeGenderFiltered = animalsWithDistance.filter(animal => {
           if (currentFilters.animalType && currentFilters.animalType !== 'all' && animal.type !== currentFilters.animalType) return false;
           if (currentFilters.gender && currentFilters.gender !== 'all' && animal.gender !== currentFilters.gender) return false;
+          if (!hasAllTags(animal.tags, currentFilters.living)) return false;
           return true;
         });
         if (typeGenderFiltered.length > 0) {
@@ -495,6 +500,7 @@ function Feed() {
         isOpen={isFilterOpen}
         currentFilters={filters}
         hasLocation={!!userCoords}
+        tagCounts={tagCounts}
         onSetLocation={() => { setIsFilterOpen(false); setIsLocSheetOpen(true); }}
         onClose={() => setIsFilterOpen(false)}
         onApply={handleApplyFilters}

@@ -161,3 +161,9 @@
   cursor: pointer;
   flex-shrink: 0;
 }
+
+.filter-hint { margin: -4px 0 var(--space-3); font-size: var(--text-caption); color: var(--ink-500); }
+.filter-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Keep the sheet usable on short screens now that it has more sections */
+.filter-modal-content { max-height: calc(100dvh - 24px); overflow-y: auto; }
