@@ -45,20 +45,6 @@
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
-/* Low-resolution photo: centered near native size over a blurred copy (DESIGN.md §5) */
-.ap-hero__img.is-lowres {
-  top: 50%;
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  width: clamp(180px, 56%, 300px);
-  height: auto;
-  aspect-ratio: auto;
-  transform: translate(-50%, -50%);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.25);
-}
-
 .ap-photo-skeleton {
   position: absolute;
   inset: 0;

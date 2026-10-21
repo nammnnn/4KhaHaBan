@@ -4,10 +4,6 @@ import { Heart, X, Info, PawPrint, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Chip } from './ui';
 
-// Photos narrower than this would be stretched far past their real resolution on the card,
-// so they are shown at a modest size over a blurred copy instead (DESIGN.md §5).
-export const LOW_RES_WIDTH = 480;
-
 const GENDER_LABEL = { male: 'ตัวผู้', female: 'ตัวเมีย' };
 const TYPE_LABEL = { dog: 'สุนัข', cat: 'แมว' };
 
@@ -30,7 +26,6 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
   const originalSrc = animal?.images?.[0] || null;
   const [imgSrc, setImgSrc] = useState(originalSrc);
   const [imgState, setImgState] = useState(originalSrc ? 'loading' : 'error');
-  const [lowRes, setLowRes] = useState(false);
   const [triedSwap, setTriedSwap] = useState(false);
 
   useEffect(() => {
@@ -122,10 +117,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
       initial={isSecond ? { scale: 0.94, opacity: 0 } : false}
       aria-hidden={!isFront}
     >
-      <div className={`swipe-card__media${lowRes ? ' swipe-card__media--lowres' : ''}`}>
-        {lowRes && (
-          <div className="photo-backdrop" style={{ backgroundImage: `url("${imgSrc}")` }} aria-hidden="true" />
-        )}
+      <div className="swipe-card__media">
         {imgState === 'loading' && <div className="skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />}
 
         {imgState === 'error' ? (
@@ -142,10 +134,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
             loading={isFront ? 'eager' : 'lazy'}
             decoding="async"
             fetchPriority={isFront ? 'high' : 'auto'}
-            onLoad={(e) => {
-              setLowRes(e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth < LOW_RES_WIDTH);
-              setImgState('loaded');
-            }}
+            onLoad={() => setImgState('loaded')}
             onError={handleImgError}
           />
         )}

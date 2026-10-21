@@ -188,31 +188,6 @@
 
 .swipe-card__img--loading { opacity: 0; }
 
-/* Low-resolution photo: blurred copy fills the card, the real photo sits on top at a size
-   close to its native resolution so it stays sharp (DESIGN.md §5) */
-.photo-backdrop {
-  position: absolute;
-  inset: -24px;
-  background-size: cover;
-  background-position: center;
-  filter: blur(24px) saturate(1.15) brightness(0.9);
-}
-
-.swipe-card__media--lowres {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 12%;
-}
-
-.swipe-card__media--lowres .swipe-card__img {
-  position: relative;
-  width: clamp(160px, 58%, 240px);
-  height: auto;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.25);
-}
-
 .swipe-card__fallback {
   position: absolute;
   inset: 0;
