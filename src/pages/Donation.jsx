@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Building2, ChevronDown, ChevronRight, AlertCircle, Lightbulb, ShoppingBag, Pill, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Building2, ChevronDown, ChevronRight, AlertCircle, Info, ShoppingBag, Pill, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
@@ -58,6 +58,75 @@ function NeedsList({ items, t }) {
   );
 }
 
+// Shipping tips as a tooltip by the "Send supplies" heading: hover/focus on desktop, tap on touch.
+// Floats over the card, so it never changes the card's height.
+const canHover = () => window.matchMedia?.('(hover: hover)').matches;
+
+function ShippingTips({ t }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={ref}
+      className="sp-tip"
+      onMouseEnter={() => canHover() && setOpen(true)}
+      onMouseLeave={() => canHover() && setOpen(false)}
+    >
+      <button
+        type="button"
+        className="sp-tip__btn"
+        aria-expanded={open}
+        aria-controls="sp-tip-pop"
+        aria-label={t('donate.tips.title')}
+        // With a mouse, hover already opened it, so a click keeps it open; on touch, tap toggles
+        onClick={() => setOpen((v) => (canHover() ? true : !v))}
+      >
+        <Info size={16} aria-hidden="true" />
+        <span>{t('donate.tips.short')}</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            id="sp-tip-pop"
+            role="tooltip"
+            className="sp-tip__pop"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+          >
+            <strong className="sp-tip__title">{t('donate.tips.title')}</strong>
+            <ul className="sp-tip-list">
+              {[ShoppingBag, Package, Sparkles, Pill].map((Icon, i) => (
+                <li key={i}>
+                  <span className="sp-tip-list__icon" aria-hidden="true"><Icon size={16} /></span>
+                  <span>
+                    <strong>{t(`donate.tips.${i + 1}.title`)}</strong>
+                    <small>{t(`donate.tips.${i + 1}`)}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function Donation() {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -70,7 +139,7 @@ function Donation() {
 
   const [payOpen, setPayOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [sheet, setSheet] = useState(null); // 'needs' | 'tips'
+  const [sheet, setSheet] = useState(null); // 'needs'
   const [slipFile, setSlipFile] = useState(null);
   const [slipPreview, setSlipPreview] = useState(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -288,7 +357,10 @@ function Donation() {
 
         {/* Items */}
         <section className={`sp-card ${mobileTab !== 'items' ? 'sp-hide-mobile' : ''}`}>
-          <h2 className="sp-card__title"><Package size={20} className="sp-card__icon" aria-hidden="true" />{t('donate.items')}</h2>
+          <div className="sp-card__head">
+            <h2 className="sp-card__title"><Package size={20} className="sp-card__icon" aria-hidden="true" />{t('donate.items')}</h2>
+            <ShippingTips t={t} />
+          </div>
           <p className="sp-card__hint">{t('donate.items.desc')}</p>
 
           <h3 className="sp-label">{t('donate.items.needs')}</h3>
@@ -327,38 +399,12 @@ function Donation() {
             </div>
           )}
 
-          {/* Opens in a sheet so the card never changes height */}
-          <button type="button" className="sp-tips-link" onClick={() => setSheet('tips')} aria-haspopup="dialog">
-            <Lightbulb size={18} aria-hidden="true" />
-            <span>{t('donate.tips.title')}</span>
-            <ChevronRight size={16} aria-hidden="true" />
-          </button>
         </section>
       </div>
 
       {/* All needs */}
       <Dialog open={sheet === 'needs'} onClose={() => setSheet(null)} title={t('donate.items.needs')}>
         <NeedsList items={needs} t={t} />
-      </Dialog>
-
-      {/* Shipping tips */}
-      <Dialog
-        open={sheet === 'tips'}
-        onClose={() => setSheet(null)}
-        title={t('donate.tips.title')}
-        actions={<Button variant="primary" block onClick={() => setSheet(null)}>{t('donate.tips.ok')}</Button>}
-      >
-        <ul className="sp-tip-list">
-          {[ShoppingBag, Package, Sparkles, Pill].map((Icon, i) => (
-            <li key={i}>
-              <span className="sp-tip-list__icon" aria-hidden="true"><Icon size={18} /></span>
-              <span>
-                <strong>{t(`donate.tips.${i + 1}.title`)}</strong>
-                <small>{t(`donate.tips.${i + 1}`)}</small>
-              </span>
-            </li>
-          ))}
-        </ul>
       </Dialog>
 
       {/* Foundation list */}

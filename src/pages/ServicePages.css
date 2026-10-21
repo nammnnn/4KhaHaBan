@@ -375,28 +375,56 @@
 .sp-address address { display: flex; flex-direction: column; gap: 2px; font-style: normal; font-size: var(--text-label); line-height: 1.55; color: var(--ink-700); }
 .sp-address address strong { color: var(--ink-900); }
 
-.sp-tips-link {
-  display: flex;
+/* Shipping tips tooltip */
+.sp-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.sp-tip { position: relative; }
+.sp-tip__btn {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  margin-top: auto;
-  padding: var(--space-3) var(--space-1) 0;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
   border: 0;
-  border-top: 1px solid var(--line-200);
-  background: none;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
   font: inherit;
-  font-size: var(--text-label);
+  font-size: var(--text-caption);
   font-weight: 600;
-  color: var(--ink-700);
-  text-align: left;
+  color: var(--ink-600);
   cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
 }
-.sp-tips-link span { flex: 1; }
-.sp-tips-link svg:first-child { color: var(--primary-strong); }
-.sp-tips-link svg:last-child { color: var(--ink-400); transition: transform var(--duration-fast); }
-.sp-tips-link:hover { color: var(--ink-900); }
-.sp-tips-link:hover svg:last-child { transform: translateX(2px); }
+.sp-tip__btn:hover, .sp-tip__btn[aria-expanded='true'] { background: var(--line-200); color: var(--ink-900); }
+.sp-tip__btn svg { color: var(--primary-strong); }
+.sp-tip__pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 48px));
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elev-floating), 0 0 0 1px var(--line-200);
+}
+/* small arrow pointing at the button */
+.sp-tip__pop::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  width: 12px;
+  height: 12px;
+  background: var(--surface);
+  transform: rotate(45deg);
+  box-shadow: -1px -1px 0 var(--line-200);
+}
+/* keep the pointer path between button and popup so hover doesn't drop */
+.sp-tip__pop::after { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
+.sp-tip__title { display: block; margin-bottom: var(--space-3); font-size: var(--text-label); color: var(--ink-900); }
+.sp-tip__pop .sp-tip-list { gap: var(--space-3); }
+.sp-tip__pop .sp-tip-list__icon { width: 30px; height: 30px; border-radius: var(--radius-sm); }
+.sp-tip__pop .sp-tip-list small { font-size: var(--text-caption); }
 
 .sp-tip-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-4); }
 .sp-tip-list li { display: flex; gap: var(--space-3); align-items: flex-start; }
