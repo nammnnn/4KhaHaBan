@@ -3447,6 +3447,9 @@
     max-height: min(640px, calc(100dvh - 200px));
   }
 
+  /* The panel's "ดูประวัติเต็ม" link replaces the card's (i) button here */
+  .swipe-card__info-btn { display: none; }
+
   .feed-panel__inner {
     flex: 0 1 auto;
     min-height: 0;

@@ -29,6 +29,10 @@ const TIPS = [
   { icon: Info, tone: 'info', title: 'ปุ่ม (i) บนการ์ด', text: 'ดูประวัติและเรื่องราวของน้อง' },
 ];
 
+// Wide screens show details beside the card instead of an (i) button (DESIGN.md §7.18)
+const WIDE_INFO_TIP = { icon: Info, tone: 'info', title: 'ข้อมูลด้านขวา', text: 'อ่านเรื่องราวของน้อง หรือกด "ดูประวัติเต็ม"' };
+const isWideScreen = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1200px)').matches;
+
 export function FeedOnboarding({ open, onClose }) {
   const reduceMotion = useReducedMotion();
   const buttonRef = useRef(null);
@@ -76,7 +80,7 @@ export function FeedOnboarding({ open, onClose }) {
             <h2 id="feed-onboarding-title" className="feed-onboarding__title">ปัดเพื่อหาน้องที่ใช่</h2>
 
             <ul className="feed-onboarding__tips">
-              {TIPS.map(({ icon: Icon, tone, title, text }) => (
+              {(isWideScreen() ? [...TIPS.slice(0, 3), WIDE_INFO_TIP] : TIPS).map(({ icon: Icon, tone, title, text }) => (
                 <li key={title}>
                   <span className={`feed-onboarding__icon feed-onboarding__icon--${tone}`} aria-hidden="true">
                     <Icon size={20} strokeWidth={2.5} {...(tone === 'like' ? { fill: 'currentColor', strokeWidth: 0 } : {})} />
