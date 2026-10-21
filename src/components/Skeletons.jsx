@@ -773,7 +773,6 @@ export const LoginSkeleton = () => (
       <div className="login-form-card">
         {/* Mobile Topbar Skeleton */}
         <div className="login-mobile-topbar">
-          <div className="skeleton" style={{ width: '76px', height: '32px', borderRadius: '8px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="skeleton" style={{ width: '26px', height: '26px', borderRadius: '6px' }} />
             <div className="skeleton skeleton-text" style={{ width: '70px', height: '16px' }} />

@@ -50,11 +50,6 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.login-brand-badge:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
 .login-brand-icon-box {
   width: 28px;
   height: 28px;
@@ -154,7 +149,7 @@
 .login-mobile-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
   margin-bottom: 20px;
 }
@@ -163,26 +158,6 @@
   .login-mobile-topbar {
     display: none;
   }
-}
-
-.login-mobile-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.login-mobile-back-btn:active {
-  background: #F3F4F6;
-  transform: scale(0.97);
 }
 
 .login-mobile-brand {

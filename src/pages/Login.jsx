@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   PawPrint, Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield, CheckCircle2, ChevronLeft
+  X, Shield, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
@@ -139,14 +139,14 @@ const Login = () => {
         <div className="login-showcase-inner">
           
           {/* Logo Badge */}
-          <Link to="/" className="login-brand-badge" title="กลับหน้าแรก">
+          <div className="login-brand-badge">
             <div className="login-brand-icon-box">
               <PawPrint size={16} strokeWidth={2.4} />
             </div>
             <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>
               4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
             </span>
-          </Link>
+          </div>
 
           <h1 className="login-showcase-title">
             ค้นหาเพื่อนสี่ขา <br />
@@ -190,11 +190,6 @@ const Login = () => {
 
           {/* Mobile Topbar */}
           <div className="login-mobile-topbar">
-            <Link to="/" className="login-mobile-back-btn">
-              <ChevronLeft size={16} />
-              <span>หน้าแรก</span>
-            </Link>
-
             <div className="login-mobile-brand">
               <div className="login-mobile-brand-icon">
                 <PawPrint size={15} strokeWidth={2.4} />
