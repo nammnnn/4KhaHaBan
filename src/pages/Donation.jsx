@@ -15,8 +15,32 @@ import './ServicePages.css';
 
 const TIERS = [100, 300, 500, 1000];
 const CUSTOM = 'custom';
+const NEEDS_PREVIEW = 3; // most urgent first; keeps the two cards about the same height
 const NEED_ORDER = { critical: 0, high: 1, normal: 2, sufficient: 3 };
 const NEED_TONE = { critical: 'danger', high: 'pending', normal: 'success', sufficient: 'neutral' };
+
+// Thai addresses end with the province ("... จ.ขอนแก่น 40270"); show just that as the place
+function placeOf(address = '') {
+  const m = /(?:จ\.|จังหวัด)\s*([^\s\d()]+)/.exec(address) || /(กรุงเทพ(?:มหานคร|ฯ)?)/.exec(address);
+  return m ? m[1] : '';
+}
+
+const hasRealPromptpay = (f) => !f?.demo && (f?.promptpay_number || f?.phone || '').replace(/\D/g, '').length >= 10;
+
+function FoundationAvatar({ f }) {
+  const initial = (f?.full_name || '').replace(/^มูลนิธิ\s*/, '').trim().charAt(0).toUpperCase();
+  return <span className="sp-avatar" aria-hidden="true">{initial || <Building2 size={20} />}</span>;
+}
+
+function FoundationMeta({ f, t }) {
+  const place = placeOf(f?.address);
+  return (
+    <span className="sp-picked__meta">
+      {place && <span>{place}</span>}
+      {hasRealPromptpay(f) && <span className="sp-picked__pp">{t('donate.acceptsPromptpay')}</span>}
+    </span>
+  );
+}
 
 function Donation() {
   const { user } = useAuth();
@@ -29,6 +53,8 @@ function Donation() {
   const [copied, setCopied] = useState(null); // 'address' | 'promptpay'
 
   const [payOpen, setPayOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [showAllNeeds, setShowAllNeeds] = useState(false);
   const [slipFile, setSlipFile] = useState(null);
   const [slipPreview, setSlipPreview] = useState(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -60,6 +86,7 @@ function Donation() {
 
   useEffect(() => {
     if (!selectedFoundationId) return;
+    setShowAllNeeds(false);
     let channel = null;
     const fetchNeeds = async () => {
       setLoadingNeeds(true);
@@ -83,8 +110,8 @@ function Donation() {
 
   const foundation = foundations.find((f) => f.id === selectedFoundationId) || null;
   // Only ever build a QR for a real number — never a placeholder account
-  const promptpay = foundation?.demo ? '' : (foundation?.promptpay_number || foundation?.phone || '').replace(/\D/g, '');
-  const hasPromptpay = promptpay.length >= 10;
+  const hasPromptpay = hasRealPromptpay(foundation);
+  const promptpay = hasPromptpay ? (foundation.promptpay_number || foundation.phone).replace(/\D/g, '') : '';
   const amount = tier === CUSTOM ? Math.floor(Number(customAmount) || 0) : tier;
   const canDonate = !!foundation && hasPromptpay && amount >= 1;
 
@@ -99,7 +126,7 @@ function Donation() {
   };
 
   const addressText = foundation
-    ? `${foundation.full_name}\n${foundation.address || ''}\n${t('donate.items.tel')} ${foundation.phone || '-'}`
+    ? [foundation.full_name, foundation.address, foundation.phone && `${t('donate.items.tel')} ${foundation.phone}`].filter(Boolean).join('\n')
     : '';
 
   const openPayment = () => {
@@ -160,20 +187,25 @@ function Donation() {
       </motion.header>
 
       {/* One foundation picker for both ways of giving */}
-      <section className="sp-card sp-foundation">
-        <label className="sp-label" htmlFor="dn-foundation">{t('donate.to')}</label>
-        {foundations.length === 0 ? (
-          <p className="sp-card__hint">{t('donate.noFoundations')}</p>
-        ) : (
-          <div className="sp-select">
-            <Building2 size={18} aria-hidden="true" />
-            <select id="dn-foundation" className="ui-input" value={selectedFoundationId} onChange={(e) => setSelectedFoundationId(e.target.value)}>
-              {foundations.map((f) => <option key={f.id} value={f.id}>{f.full_name}</option>)}
-            </select>
-            <ChevronDown size={18} aria-hidden="true" />
-          </div>
-        )}
-      </section>
+      {foundations.length === 0 ? (
+        <section className="sp-card"><p className="sp-card__hint">{t('donate.noFoundations')}</p></section>
+      ) : (
+        <button
+          type="button"
+          className="sp-card sp-picked"
+          onClick={() => foundations.length > 1 && setPickerOpen(true)}
+          aria-haspopup={foundations.length > 1 ? 'dialog' : undefined}
+          disabled={foundations.length < 2}
+        >
+          <FoundationAvatar f={foundation} />
+          <span className="sp-picked__body">
+            <small>{t('donate.to')}</small>
+            <strong>{foundation?.full_name}</strong>
+            <FoundationMeta f={foundation} t={t} />
+          </span>
+          {foundations.length > 1 && <span className="sp-picked__change">{t('donate.change')}<ChevronDown size={16} aria-hidden="true" /></span>}
+        </button>
+      )}
 
       <div className="sp-seg sp-seg--mobile" role="tablist">
         <button type="button" role="tab" aria-selected={mobileTab === 'money'} className={mobileTab === 'money' ? 'is-on' : ''} onClick={() => setMobileTab('money')}>
@@ -226,15 +258,17 @@ function Donation() {
 
           {tier !== CUSTOM && <p className="sp-impact">{t(`donate.tier.${tier}.impact`)}</p>}
 
-          <p className="sp-trust"><ShieldCheck size={16} aria-hidden="true" /> {t('donate.trust')}</p>
-
-          {foundation && !hasPromptpay && (
-            <p className="sp-warn"><AlertCircle size={16} aria-hidden="true" /> {t('donate.noPromptpay')}</p>
-          )}
-
-          <Button variant="primary" block onClick={openPayment} disabled={!canDonate}>
-            {amount >= 1 ? t('donate.cta', { amount: baht(amount) }) : t('donate.cta.empty')}
-          </Button>
+          {/* Pinned to the bottom so both cards line up */}
+          <div className="sp-card__foot">
+            {foundation && !hasPromptpay ? (
+              <p className="sp-warn"><AlertCircle size={16} aria-hidden="true" /> {t('donate.noPromptpay')}</p>
+            ) : (
+              <p className="sp-trust"><ShieldCheck size={16} aria-hidden="true" /> {t('donate.trust')}</p>
+            )}
+            <Button variant="primary" block onClick={openPayment} disabled={!canDonate}>
+              {amount >= 1 ? t('donate.cta', { amount: baht(amount) }) : t('donate.cta.empty')}
+            </Button>
+          </div>
         </section>
 
         {/* Items */}
@@ -250,8 +284,9 @@ function Donation() {
           ) : needs.length === 0 ? (
             <p className="sp-empty">{t('donate.items.none')}</p>
           ) : (
+            <>
             <ul className="sp-needs">
-              {needs.map((item) => (
+              {(showAllNeeds ? needs : needs.slice(0, NEEDS_PREVIEW)).map((item) => (
                 <li key={item.id}>
                   <span>
                     <strong>{item.item_name}</strong>
@@ -261,6 +296,13 @@ function Donation() {
                 </li>
               ))}
             </ul>
+            {needs.length > NEEDS_PREVIEW && (
+              <button type="button" className="sp-more" onClick={() => setShowAllNeeds((v) => !v)} aria-expanded={showAllNeeds}>
+                {showAllNeeds ? t('donate.items.less') : t('donate.items.more', { count: needs.length })}
+                <ChevronDown size={16} aria-hidden="true" />
+              </button>
+            )}
+            </>
           )}
 
           {foundation && (
@@ -275,7 +317,7 @@ function Donation() {
               <address>
                 <strong>{foundation.full_name}</strong>
                 <span>{foundation.address || t('donate.items.noAddress')}</span>
-                <span>{t('donate.items.tel')} {foundation.phone || '-'}</span>
+                {foundation.phone && <span>{t('donate.items.tel')} {foundation.phone}</span>}
               </address>
             </div>
           )}
@@ -291,6 +333,33 @@ function Donation() {
           </details>
         </section>
       </div>
+
+      {/* Foundation list */}
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} title={t('donate.pick')}>
+        <ul className="sp-pick-list" role="listbox" aria-label={t('donate.pick')}>
+          {foundations.map((f) => {
+            const on = f.id === selectedFoundationId;
+            return (
+              <li key={f.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  className={`sp-pick ${on ? 'is-on' : ''}`}
+                  onClick={() => { setSelectedFoundationId(f.id); setPickerOpen(false); }}
+                >
+                  <FoundationAvatar f={f} />
+                  <span className="sp-picked__body">
+                    <strong>{f.full_name}</strong>
+                    <FoundationMeta f={f} t={t} />
+                  </span>
+                  {on && <Check size={20} className="sp-pick__check" aria-hidden="true" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Dialog>
 
       {/* PromptPay */}
       <Dialog

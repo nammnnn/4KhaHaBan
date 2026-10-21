@@ -564,9 +564,12 @@ export const DonationSkeleton = () => (
       <div className="skeleton skeleton-text" style={{ width: '120px', height: '32px' }} />
       <div className="skeleton skeleton-text" style={{ width: '70%', maxWidth: '460px', height: '16px', marginTop: '10px' }} />
     </div>
-    <div className="sp-card sp-foundation">
-      <div className="skeleton skeleton-text" style={{ width: '72px', height: '14px' }} />
-      <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
+    <div className="sp-card sp-picked">
+      <div className="skeleton" style={{ width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0 }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className="skeleton skeleton-text" style={{ width: '60px', height: '12px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '55%', height: '18px' }} />
+      </div>
     </div>
     <div className="sp-two">
       {[0, 1].map((col) => (
