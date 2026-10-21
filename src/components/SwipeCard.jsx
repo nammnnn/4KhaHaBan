@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Chip } from './ui';
 import { useI18n, localizeAge, localizeDistance } from '../i18n';
 import { displayNames, formatGender, formatType } from '../lib/animal';
+import { displayTags } from '../lib/tags';
 
 export { splitAnimalName } from '../lib/animal';
 
@@ -105,6 +106,12 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
     localizeDistance(animal.distance, lang),
   ].filter(Boolean);
   const typeLabel = formatType(animal.type, t);
+  // Card shows personality first (what people browse for), health facts live on the profile
+  const tags = (() => {
+    const all = displayTags(animal.tags, lang);
+    const order = { personality: 0, living: 1, custom: 2, health: 3 };
+    return [...all].sort((a, b) => order[a.group] - order[b.group]).slice(0, 3);
+  })();
 
   return (
     <motion.div
@@ -185,10 +192,10 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
           <span>{animal.shelter || t('common.shelter')}</span>
         </div>
 
-        {animal.tags?.length > 0 && (
+        {tags.length > 0 && (
           <div className="swipe-card__tags">
-            {animal.tags.slice(0, 3).map((tag) => (
-              <Chip key={tag} onPhoto>{tag}</Chip>
+            {tags.map((tag) => (
+              <Chip key={tag.key} onPhoto>{tag.label}</Chip>
             ))}
           </div>
         )}

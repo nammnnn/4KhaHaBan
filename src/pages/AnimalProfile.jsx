@@ -11,6 +11,7 @@ import {
   MessageCircle,
   PawPrint,
   MapPin,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
@@ -19,6 +20,7 @@ import { AnimalProfileSkeleton } from '../components/Skeletons';
 import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermission } from '../lib/geo';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { displayNames } from '../lib/animal';
+import { displayTags } from '../lib/tags';
 import { useI18n, localizeAge, localizeDistance } from '../i18n';
 import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
 import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
@@ -219,7 +221,7 @@ function AnimalProfile() {
     { label: t('animal.size'), value: formatSize(animal.size, t) },
   ];
   // Breed is only worth a chip when the foundation actually filled it in
-  const tags = [animal.breed, ...(animal.tags || [])].filter(Boolean);
+  const tags = displayTags([animal.breed, ...(animal.tags || [])], lang);
   const hasEnglish = Boolean(story.en);
   const storyText = storyLang === 'en' && hasEnglish ? story.en : story.th;
   const adoptHint = existingMatch
@@ -344,7 +346,12 @@ function AnimalProfile() {
             <section className="ap-section">
               <h2 className="ap-section__title">{t('animal.personality')}</h2>
               <div className="ap-tags">
-                {tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}
+                {tags.map((tag) => (
+                  <Chip key={tag.key} className={tag.group === 'health' ? 'ui-chip--health' : undefined}>
+                    {tag.group === 'health' && <CheckCircle2 size={14} aria-hidden="true" />}
+                    {tag.label}
+                  </Chip>
+                ))}
               </div>
             </section>
           )}

@@ -142,6 +142,8 @@ button.ui-chip[aria-pressed='true'] {
   border-color: transparent;
   color: var(--primary-deep);
 }
+.ui-chip--health { background: var(--success-soft) !important; color: var(--success); }
+
 .ui-chip--on-photo {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;

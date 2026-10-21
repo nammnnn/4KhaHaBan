@@ -8,6 +8,8 @@ import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinat
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { FormPageSkeleton } from '../components/Skeletons';
 import { useToast } from '../components/ui';
+import { TagPicker } from '../components/TagPicker';
+import { splitStoredTags, buildStoredTags } from '../lib/tags';
 
 // Card photos fill ~900px-wide screens; anything much smaller looks blurry (DESIGN.md §5)
 const MIN_SHARP_WIDTH = 800;
@@ -36,7 +38,6 @@ const AnimalForm = () => {
     gender: 'unknown',
     size: 'medium',
     story: '',
-    tags: '', // string คั่นด้วยลูกน้ำ
     latitude: '',
     longitude: '',
   });
@@ -44,6 +45,8 @@ const AnimalForm = () => {
   // รูปภาพ
   const [images, setImages] = useState([]); // ไฟล์ใหม่ที่กำลังจะอัปโหลด
   const [smallImages, setSmallImages] = useState({}); // preview url -> natural width (only small ones)
+  const [tagIds, setTagIds] = useState([]); // standard tag ids (src/lib/tags.js)
+  const [customTags, setCustomTags] = useState([]); // [{ th, en }]
   const toast = useToast();
   const [previewImages, setPreviewImages] = useState([]); // URL ของรูป (ทั้งของเดิมและที่กำลัง preview)
   const [deletedImages, setDeletedImages] = useState([]); // URL ของรูปเดิมที่ถูกกดลบ
@@ -98,10 +101,12 @@ const AnimalForm = () => {
         gender: data.gender || 'unknown',
         size: data.size || 'medium',
         story: data.story || '',
-        tags: (data.tags || []).join(', '),
         latitude: data.latitude ? String(data.latitude) : '',
         longitude: data.longitude ? String(data.longitude) : '',
       });
+      const storedTags = splitStoredTags(data.tags || []);
+      setTagIds(storedTags.ids);
+      setCustomTags(storedTags.custom);
       
       setPreviewImages(data.images || []);
     } catch (error) {
@@ -297,10 +302,8 @@ const AnimalForm = () => {
       const existingUrls = previewImages.filter(url => url.startsWith('http'));
       const finalImages = [...existingUrls, ...uploadedUrls];
 
-      const tagsArray = formData.tags
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t !== '');
+      // Standard tag ids first, then custom tags ("ไทย" or "ไทย||English")
+      const tagsArray = buildStoredTags(tagIds, customTags);
 
       let shelterName = profile?.full_name || 'มูลนิธิช่วยเหลือสัตว์';
       if (supabase && user) {
@@ -665,19 +668,13 @@ const AnimalForm = () => {
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Tags (DESIGN.md §7.19) */}
             <div>
-              <label style={labelStyle}>ลักษณะนิสัย / สุขภาพ (คั่นด้วยเครื่องหมายจุลภาค ,)</label>
-              <input
-                type="text"
-                value={formData.tags}
-                onChange={e => handleFieldChange('tags', e.target.value)}
-                style={inputStyle}
-                placeholder="เช่น ขี้อ้อน, ทำหมันแล้ว, ฉีดวัคซีนครบ, เข้ากับแมวได้"
-              />
-              <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                ข้อความนี้จะแสดงเป็นแท็กบนการ์ดค้นหา เพื่อช่วยให้ผู้รับเลี้ยงตัดสินใจได้ง่ายขึ้น
+              <label style={labelStyle}>ลักษณะนิสัยและสุขภาพ</label>
+              <span style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0 0 12px', display: 'block' }}>
+                แตะเพื่อเลือก แท็กจะแสดงบนการ์ดและหน้าประวัติน้อง ทั้งภาษาไทยและภาษาอังกฤษ
               </span>
+              <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
             </div>
 
             {/* Story */}
