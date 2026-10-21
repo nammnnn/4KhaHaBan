@@ -5,116 +5,184 @@
    Mobile-first responsive design
    ============================================ */
 
-/* --- CSS Variables (DESIGN.md: Production Standard) --- */
+/* --- Design tokens (DESIGN.md v2) ---
+   ค่าทั้งหมดต้องมาจาก DESIGN.md — ห้ามเพิ่มสี/ขนาดใหม่ที่นี่โดยไม่แก้เอกสาร */
 :root {
-  /* Brand & Primary — Warm Honey Amber */
-  --primary: #D97706;
-  --primary-hover: #B45309;
-  --primary-light: #FDE68A;
-  --primary-lightest: #FEF3C7;
-  --primary-ring: rgba(217, 119, 6, 0.15);
+  /* Brand — Honey Amber */
+  --primary: #D97706;          /* ไอคอน, พื้นใหญ่ — ห้ามใช้เป็นตัวหนังสือเล็ก */
+  --primary-strong: #B45309;   /* ปุ่มหลัก, ลิงก์, ตัวหนังสือสีแบรนด์ */
+  --primary-deep: #92400E;     /* ตัวหนังสือบน primary-soft */
+  --primary-soft: #FEF3C7;
+  --primary-wash: #FFFBEB;
+  --primary-ring: rgba(217, 119, 6, 0.25);
 
-  /* Secondary & Verified — Forest Emerald */
-  --secondary: #059669;
-  --secondary-hover: #047857;
-  --secondary-light: #A7F3D0;
-  --secondary-lightest: #ECFDF5;
+  /* Semantic */
+  --success: #047857;
+  --success-fill: #059669;
+  --success-soft: #ECFDF5;
+  --danger: #DC2626;
+  --danger-strong: #B91C1C;
+  --danger-soft: #FEF2F2;
+  --info: #1D4ED8;
+  --info-soft: #EFF6FF;
 
-  /* Surfaces — Warm Alabaster & Crisp Paper White */
-  --background: #FAF8F5;       /* Warm Alabaster — clean neutral canvas */
-  --surface: #FFFFFF;          /* Pure White — card/dialog bg */
-  --surface-hover: #F9FAFB;
-  --surface-subtle: #F9FAFB;
+  /* Canvas & surfaces */
+  --background: #FAF8F5;
+  --surface: #FFFFFF;
+  --surface-sunken: #F5F5F4;
 
-  /* Text — Clean Neutral Contrast */
-  --text-dark: #111827;        /* Gray-900 Highest contrast */
-  --text-medium: #374151;      /* Gray-700 Labels & Body */
-  --text-light: #6B7280;       /* Gray-500 Secondary descriptions */
-  --text-muted: #9CA3AF;       /* Gray-400 Placeholders */
+  /* Warm neutrals (stone) */
+  --ink-900: #1C1917;
+  --ink-700: #44403C;
+  --ink-600: #57534E;
+  --ink-500: #78716C;
+  --ink-400: #A8A29E;
+  --line-200: #E7E5E4;
+  --line-300: #D6D3D1;
 
-  /* Action & Semantic Colors */
-  --danger: #DC2626;           /* Crisp Crimson (Nope / Required) */
-  --danger-hover: #B91C1C;
-  --danger-light: #FEF2F2;
-  --success: #059669;          /* Forest Emerald (Like / Verified) */
-  --success-light: #ECFDF5;
-  --super-like: #D97706;       /* Warm Amber (Super Like) */
+  /* Swipe actions */
+  --action-nope: #DC2626;
+  --action-like: #059669;
+  --action-superlike: #D97706;
+  --photo-scrim: linear-gradient(180deg, rgba(28,25,23,0) 40%, rgba(28,25,23,0.55) 65%, rgba(28,25,23,0.88) 100%);
 
-  /* Neutrals & Borders */
-  --border: #E5E7EB;           /* Card border 1px */
-  --border-input: #D1D5DB;     /* Input border 1px */
-  --gray-50: #FAF8F5;
-  --gray-100: #F3F4F6;
-  --gray-200: #E5E7EB;
-  --gray-300: #D1D5DB;
-  --gray-400: #9CA3AF;
-  --gray-500: #6B7280;
-  --gray-700: #374151;
-  --gray-900: #111827;
+  /* Typography scale */
+  --font-sans: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --text-display: 2.125rem;   /* 34 */
+  --text-title-lg: 1.75rem;   /* 28 */
+  --text-title: 1.375rem;     /* 22 */
+  --text-headline: 1.125rem;  /* 18 */
+  --text-body: 1rem;          /* 16 */
+  --text-label: 0.875rem;     /* 14 */
+  --text-caption: 0.75rem;    /* 12 */
 
   /* Radii */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Elevation (Micro-shadows without neon glow) */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.03);
-  --shadow-glow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  /* Spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Elevation (warm, no colored glows) */
+  --elev-raised: 0 1px 2px rgba(28,25,23,0.06), 0 2px 8px rgba(28,25,23,0.04);
+  --elev-floating: 0 8px 24px rgba(28,25,23,0.10), 0 2px 6px rgba(28,25,23,0.06);
+  --elev-photo: 0 12px 32px rgba(28,25,23,0.18);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
   /* Layout */
   --nav-height: 64px;
   --sidebar-width: 240px;
 
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-spring: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* --- Typography Tokens (DESIGN.md) --- */
-  --typography-display-fontFamily: "Prompt", sans-serif;
-  --typography-display-fontSize: 1.75rem;
-  --typography-display-fontWeight: 700;
-  --typography-display-lineHeight: 1.2;
-
-  --typography-headline-fontFamily: "Prompt", sans-serif;
-  --typography-headline-fontSize: 1.25rem;
-  --typography-headline-fontWeight: 600;
-  --typography-headline-lineHeight: 1.3;
-
-  --typography-body-fontFamily: "Prompt", sans-serif;
-  --typography-body-fontSize: 1rem;
-  --typography-body-fontWeight: 400;
-  --typography-body-lineHeight: 1.5;
-
-  --typography-label-fontFamily: "Prompt", sans-serif;
-  --typography-label-fontSize: 0.875rem;
-  --typography-label-fontWeight: 500;
-  --typography-label-lineHeight: 1.2;
-
-  --typography-title-fontFamily: "Prompt", sans-serif;
-  --typography-title-fontSize: 1.35rem;
-  --typography-title-fontWeight: 700;
-  --typography-title-lineHeight: 1.3;
-
-  --typography-caption-fontFamily: "Prompt", sans-serif;
-  --typography-caption-fontSize: 0.75rem;
-  --typography-caption-fontWeight: 400;
-  --typography-caption-lineHeight: 1.2;
-
-  /* Card-specific Typography (DESIGN.md §3) */
-  --typography-cardName-fontSize: 2rem;
+  /* ---- v1 aliases: ชื่อเดิมที่โค้ดเก่ายังใช้ ชี้ไปที่ค่า v2 ----
+     โค้ดใหม่ให้ใช้ชื่อ v2 ด้านบนแทน */
+  --primary-hover: var(--primary-strong);
+  --primary-dark: var(--primary-strong);
+  --primary-light: #FDE68A;
+  --primary-lightest: var(--primary-soft);
+  --primary-gradient-start: var(--primary);
+  --primary-gradient-end: var(--primary-strong);
+  --secondary: var(--success-fill);
+  --secondary-hover: var(--success);
+  --secondary-light: #A7F3D0;
+  --secondary-lightest: var(--success-soft);
+  --success-light: var(--success-soft);
+  --danger-hover: var(--danger-strong);
+  --danger-light: var(--danger-soft);
+  --super-like: var(--action-superlike);
+  --surface-hover: var(--surface-sunken);
+  --surface-subtle: var(--surface-sunken);
+  --text-dark: var(--ink-900);
+  --text-medium: var(--ink-700);
+  --text-light: var(--ink-500);
+  --text-muted: var(--ink-400);
+  --border: var(--line-200);
+  --border-input: var(--line-300);
+  --gray-50: var(--background);
+  --gray-100: var(--surface-sunken);
+  --gray-200: var(--line-200);
+  --gray-300: var(--line-300);
+  --gray-400: var(--ink-400);
+  --gray-500: var(--ink-500);
+  --gray-700: var(--ink-700);
+  --gray-900: var(--ink-900);
+  --radius-xs: 4px;
+  --shadow-sm: var(--elev-raised);
+  --shadow-md: var(--elev-raised);
+  --shadow-lg: var(--elev-floating);
+  --shadow-button: 0 1px 2px rgba(28,25,23,0.06);
+  --shadow-card: var(--elev-raised);
+  --shadow-glow: var(--elev-raised);
+  --font-display: var(--font-sans);
+  --transition-fast: var(--duration-fast) ease;
+  --transition-normal: var(--duration-base) ease;
+  --transition-spring: var(--duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
+  --typography-display-fontSize: var(--text-display);
+  --typography-headline-fontSize: var(--text-headline);
+  --typography-body-fontSize: var(--text-body);
+  --typography-label-fontSize: var(--text-label);
+  --typography-title-fontSize: var(--text-title);
+  --typography-caption-fontSize: var(--text-caption);
+  --typography-cardName-fontSize: var(--text-display);
   --typography-cardName-fontWeight: 700;
-  --typography-cardName-lineHeight: 1.1;
+  --typography-cardName-lineHeight: 1.2;
+  --typography-stamp-fontSize: var(--text-title);
+  --typography-stamp-fontWeight: 700;
+}
 
-  --typography-stamp-fontSize: 2.5rem;
-  --typography-stamp-fontWeight: 900;
+/* Tailwind v4 theme — ให้ class อย่าง bg-primary-strong / text-ink-700 ใช้ token เดียวกัน */
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-wash: var(--primary-wash);
+  --color-success: var(--success);
+  --color-success-fill: var(--success-fill);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-soft: var(--danger-soft);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-line-200: var(--line-200);
+  --color-line-300: var(--line-300);
+  --font-sans: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* --- Reset --- */
@@ -130,7 +198,9 @@ html {
 }
 
 body {
-  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.6;
   background: var(--background);
   color: var(--text-dark);
   min-height: 100vh;
@@ -232,7 +302,7 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--text-light);
+  color: var(--ink-600);
   font-size: var(--typography-caption-fontSize);
   gap: 2px;
   padding: 6px 2px;
@@ -243,7 +313,7 @@ button {
 }
 
 .nav-item span {
-  font-size: 0.7rem;
+  font-size: var(--text-caption);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -255,18 +325,21 @@ button {
 }
 
 .nav-item svg {
-  width: 22px;
-  height: 22px;
-  transition: transform var(--transition-spring);
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  padding: 4px 16px;
+  border-radius: var(--radius-full);
+  transition: background-color var(--duration-base) var(--ease-standard);
 }
 
 .nav-item.active {
-  color: var(--primary);
+  color: var(--primary-strong);
   font-weight: 600;
 }
 
 .nav-item.active svg {
-  transform: translateY(-1px);
+  background-color: var(--primary-soft);
 }
 
 .nav-badge {
@@ -350,20 +423,18 @@ button {
     gap: 8px;
     width: 100%;
     padding: 10px 14px;
-    background: var(--primary);
+    background: var(--primary-strong);
     color: #ffffff;
     font-size: var(--typography-body-fontSize);
     font-weight: 600;
     border-radius: var(--radius-md);
     text-decoration: none;
-    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
     transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
   .nav-cta-btn:hover {
-    background: var(--primary-dark);
+    background: var(--primary-deep);
     color: #ffffff;
-    transform: translateY(-1px);
   }
 
   .nav-item {
@@ -385,23 +456,24 @@ button {
   }
 
   .nav-item:hover {
-    background: var(--primary-lightest);
-    color: var(--primary);
+    background: var(--primary-wash);
+    color: var(--primary-deep);
   }
 
   .nav-item svg {
     width: 20px;
     height: 20px;
+    padding: 0;
   }
 
   .nav-item.active {
-    background: var(--primary-lightest);
-    color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary-deep);
     font-weight: 600;
   }
 
   .nav-item.active svg {
-    transform: none;
+    background-color: transparent;
   }
 
   .nav-badge {
@@ -433,11 +505,11 @@ button {
 
 /* --- Utility Classes --- */
 .btn {
-  height: 42px;
+  height: 48px;
   padding: 0 20px;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-body);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -448,24 +520,23 @@ button {
 }
 
 .btn-primary {
-  background-color: var(--primary);
+  background-color: var(--primary-strong);
   color: #ffffff;
   border: none;
   box-shadow: var(--shadow-button);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
+  background-color: var(--primary-deep);
 }
 
-.btn-primary:active {
-  transform: scale(0.98);
+.btn:active {
+  transform: scale(0.96);
 }
 
 .btn-secondary {
   background-color: var(--surface);
-  color: var(--text-medium);
+  color: var(--ink-900);
   border: 1px solid var(--border-input);
 }
 
@@ -492,29 +563,28 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 0.78rem;
+  min-height: 28px;
+  padding: 2px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-label);
   font-weight: 500;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-medium);
+  border: none;
+  background: var(--surface-sunken);
+  color: var(--ink-700);
 }
 
 .tag-orange {
-  background: var(--primary-lightest);
-  border-color: var(--primary-light);
-  color: var(--primary-hover);
+  background: var(--primary-soft);
+  color: var(--primary-deep);
 }
 
 .tag-green {
-  background: var(--success-light);
-  border-color: var(--secondary-light);
-  color: var(--secondary-hover);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
-.text-primary { color: var(--primary); }
-.text-secondary { color: var(--secondary); }
+.text-primary { color: var(--primary-strong); }
+.text-secondary { color: var(--success); }
 .text-light { color: var(--text-light); }
 .text-sm { font-size: var(--typography-label-fontSize); }
 
@@ -586,12 +656,12 @@ button {
 .skeleton {
   background: linear-gradient(
     90deg,
-    #F3F4F6 0%,
-    #E5E7EB 50%,
-    #F3F4F6 100%
+    var(--surface-sunken) 0%,
+    var(--line-200) 50%,
+    var(--surface-sunken) 100%
   );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.6s infinite ease-in-out;
+  animation: skeleton-shimmer 1.2s infinite ease-in-out;
   border-radius: 6px;
 }
 
@@ -605,9 +675,8 @@ button {
 }
 
 .skeleton-card {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--elev-raised);
 }

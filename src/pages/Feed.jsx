@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, Sparkles, MapPin, ShieldAlert } from 'lucide-react';
+import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, MapPin, ShieldAlert, ChevronRight, PawPrint } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { SwipeCard } from '../components/SwipeCard';
+import { SwipeCard, splitAnimalName } from '../components/SwipeCard';
+import { Button, IconButton, Dialog, EmptyState, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { FeedCardSkeleton } from '../components/Skeletons';
@@ -30,6 +31,7 @@ function Feed() {
   const [isLocating, setIsLocating] = useState(false);
   
   const navigate = useNavigate();
+  const toast = useToast();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({ maxDistance: 100, animalType: 'all', gender: 'all' });
@@ -147,7 +149,7 @@ function Feed() {
       await loadAnimals(filters, coords);
     } catch (err) {
       console.warn('GPS permission denied or unavailable:', err);
-      alert('ไม่สามารถดึงพิกัด GPS ได้ กรุณาเปิด GPS และอนุญาตการเข้าถึงตำแหน่งในการตั้งค่าเบราว์เซอร์หรือโทรศัพท์ของคุณ');
+      toast('ระบุตำแหน่งไม่สำเร็จ กรุณาเปิด GPS และอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง', { tone: 'error' });
     } finally {
       setIsLocating(false);
     }
@@ -209,11 +211,14 @@ function Feed() {
   const handleConfirmMatch = async () => {
     if (!pendingMatch) return;
     
-    const newMatch = await addMatch(pendingMatch.animal.id, user?.id);
+    const { animal } = pendingMatch;
+    const newMatch = await addMatch(animal.id, user?.id);
     setPendingMatch(null);
-    
+
     if (newMatch) {
-      setShowMatch(newMatch);
+      setShowMatch({ match: newMatch, animal });
+    } else {
+      toast('ส่งคำขอไม่สำเร็จ กรุณาลองอีกครั้ง', { tone: 'error' });
     }
   };
 
@@ -249,155 +254,83 @@ function Feed() {
     }
   };
 
+  // DESIGN.md §7.2: keyboard parity for swipe gestures
+  const anyOverlayOpen = isFilterOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (anyOverlayOpen || loading) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); handleSwipeAction('left'); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); handleSwipeAction('right'); }
+      else if (e.key === 'Backspace' && history.length > 0) { e.preventDefault(); handleUndo(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   return (
-    <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
-      {/* Top Bar */}
-      <div className="feed-header">
-        <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
-          4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
+    <div className="feed-container">
+      <header className="feed-header">
+        <h1 className="logo-text">
+          4 ขา<span className="logo-text__accent">หาบ้าน</span>
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            className="filter-btn"
+        <div className="feed-header__actions">
+          <IconButton
+            label={userCoords && !userCoords.isFallback ? 'อัปเดตตำแหน่งของฉัน' : 'ใช้ตำแหน่งของฉัน'}
+            className={userCoords && !userCoords.isFallback ? 'gps-btn--active' : undefined}
             onClick={handleRequestGps}
             disabled={isLocating}
-            title={userCoords && !userCoords.isFallback ? 'ระบุพิกัด GPS จริงแล้ว (แตะเพื่ออัปเดต)' : 'แตะเพื่อขอสิทธิ์และระบุพิกัด GPS จริงของคุณ'}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '36px',
-              height: '36px',
-              padding: 0,
-              borderRadius: '50%',
-              backgroundColor: userCoords && !userCoords.isFallback ? '#ECFDF5' : '#FFFBEB',
-              border: userCoords && !userCoords.isFallback ? '1px solid #A7F3D0' : '1px solid #FDE68A',
-              color: userCoords && !userCoords.isFallback ? '#065F46' : '#92400E',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              flexShrink: 0
-            }}
           >
-            {isLocating ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <MapPin size={16} />
-            )}
-          </button>
-
-
-          <button
-            className="filter-btn"
-            onClick={() => setIsFilterOpen(true)}
-          >
-            <SlidersHorizontal size={15} color="#D97706" />
+            {isLocating ? <Loader2 size={20} className="ui-spin" /> : <MapPin size={20} />}
+          </IconButton>
+          <button className="filter-btn" onClick={() => setIsFilterOpen(true)}>
+            <SlidersHorizontal size={18} aria-hidden="true" />
             <span>ตัวกรอง</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Verification Prompt Banner for unverified users */}
       {user && !isVerifiedUser && (
-        <div
-          onClick={() => setShowVerificationPrompt(true)}
-          style={{
-            margin: '0 16px 10px',
-            padding: '10px 14px',
-            backgroundColor: '#FFFBEB',
-            border: '1px solid #FDE68A',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            fontSize: '0.82rem',
-            color: '#92400E',
-            boxShadow: '0 1px 3px rgba(217, 119, 6, 0.08)',
-            transition: 'all 0.15s ease',
-            flexShrink: 0
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-            <ShieldAlert size={16} color="#D97706" style={{ flexShrink: 0 }} />
-            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
-              ยืนยันตัวตนและตอบแบบประเมิน เพื่อเปิดการปัดรับเลี้ยง
-            </span>
-          </div>
-          <span style={{ fontWeight: 600, color: '#D97706', whiteSpace: 'nowrap', marginLeft: '8px', textDecoration: 'underline' }}>
-            ยืนยันเลย
-          </span>
-        </div>
+        <button className="feed-verify-banner" onClick={() => setShowVerificationPrompt(true)}>
+          <ShieldAlert size={20} aria-hidden="true" />
+          <span className="feed-verify-banner__text">ยืนยันตัวตนก่อน เพื่อเริ่มส่งคำขอรับเลี้ยง</span>
+          <span className="feed-verify-banner__cta">ยืนยันเลย</span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
       )}
 
-      <FilterModal 
-        isOpen={isFilterOpen} 
+      <FilterModal
+        isOpen={isFilterOpen}
         currentFilters={filters}
         userCoords={userCoords}
         onRequestGps={handleRequestGps}
         isLocating={isLocating}
-        onClose={() => setIsFilterOpen(false)} 
-        onApply={handleApplyFilters} 
+        onClose={() => setIsFilterOpen(false)}
+        onApply={handleApplyFilters}
       />
 
-      {/* Card Stack */}
       <div className="card-stack-container">
         {loading ? (
           <FeedCardSkeleton />
         ) : cards.length === 0 ? (
-          <div className="empty-state" style={{
-            textAlign: 'center',
-            padding: '40px 24px',
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E5E7EB',
-            maxWidth: '440px',
-            margin: '0 auto',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '12px',
-              backgroundColor: '#FEF3C7',
-              color: '#D97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px'
-            }}>
-              <Search size={28} />
-            </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
-              ไม่พบสัตว์เลี้ยงตามเงื่อนไขที่เลือก
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#6B7280', marginBottom: '20px', lineHeight: 1.5 }}>
-              ลองขยายรัศมีการค้นหา หรือปรับเปลี่ยนตัวกรองเพื่อดูสัตว์เลี้ยงเพิ่มเติมครับ
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setIsFilterOpen(true)}
-                style={{
-                  height: '42px',
-                  padding: '0 20px',
-                  borderRadius: '10px',
-                  fontSize: '0.88rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <SlidersHorizontal size={16} /> ปรับเปลี่ยนตัวกรอง
-              </button>
-            </div>
-          </div>
+          <EmptyState
+            icon={Search}
+            title="ไม่พบน้องตามเงื่อนไขที่เลือก"
+            text="ลองขยายระยะค้นหา หรือเปลี่ยนชนิดและเพศของสัตว์"
+            action={
+              <Button variant="secondary" onClick={() => setIsFilterOpen(true)}>
+                <SlidersHorizontal size={18} aria-hidden="true" /> ปรับตัวกรอง
+              </Button>
+            }
+          />
         ) : (
           [...cards].reverse().map((animal, reversedIndex, arr) => {
             const index = arr.length - 1 - reversedIndex;
-            // Only render top 2 cards for optimal performance and clean stacking
+            // Only render the top 2 cards
             if (index > 1) return null;
             return (
-              <SwipeCard 
+              <SwipeCard
                 key={animal.cardKey || animal.id}
                 animal={animal}
                 isFront={index === 0}
@@ -410,198 +343,97 @@ function Feed() {
             );
           })
         )}
-
-        {/* Match Animation Overlay */}
-        <AnimatePresence>
-          {showMatch && (
-            <motion.div 
-              className="match-overlay" 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              onClick={() => setShowMatch(false)}
-              style={{ pointerEvents: 'auto', backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-            >
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                onClick={e => e.stopPropagation()}
-                className="match-content"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E5E7EB',
-                  padding: '36px 28px',
-                  maxWidth: '420px',
-                  width: '90%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  boxShadow: '0 20px 48px rgba(0,0,0,0.12)'
-                }}
-              >
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  backgroundColor: '#ECFDF5',
-                  color: '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px'
-                }}>
-                  <Heart size={28} fill="currentColor" />
-                </div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
-                  ส่งคำขอรับเลี้ยงสำเร็จ!
-                </h2>
-                <p style={{ color: '#6B7280', fontSize: '0.9rem', lineHeight: 1.5, margin: '0 0 24px' }}>
-                  ส่งข้อมูลแนะนำตัวไปยังศูนย์พักพิงแล้ว เจ้าหน้าที่จะตรวจสอบและติดต่อกลับผ่านกล่องข้อความ
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
-                  <button 
-                    onClick={() => navigate(`/matches`)}
-                    style={{
-                      height: '42px',
-                      backgroundColor: '#D97706',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <MessageCircle size={18} /> ดูสถานะคำขอในกล่องข้อความ
-                  </button>
-                  <button 
-                    onClick={() => setShowMatch(false)}
-                    style={{
-                      height: '42px',
-                      backgroundColor: '#FFFFFF',
-                      color: '#374151',
-                      border: '1px solid #D1D5DB',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ค้นหาสัตว์ตัวต่อไป
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Swiper Actions */}
       {loading ? (
-        <div className="swiper-actions">
-          <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
-          <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
-          <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+        <div className="swiper-actions" aria-hidden="true">
+          <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
+          <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
         </div>
-      ) : (cards.length > 0 || history.length > 0) && (
+      ) : cards.length > 0 && (
         <div className="swiper-actions">
-          <button 
-            className="swiper-btn btn-undo" 
-            onClick={handleUndo} 
-            disabled={history.length === 0} 
-            title="ย้อนกลับ"
-          >
-            <RotateCcw size={18} />
-          </button>
-          {cards.length > 0 && (
-            <>
-              <button
-                aria-label="Pass"
-                className="swiper-btn btn-nope"
-                onClick={() => handleSwipeAction('left')}
-                title="ข้าม"
-              >
-                <X size={26} strokeWidth={2.5} />
-              </button>
-              <button
-                aria-label="Like"
-                className="swiper-btn btn-like"
-                onClick={() => handleSwipeAction('right')}
-                title="สนใจรับเลี้ยง"
-              >
-                <Heart size={26} fill="currentColor" strokeWidth={0} />
-              </button>
-            </>
+          {history.length > 0 ? (
+            <button className="swiper-btn btn-undo" onClick={handleUndo} aria-label="ย้อนกลับการ์ดก่อนหน้า" title="ย้อนกลับ (Backspace)">
+              <RotateCcw size={20} />
+            </button>
+          ) : (
+            <span className="swiper-btn-spacer" aria-hidden="true" />
           )}
+          <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label="ข้าม" title="ข้าม (←)">
+            <X size={28} strokeWidth={2.5} />
+          </button>
+          <button className="swiper-btn btn-like" onClick={() => handleSwipeAction('right')} aria-label="ถูกใจ สนใจรับเลี้ยง" title="ถูกใจ (→)">
+            <Heart size={28} fill="currentColor" strokeWidth={0} />
+          </button>
+          <span className="swiper-btn-spacer" aria-hidden="true" />
         </div>
       )}
 
-      {/* Confirmation Dialog Overlay */}
-      <AnimatePresence>
+      {/* Confirm before sending an adoption request (DESIGN.md §7.10) */}
+      <Dialog
+        open={!!pendingMatch}
+        onClose={handleCancelMatch}
+        title={pendingMatch ? `ส่งคำขอรับเลี้ยง${splitAnimalName(pendingMatch.animal.name).main}?` : ''}
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleCancelMatch}>ยังก่อน</Button>
+            <Button variant="primary" onClick={handleConfirmMatch}>ส่งคำขอรับเลี้ยง</Button>
+          </>
+        }
+      >
         {pendingMatch && (
-          <motion.div 
-            className="confirm-dialog-overlay" 
+          <>ระบบจะส่งข้อมูลแนะนำตัวของคุณให้ {pendingMatch.animal.shelter || 'มูลนิธิ'} เพื่อตรวจสอบและเปิดห้องแชทกับคุณ</>
+        )}
+      </Dialog>
+
+      {/* Request-sent moment (DESIGN.md §7.3) */}
+      <AnimatePresence>
+        {showMatch && (
+          <motion.div
+            className="match-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="match-title"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={handleCancelMatch}
-            style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+            transition={{ duration: 0.2 }}
           >
-            <motion.div 
-              className="confirm-dialog-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              onClick={e => e.stopPropagation()}
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '16px',
-                border: '1px solid #E5E7EB',
-                padding: '28px 24px',
-                maxWidth: '440px',
-                boxShadow: '0 20px 48px rgba(0,0,0,0.12)',
-                animation: 'none'
-              }}
-            >
-              <div className="confirm-dialog-title" style={{ fontSize: '1.15rem', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
-                ส่งคำขอแนะนำตัวเพื่อรับเลี้ยง {pendingMatch.animal.name}
+            <div className="match-content">
+              <motion.div
+                className="match-photo"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22, delay: 0.05 }}
+              >
+                {showMatch.animal?.images?.[0] ? (
+                  <img src={showMatch.animal.images[0]} alt="" />
+                ) : (
+                  <div className="match-photo__placeholder"><PawPrint size={48} /></div>
+                )}
+                <span className="match-photo__heart" aria-hidden="true">
+                  <Heart size={20} fill="currentColor" strokeWidth={0} />
+                </span>
+              </motion.div>
+              <h2 id="match-title" className="match-title">
+                ส่งคำขอรับเลี้ยง{splitAnimalName(showMatch.animal?.name).main}แล้ว
+              </h2>
+              <p className="match-text">
+                {showMatch.animal?.shelter || 'มูลนิธิ'} จะตรวจสอบข้อมูลของคุณ แล้วตอบกลับในกล่องข้อความ
+              </p>
+              <div className="match-actions">
+                <Button variant="primary" block onClick={() => navigate('/matches')}>
+                  <MessageCircle size={20} aria-hidden="true" /> ดูสถานะในกล่องข้อความ
+                </Button>
+                <Button variant="ghost" onDark block onClick={() => setShowMatch(false)}>
+                  ดูน้องตัวอื่นต่อ
+                </Button>
               </div>
-              <div className="confirm-dialog-text" style={{ fontSize: '0.875rem', color: '#6B7280', lineHeight: 1.5, marginBottom: '20px' }}>
-                ระบบจะส่งข้อมูลประวัติเบื้องต้นของคุณให้กับทาง {pendingMatch.animal.shelter || 'มูลนิธิ'} เพื่อให้เจ้าหน้าที่ทำการตรวจสอบและเปิดห้องสนทนา
-              </div>
-              <div className="confirm-dialog-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleCancelMatch}
-                  style={{ height: '40px', padding: '0 16px', borderRadius: '8px' }}
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleConfirmMatch}
-                  style={{ height: '40px', padding: '0 18px', borderRadius: '8px' }}
-                >
-                  ยืนยันการส่งคำขอ
-                </button>
-              </div>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Verification Required Modal */}
       <VerificationPromptModal
         isOpen={showVerificationPrompt}
         onClose={() => setShowVerificationPrompt(false)}

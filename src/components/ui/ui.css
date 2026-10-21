@@ -1,0 +1,257 @@
+/* Shared UI components — spec in DESIGN.md §7. Use tokens only. */
+
+/* ---------- Button ---------- */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+.ui-btn:active:not(:disabled) { transform: scale(0.96); }
+.ui-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ui-btn--sm { height: 44px; padding: 0 var(--space-4); font-size: var(--text-label); }
+.ui-btn--block { width: 100%; }
+
+.ui-btn--primary { background: var(--primary-strong); color: #fff; }
+.ui-btn--primary:hover:not(:disabled) { background: var(--primary-deep); }
+
+.ui-btn--secondary { background: var(--surface); color: var(--ink-900); border-color: var(--line-300); }
+.ui-btn--secondary:hover:not(:disabled) { background: var(--surface-sunken); }
+
+.ui-btn--ghost { background: transparent; color: var(--primary-strong); height: 44px; }
+.ui-btn--ghost:hover:not(:disabled) { background: var(--primary-wash); }
+
+.ui-btn--danger { background: var(--danger); color: #fff; }
+.ui-btn--danger:hover:not(:disabled) { background: var(--danger-strong); }
+
+.ui-btn--success { background: var(--success); color: #fff; }
+
+/* On dark/photo backgrounds */
+.ui-btn--on-dark.ui-btn--ghost { color: #fff; }
+.ui-btn--on-dark.ui-btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+
+.ui-spin { animation: spin 0.8s linear infinite; }
+
+/* ---------- Icon button ---------- */
+.ui-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-700);
+  box-shadow: var(--elev-raised);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+.ui-icon-btn:hover:not(:disabled) { background: var(--surface-sunken); }
+.ui-icon-btn:active:not(:disabled) { transform: scale(0.94); }
+.ui-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Card ---------- */
+.ui-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--elev-raised);
+}
+.ui-card--workspace { box-shadow: none; border: 1px solid var(--line-200); }
+
+/* ---------- Input ---------- */
+.ui-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.ui-field__label { font-size: var(--text-label); font-weight: 500; color: var(--ink-700); }
+.ui-input {
+  height: 48px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--ink-400);
+  background: var(--surface);
+  color: var(--ink-900);
+  font-family: inherit;
+  font-size: var(--text-body);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.ui-input::placeholder { color: var(--ink-500); }
+.ui-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+.ui-input[aria-invalid='true'] { border-color: var(--danger); }
+.ui-field__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  color: var(--danger-strong);
+}
+
+/* ---------- Badge (status) ---------- */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ui-badge--success { background: var(--success-soft); color: var(--success); }
+.ui-badge--pending { background: var(--primary-soft); color: var(--primary-deep); }
+.ui-badge--danger { background: var(--danger-soft); color: var(--danger-strong); }
+.ui-badge--neutral { background: var(--surface-sunken); color: var(--ink-700); }
+
+/* ---------- Chip ---------- */
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-label);
+  font-weight: 500;
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+}
+button.ui-chip {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line-300);
+  color: var(--ink-900);
+  cursor: pointer;
+}
+button.ui-chip[aria-pressed='true'] {
+  background: var(--primary-soft);
+  border-color: transparent;
+  color: var(--primary-deep);
+}
+.ui-chip--on-photo {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---------- Empty state ---------- */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-6);
+  max-width: 360px;
+  margin: 0 auto;
+}
+.ui-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--primary-wash);
+  color: var(--primary);
+}
+.ui-empty__title { font-size: var(--text-headline); font-weight: 600; line-height: 1.4; color: var(--ink-900); }
+.ui-empty__text { font-size: var(--text-body); color: var(--ink-600); line-height: 1.6; }
+.ui-empty__action { margin-top: var(--space-4); }
+
+/* ---------- Dialog (bottom sheet on mobile) ---------- */
+.ui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(28, 25, 23, 0.5);
+}
+.ui-dialog {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: var(--space-3) var(--space-6) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--elev-floating);
+}
+.ui-dialog__handle {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto var(--space-5);
+  border-radius: var(--radius-full);
+  background: var(--line-300);
+}
+.ui-dialog__title { font-size: var(--text-title); font-weight: 600; line-height: 1.35; color: var(--ink-900); margin-bottom: var(--space-2); }
+.ui-dialog__body { font-size: var(--text-body); color: var(--ink-600); line-height: 1.6; }
+.ui-dialog__actions { display: flex; flex-direction: column-reverse; gap: var(--space-3); margin-top: var(--space-6); }
+
+@media (min-width: 768px) {
+  .ui-dialog-backdrop { align-items: center; padding: var(--space-4); }
+  .ui-dialog { border-radius: var(--radius-xl); padding: var(--space-8); max-width: 440px; }
+  .ui-dialog__handle { display: none; }
+  .ui-dialog__actions { flex-direction: row; justify-content: flex-end; }
+}
+
+/* ---------- Toast ---------- */
+.ui-toast-region {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .ui-toast-region { bottom: var(--space-6); left: var(--sidebar-width); }
+}
+.ui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ink-900);
+  color: #fff;
+  font-size: var(--text-label);
+  line-height: 1.5;
+  box-shadow: var(--elev-floating);
+  pointer-events: auto;
+}
+.ui-toast__icon { flex-shrink: 0; margin-top: 1px; }
+.ui-toast__icon--success { color: #6EE7B7; }
+.ui-toast__icon--error { color: #FCA5A5; }
+.ui-toast__icon--info { color: #FCD34D; }
+.ui-toast__msg { flex: 1; }
+.ui-toast__action {
+  flex-shrink: 0;
+  color: #FCD34D;
+  font-weight: 600;
+  font-size: var(--text-label);
+  cursor: pointer;
+}

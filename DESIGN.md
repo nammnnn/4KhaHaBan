@@ -221,7 +221,7 @@ components:
 - แตะที่ข้อมูลด้านล่างเพื่อเปิดโปรไฟล์ — ใช้ปุ่มไอคอน `Info` 44px มุมขวาล่างแทนข้อความ "ดูประวัติ" ที่ถูกตัด
 
 ### 7.2 Swipe actions
-- แถวปุ่มวงกลมตรงกลาง: **ย้อนกลับ** 44px · **ไม่สนใจ** 64px · **Super Like** 52px · **ถูกใจ** 64px
+- แถวปุ่มวงกลมตรงกลาง: **ย้อนกลับ** 44px · **ไม่สนใจ** 64px · **ถูกใจ** 64px (ปุ่ม **Super Like** 52px ใส่เมื่อระบบรองรับความหมายของ Super Like แล้ว — ตอนนี้ยังไม่มี)
 - ปุ่มพื้น `surface` + เงา `raised` + ไอคอนสีของ action (24–28px) — ตอนกดให้พื้นเปลี่ยนเป็นสีของ action และไอคอนเป็นขาว
 - ปุ่มย้อนกลับที่ใช้ไม่ได้: **ซ่อน** (ไม่แสดงเป็นปุ่มเทาจาง)
 - **ป้ายบนการ์ดระหว่างลาก:** "ถูกใจ" (เขียว, เอียง −12°, มุมซ้ายบน) / "ข้าม" (แดง, เอียง 12°, มุมขวาบน) / "ถูกใจมาก" (ส้ม, กลางล่าง) — ขอบ 3px, ตัวหนังสือ `title` 700, ความทึบตามระยะลาก
@@ -349,7 +349,7 @@ components:
 | `text-light` #6B7280 | `ink-600` #57534E หรือ `ink-500` #78716C | ตามความสำคัญ |
 | `text-muted` #9CA3AF | `ink-500` (ตัวหนังสือ) / `ink-400` (ไอคอนเท่านั้น) | #9CA3AF ไม่ผ่านคอนทราสต์ |
 | `border` #E5E7EB | `line-200` #E7E5E4 | adopter: เลิกใช้กับการ์ด |
-| `border-input` #D1D5DB | `ink-400` #A8A29E | |
+| `border-input` #D1D5DB | `line-300` #D6D3D1 (ขอบปุ่มรอง) / `ink-400` #A8A29E (ขอบช่องกรอก) | |
 | `gray-100` #F3F4F6 | `surface-sunken` #F5F5F4 | |
 | `primary` (ปุ่ม/ลิงก์) | `primary-strong` #B45309 | `primary` ใช้กับไอคอน/พื้นใหญ่ |
 | `secondary` #059669 (ตัวหนังสือ) | `success` #047857 | |
@@ -359,6 +359,6 @@ components:
 | `rounded.md` 8px (ปุ่ม) | `rounded.md` 12px | |
 
 ลำดับการย้ายที่แนะนำ:
-1. อัปเดต token ใน `src/index.css` (`:root`) ให้ตรงกับไฟล์นี้ และให้ Tailwind อ่านจาก token เดียวกัน (ลบค่าซ้ำใน `tailwind.config.js`)
-2. สร้าง component กลางใน `src/components/ui/` ตามข้อ 7
-3. ย้ายทีละหน้า: Feed → AnimalProfile → MatchChat/ChatRoom → Donation → Login → UserProfile → หน้า workspace
+1. ✅ token อยู่ที่ `src/index.css` (`:root` + `@theme inline` ของ Tailwind) — ชื่อ v1 ยังใช้ได้ผ่าน alias แต่โค้ดใหม่ให้ใช้ชื่อ v2
+2. ✅ component กลางอยู่ที่ `src/components/ui/` (`Button`, `IconButton`, `Card`, `Field`, `Badge`, `Chip`, `EmptyState`, `Dialog`, `ToastProvider`/`useToast`)
+3. ย้ายทีละหน้า: ✅ Feed → AnimalProfile → MatchChat/ChatRoom → Donation → Login → UserProfile → หน้า workspace

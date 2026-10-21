@@ -6,89 +6,18 @@ import '../pages/Login.css';
  * Shimmer placeholders that strictly match current UI designs and layouts.
  */
 
-// 1. Swipe Card Deck Skeleton (Feed)
+// 1. Swipe Card Deck Skeleton (Feed) — matches SwipeCard layout (DESIGN.md §7.12)
 export const FeedCardSkeleton = () => (
-  <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-    {/* Second card background in stack */}
-    <div
-      className="swipe-card"
-      style={{
-        backgroundColor: '#E2E8F0',
-        borderRadius: '22px',
-        border: '1px solid rgba(0,0,0,0.06)',
-        transform: 'scale(0.96) translateY(0)',
-        opacity: 0.5,
-        zIndex: 1,
-        pointerEvents: 'none'
-      }}
-    />
-
-    {/* Front card skeleton */}
-    <div
-      className="swipe-card"
-      style={{
-        backgroundColor: '#1E293B',
-        borderRadius: '22px',
-        overflow: 'hidden',
-        border: '1px solid rgba(0,0,0,0.08)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
-        zIndex: 2,
-        pointerEvents: 'none'
-      }}
-    >
-      <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-        {/* Full image shimmer */}
-        <div className="skeleton" style={{ width: '100%', height: '100%', borderRadius: 0, opacity: 0.25 }} />
-
-        {/* Top-left chip */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '14px',
-            left: '14px',
-            backgroundColor: 'rgba(255,255,255,0.94)',
-            padding: '4px 10px',
-            borderRadius: '20px',
-            border: '1px solid #E5E7EB',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <div className="skeleton skeleton-circle" style={{ width: '10px', height: '10px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '56px', height: '12px' }} />
-        </div>
-
-        {/* Bottom overlay info skeleton */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '16px 16px 14px',
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 50%, transparent 100%)'
-          }}
-        >
-          {/* Name and age */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '120px', height: '22px', backgroundColor: 'rgba(255,255,255,0.25)' }} />
-            <div className="skeleton skeleton-text" style={{ width: '40px', height: '16px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-          </div>
-
-          {/* Shelter */}
-          <div className="skeleton skeleton-text" style={{ width: '160px', height: '14px', marginBottom: '10px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-
-          {/* Tags */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-            <div className="skeleton" style={{ width: '64px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-            <div className="skeleton" style={{ width: '74px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-            <div className="skeleton" style={{ width: '56px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-          </div>
-
-          {/* Bio line */}
-          <div className="skeleton skeleton-text" style={{ width: '85%', height: '12px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
-        </div>
+  <div className="swipe-card" aria-hidden="true" style={{ pointerEvents: 'none' }}>
+    <div className="skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />
+    <div className="swipe-card__info" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--space-2)' }}>
+      <div className="skeleton skeleton-text" style={{ width: '55%', height: '32px', background: 'var(--line-300)' }} />
+      <div className="skeleton skeleton-text" style={{ width: '40%', height: '14px', background: 'var(--line-300)' }} />
+      <div className="skeleton skeleton-text" style={{ width: '65%', height: '14px', background: 'var(--line-300)' }} />
+      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+        {[64, 76, 56].map((w) => (
+          <div key={w} className="skeleton" style={{ width: `${w}px`, height: '32px', borderRadius: 'var(--radius-full)', background: 'var(--line-300)' }} />
+        ))}
       </div>
     </div>
   </div>
@@ -96,28 +25,24 @@ export const FeedCardSkeleton = () => (
 
 // 1.1 Full Feed Page Skeleton (Feed Page Suspense Fallback)
 export const FeedPageSkeleton = () => (
-  <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
-    {/* Top Bar */}
+  <div className="feed-container">
     <div className="feed-header">
-      <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
-        4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
+      <h1 className="logo-text">
+        4 ขา<span className="logo-text__accent">หาบ้าน</span>
       </h1>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px' }} />
-        <div className="skeleton" style={{ width: '72px', height: '36px', borderRadius: '20px' }} />
+      <div className="feed-header__actions">
+        <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
+        <div className="skeleton" style={{ width: '104px', height: '44px', borderRadius: 'var(--radius-full)' }} />
       </div>
     </div>
 
-    {/* Card Stack */}
     <div className="card-stack-container">
       <FeedCardSkeleton />
     </div>
 
-    {/* Swiper Actions */}
-    <div className="swiper-actions">
-      <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+    <div className="swiper-actions" aria-hidden="true">
+      <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
     </div>
   </div>
 );

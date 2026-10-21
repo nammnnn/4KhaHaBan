@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navigation } from './components/Navigation';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
+import { ToastProvider } from './components/ui';
 
 // Error Boundary to prevent blank white screens
 class ErrorBoundary extends React.Component {
@@ -206,6 +207,7 @@ function App() {
   return (
     <AuthProvider>
       <AppProvider>
+      <ToastProvider>
         <BrowserRouter>
           <div className="app-container">
             <RoleEnforcer>
@@ -263,6 +265,7 @@ function App() {
             </RoleEnforcer>
           </div>
         </BrowserRouter>
+      </ToastProvider>
       </AppProvider>
     </AuthProvider>
   );
