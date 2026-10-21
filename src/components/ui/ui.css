@@ -216,7 +216,7 @@ button.ui-chip[aria-pressed='true'] {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+  bottom: calc(var(--nav-space) + env(safe-area-inset-bottom, 0px) + var(--space-2));
   z-index: 10000;
   display: flex;
   flex-direction: column;

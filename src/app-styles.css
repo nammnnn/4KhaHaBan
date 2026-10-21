@@ -608,7 +608,7 @@
 
 .fixed-bottom-action {
   position: fixed;
-  bottom: var(--nav-height);
+  bottom: var(--nav-space);
   left: 0;
   right: 0;
   padding: 12px 20px;
