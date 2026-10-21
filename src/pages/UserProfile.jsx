@@ -8,7 +8,7 @@ import {
   Heart, Settings, MessageCircle, Shield,
   Award, Sparkles, Mail, Camera, PawPrint, ClipboardList, Users, FileWarning,
   Building2, PiggyBank, ShieldCheck, MessageSquare, Briefcase, X, Loader, CheckCircle, Phone, MapPin, Search, ExternalLink,
-  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye
+  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye, Languages
 } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
@@ -17,12 +17,14 @@ import { api } from '../services/api';
 import { loadSavedLocation } from '../lib/geo';
 import { Badge, Button, Dialog, Field, useToast } from '../components/ui';
 import { ProfileSection, InfoRow, AdoptionRequests, FaqList } from '../components/profile/ProfileSections';
+import { useI18n, LanguageSwitch } from '../i18n';
 import '../components/profile/ProfileSections.css';
 
 export default function UserProfile() {
   const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useI18n();
   const { matches } = useAppContext();
   const [searchParams] = useSearchParams();
   const [searchPrefs, setSearchPrefs] = useState(null);
@@ -134,12 +136,12 @@ export default function UserProfile() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast('กรุณาเลือกไฟล์รูปภาพ (JPG หรือ PNG)', { tone: 'error' });
+      toast(t('pf.photo.notImage'), { tone: 'error' });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast('รูปต้องมีขนาดไม่เกิน 5MB ลองเลือกรูปที่เล็กลง', { tone: 'error' });
+      toast(t('pf.photo.tooBig'), { tone: 'error' });
       return;
     }
 
@@ -164,7 +166,7 @@ export default function UserProfile() {
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      toast('อัปโหลดรูปโปรไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง', { tone: 'error' });
+      toast(t('pf.photo.failed'), { tone: 'error' });
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -173,7 +175,7 @@ export default function UserProfile() {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     if (!editFullName.trim()) {
-      setSaveErrorMsg('กรุณากรอกชื่อ-นามสกุล');
+      setSaveErrorMsg(t('pf.edit.nameRequired'));
       return;
     }
 
@@ -189,7 +191,7 @@ export default function UserProfile() {
 
       if (result.error) throw result.error;
 
-      setSaveSuccessMsg('บันทึกข้อมูลเรียบร้อยแล้ว');
+      setSaveSuccessMsg(t('pf.edit.saved'));
       setTimeout(() => {
         setIsSettingsOpen(false);
         setSaveSuccessMsg('');
@@ -529,9 +531,9 @@ export default function UserProfile() {
   };
 
   const getRoleDisplayName = (r) => {
-    if (r === 'super_admin') return 'ผู้ดูแลระบบ';
-    if (r === 'foundation') return 'มูลนิธิ/ศูนย์พักพิง';
-    return 'ผู้ใช้งานทั่วไป';
+    if (r === 'super_admin') return t('pf.role.admin');
+    if (r === 'foundation') return t('pf.role.foundation');
+    return t('pf.role.user');
   };
 
   const getRoleBadgeClasses = (r) => {
@@ -613,14 +615,18 @@ export default function UserProfile() {
 
   const savedArea = loadSavedLocation();
   // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
-  const prefsSummary = searchPrefs
-    ? [
-        { dog: 'สุนัข', cat: 'แมว' }[searchPrefs.animalType],
-        { male: 'ตัวผู้', female: 'ตัวเมีย' }[searchPrefs.gender],
-      ].filter(Boolean).concat(searchPrefs.maxDistance >= 300 ? 'ทุกระยะ' : `${searchPrefs.maxDistance} กม.`)
-        .join(' · ')
-        .replace(/^(\d+ กม\.|ทุกระยะ)$/, 'ทั้งหมด · $1')
-    : '…';
+  const prefsSummary = (() => {
+    if (!searchPrefs) return '…';
+    const picked = [
+      { dog: t('animal.dog'), cat: t('animal.cat') }[searchPrefs.animalType],
+      { male: t('animal.male'), female: t('animal.female') }[searchPrefs.gender],
+    ].filter(Boolean);
+    const distance = searchPrefs.maxDistance >= 300
+      ? t('pf.filters.anyDistance')
+      : t('filters.km', { n: searchPrefs.maxDistance });
+    // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
+    return [...(picked.length ? picked : [t('pf.filters.all')]), distance].join(' · ');
+  })();
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));
   const settingsOpen = () => {
@@ -662,8 +668,8 @@ export default function UserProfile() {
               className="pf-avatar__edit"
               onClick={() => avatarInputRef.current?.click()}
               disabled={isUploadingAvatar}
-              aria-label="เปลี่ยนรูปโปรไฟล์"
-              title="เปลี่ยนรูปโปรไฟล์"
+              aria-label={t('pf.changePhoto')}
+              title={t('pf.changePhoto')}
             >
               <Camera size={18} />
             </button>
@@ -673,8 +679,8 @@ export default function UserProfile() {
             <div className="pf-header__badges">
               {role === 'user' ? (
                 isVerified
-                  ? <Badge tone="success" icon={ShieldCheck}>ยืนยันตัวตนแล้ว</Badge>
-                  : <Badge tone="pending" icon={Shield}>ยังไม่ยืนยันตัวตน</Badge>
+                  ? <Badge tone="success" icon={ShieldCheck}>{t('pf.verified')}</Badge>
+                  : <Badge tone="pending" icon={Shield}>{t('pf.notVerified')}</Badge>
               ) : (
                 <Badge tone="neutral" icon={role === 'foundation' ? Building2 : User}>{getRoleDisplayName(role)}</Badge>
               )}
@@ -685,25 +691,25 @@ export default function UserProfile() {
         {/* Not verified yet: the one thing blocking adoption requests */}
         {role === 'user' && !isVerified && (
           <div className="pf-verify">
-            <p className="pf-verify__title">ยืนยันตัวตนเพื่อส่งคำขอรับเลี้ยง</p>
-            <p className="pf-verify__text">กรอกข้อมูลส่วนตัวและแบบประเมินความพร้อม 2 ขั้นตอน มูลนิธิใช้ข้อมูลนี้พิจารณาคำขอของคุณ</p>
+            <p className="pf-verify__title">{t('pf.verifyCard.title')}</p>
+            <p className="pf-verify__text">{t('pf.verifyCard.text')}</p>
             <Button variant="primary" onClick={() => navigate('/verify-user')}>
-              <ShieldCheck size={20} aria-hidden="true" /> เริ่มยืนยันตัวตน
+              <ShieldCheck size={20} aria-hidden="true" /> {t('pf.verifyCard.cta')}
             </Button>
           </div>
         )}
 
         {role === 'user' && (
           <ProfileSection
-            title="คำขอรับเลี้ยงของฉัน"
-            action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">ดูทั้งหมด</Link>}
+            title={t('pf.requests')}
+            action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
           >
             <AdoptionRequests matches={matches} />
           </ProfileSection>
         )}
 
         {role === 'foundation' && foundationMenu.length > 0 && (
-          <ProfileSection title="มูลนิธิของฉัน">
+          <ProfileSection title={t('pf.myFoundation')}>
             {foundationMenu.map((item) => (
               <InfoRow
                 key={item.key}
@@ -717,16 +723,16 @@ export default function UserProfile() {
         )}
 
         <ProfileSection
-          title="ข้อมูลของฉัน"
-          action={<button type="button" className="pf-section__action" onClick={settingsOpen}>แก้ไข</button>}
+          title={t('pf.myInfo')}
+          action={<button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
         >
-          <InfoRow label="ชื่อ" value={profile?.full_name || user?.user_metadata?.full_name || '—'} />
-          <InfoRow label="เบอร์โทร" value={profile?.phone ? formatPhoneNumber(profile.phone) : 'ยังไม่ได้ระบุ'} tone={profile?.phone ? undefined : 'muted'} />
-          <InfoRow label="อีเมล" value={displayEmail} />
+          <InfoRow label={t('pf.name')} value={profile?.full_name || user?.user_metadata?.full_name || '—'} />
+          <InfoRow label={t('pf.phone')} value={profile?.phone ? formatPhoneNumber(profile.phone) : t('pf.notSet')} tone={profile?.phone ? undefined : 'muted'} />
+          <InfoRow label={t('pf.email')} value={displayEmail} />
           {role === 'user' && (
             <InfoRow
-              label="ยืนยันตัวตน"
-              value={isVerified ? 'เรียบร้อย' : 'ยังไม่ยืนยัน'}
+              label={t('pf.verification')}
+              value={isVerified ? t('pf.done') : t('pf.notYetVerified')}
               tone={isVerified ? 'success' : 'muted'}
               to="/verify-user"
             />
@@ -734,31 +740,40 @@ export default function UserProfile() {
         </ProfileSection>
 
         {role === 'user' && (
-          <ProfileSection title="การค้นหา">
+          <ProfileSection title={t('pf.search')}>
             <InfoRow
               icon={MapPin}
-              label="พื้นที่"
-              value={savedArea?.label ? `ใกล้ ${savedArea.label}` : 'ตำแหน่งปัจจุบัน (GPS)'}
+              label={t('pf.area')}
+              value={savedArea?.label ? t('pf.areaNear', { area: savedArea.label }) : t('pf.areaGps')}
               to="/?sheet=location"
             />
-            <InfoRow icon={Search} label="ตัวกรอง" value={prefsSummary} to="/?sheet=filters" />
+            <InfoRow icon={Search} label={t('pf.filters')} value={prefsSummary} to="/?sheet=filters" />
           </ProfileSection>
         )}
 
+        {/* Language (DESIGN.md §8.1) */}
+        <ProfileSection title={t('pf.settings')}>
+          <div className="pf-row">
+            <Languages size={20} className="pf-row__icon" aria-hidden="true" />
+            <span className="pf-row__label">{t('pf.language')}</span>
+            <span className="pf-row__value"><LanguageSwitch /></span>
+          </div>
+        </ProfileSection>
+
         {role !== 'super_admin' && (
-          <ProfileSection title="ช่วยเหลือ">
+          <ProfileSection title={t('pf.help')}>
             <FaqList />
-            <InfoRow icon={MessageSquare} label="แชทกับทีมงาน" value="" to="/support-chat" />
+            <InfoRow icon={MessageSquare} label={t('pf.chatTeam')} value="" to="/support-chat" />
           </ProfileSection>
         )}
 
         <Button variant="secondary" className="pf-logout" onClick={handleLogout}>
-          <LogOut size={18} aria-hidden="true" /> ออกจากระบบ
+          <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
         </Button>
       </div>
 
       {/* Edit "ข้อมูลของฉัน" — DESIGN.md §7.10 bottom sheet */}
-      <Dialog open={isSettingsOpen} onClose={() => !isSavingProfile && setIsSettingsOpen(false)} title="แก้ไขข้อมูลของฉัน">
+      <Dialog open={isSettingsOpen} onClose={() => !isSavingProfile && setIsSettingsOpen(false)} title={t('pf.edit.title')}>
         <form onSubmit={handleSaveSettings} className="pf-edit-form">
           {saveSuccessMsg && (
             <p className="pf-edit-form__msg pf-edit-form__msg--success" role="status">
@@ -772,27 +787,27 @@ export default function UserProfile() {
           )}
           <Field
             id="pf-name"
-            label="ชื่อ - นามสกุล"
+            label={t('pf.edit.fullName')}
             value={editFullName}
             onChange={(e) => setEditFullName(e.target.value)}
-            placeholder="ระบุชื่อของคุณ"
+            placeholder={t('pf.edit.fullNamePh')}
             autoComplete="name"
             required
           />
           <Field
             id="pf-phone"
-            label="เบอร์โทรศัพท์"
+            label={t('pf.edit.phone')}
             type="tel"
             inputMode="tel"
             value={editPhone}
             onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
-            placeholder="เช่น 081-234-5678"
+            placeholder={t('pf.edit.phonePh')}
             autoComplete="tel"
           />
-          <Field id="pf-email" label="อีเมล (เปลี่ยนไม่ได้)" type="email" value={displayEmail} disabled readOnly />
+          <Field id="pf-email" label={t('pf.edit.email')} type="email" value={displayEmail} disabled readOnly />
           <div className="ui-dialog__actions">
-            <Button type="button" variant="secondary" onClick={() => setIsSettingsOpen(false)} disabled={isSavingProfile}>ยกเลิก</Button>
-            <Button type="submit" variant="primary" loading={isSavingProfile}>บันทึกข้อมูล</Button>
+            <Button type="button" variant="secondary" onClick={() => setIsSettingsOpen(false)} disabled={isSavingProfile}>{t('common.cancel')}</Button>
+            <Button type="submit" variant="primary" loading={isSavingProfile}>{t('common.save')}</Button>
           </div>
         </form>
       </Dialog>

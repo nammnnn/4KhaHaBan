@@ -438,3 +438,8 @@
 .login-footer-link:hover {
   color: #B45309;
 }
+
+/* Language switch, top-right of the form card (DESIGN.md §8.1) */
+.login-form-card { position: relative; }
+.login-lang { position: absolute; top: 16px; right: 16px; }
+@media (max-width: 767px) { .login-lang { top: 12px; right: 12px; } }

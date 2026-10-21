@@ -6,6 +6,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
+import { useI18n } from '../i18n';
 
 // Desktop shows the sidebar, where the profile lives in the user card instead of a tab
 function useIsDesktop() {
@@ -24,11 +25,12 @@ function useIsDesktop() {
 // One tab in the dock (mobile) / sidebar (desktop). DESIGN.md §7.4
 function NavItem({ to, active, icon: Icon, label, ariaLabel, badge = 0, children }) {
   const reduceMotion = useReducedMotion();
+  const { t } = useI18n();
   return (
     <Link
       to={to}
       className={`nav-item${active ? ' active' : ''}`}
-      aria-label={badge > 0 ? `${ariaLabel || label} (${badge} รายการใหม่)` : ariaLabel || label}
+      aria-label={badge > 0 ? t('nav.newItems', { label: ariaLabel || label, count: badge }) : ariaLabel || label}
       aria-current={active ? 'page' : undefined}
     >
       {active && (
@@ -257,58 +259,59 @@ export function Navigation() {
     </span>
   );
   const path = location.pathname;
+  const { t } = useI18n();
   const isDesktop = useIsDesktop();
 
   return (
-    <nav className="main-nav" aria-label="เมนูหลัก">
+    <nav className="main-nav" aria-label={t('nav.main')}>
       {/* Logo — desktop sidebar only */}
-      <Link to={isFoundationApproved ? '/foundation' : '/'} className="nav-logo" aria-label="4 ขาหาบ้าน หน้าแรก">
+      <Link to={isFoundationApproved ? '/foundation' : '/'} className="nav-logo" aria-label={t('app.home')}>
         <span className="nav-logo__mark" aria-hidden="true"><PawPrint size={20} /></span>
-        <span>4 ขา<span className="nav-logo__accent">หาบ้าน</span></span>
+        <span>{t('app.name.prefix')}<span className="nav-logo__accent">{t('app.name.accent')}</span></span>
       </Link>
 
       <div className="nav-items">
         {/* Adopter / donor */}
         {!isFoundationPending && !isFoundationApproved && role !== 'super_admin' && (
           <>
-            <NavItem to="/" active={isActive('/')} icon={Home} label="หน้าแรก" ariaLabel="หน้าแรก หาบ้านให้น้อง" />
-            <NavItem to="/matches" active={isActive('/matches') || path.startsWith('/chat')} icon={MessageCircle} label="แชท" badge={userChatBadge} />
-            <NavItem to="/report" active={isActive('/report')} icon={AlertTriangle} label="แจ้งเหตุ" ariaLabel="แจ้งเหตุสัตว์ต้องการความช่วยเหลือ" />
-            <NavItem to="/donation" active={isActive('/donation')} icon={HandHeart} label="บริจาค" />
+            <NavItem to="/" active={isActive('/')} icon={Home} label={t('nav.home')} ariaLabel={t('nav.homeAria')} />
+            <NavItem to="/matches" active={isActive('/matches') || path.startsWith('/chat')} icon={MessageCircle} label={t('nav.chat')} badge={userChatBadge} />
+            <NavItem to="/report" active={isActive('/report')} icon={AlertTriangle} label={t('nav.report')} ariaLabel={t('nav.reportAria')} />
+            <NavItem to="/donation" active={isActive('/donation')} icon={HandHeart} label={t('nav.donate')} />
           </>
         )}
 
         {isFoundationPending && (
-          <NavItem to="/foundation/pending" active={isActive('/foundation/pending')} icon={Building2} label="สถานะมูลนิธิ" />
+          <NavItem to="/foundation/pending" active={isActive('/foundation/pending')} icon={Building2} label={t('nav.foundationStatus')} />
         )}
 
         {isFoundationApproved && (
           <>
-            <NavItem to="/foundation" active={path === '/foundation'} icon={Home} label="หน้าหลัก" ariaLabel="หน้าหลักมูลนิธิ" />
-            <NavItem to="/foundation/animals" active={path.startsWith('/foundation/animals')} icon={PawPrint} label="สัตว์ในดูแล" />
+            <NavItem to="/foundation" active={path === '/foundation'} icon={Home} label={t('nav.foundationHome')} ariaLabel={t('nav.foundationHomeAria')} />
+            <NavItem to="/foundation/animals" active={path.startsWith('/foundation/animals')} icon={PawPrint} label={t('nav.animals')} />
             <NavItem
               to="/foundation/matches"
               active={path.startsWith('/foundation/matches') || path.startsWith('/foundation/chat')}
               icon={MessageCircle}
-              label="แชท"
+              label={t('nav.chat')}
               badge={foundationChatBadge}
             />
-            <NavItem to="/foundation/incidents" active={path.startsWith('/foundation/incidents')} icon={AlertTriangle} label="แจ้งเหตุ" ariaLabel="แจ้งเหตุกู้ภัย" badge={pendingIncidents} />
+            <NavItem to="/foundation/incidents" active={path.startsWith('/foundation/incidents')} icon={AlertTriangle} label={t('nav.report')} ariaLabel={t('nav.incidentsAria')} badge={pendingIncidents} />
           </>
         )}
 
         {role === 'super_admin' && (
-          <NavItem to="/admin" active={isActive('/admin')} icon={Shield} label="ระบบจัดการ" ariaLabel="ระบบจัดการผู้ใช้งาน" />
+          <NavItem to="/admin" active={isActive('/admin')} icon={Shield} label={t('nav.admin')} ariaLabel={t('nav.adminAria')} />
         )}
 
         {/* Not rendered (rather than CSS-hidden) on desktop, so the sliding pill never
             animates out of an invisible 0x0 tab in the corner */}
         {user && !isDesktop ? (
-          <NavItem to="/profile" active={isActive('/profile')} label="โปรไฟล์" ariaLabel="โปรไฟล์ของฉัน">
+          <NavItem to="/profile" active={isActive('/profile')} label={t('nav.profile')} ariaLabel={t('nav.profileAria')}>
             {avatar}
           </NavItem>
         ) : user ? null : (
-          <NavItem to="/login" active={false} icon={LogIn} label="เข้าสู่ระบบ" />
+          <NavItem to="/login" active={false} icon={LogIn} label={t('nav.login')} />
         )}
       </div>
 
@@ -322,7 +325,7 @@ export function Navigation() {
           {avatar}
           <span className="nav-user__text">
             <span className="nav-user__name">{displayName}</span>
-            <span className="nav-user__hint">ดูโปรไฟล์</span>
+            <span className="nav-user__hint">{t('nav.viewProfile')}</span>
           </span>
         </Link>
       )}

@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ChevronDown, PawPrint } from 'lucide-react';
 import { api } from '../../services/api';
-import { splitAnimalName } from '../SwipeCard';
 import './ProfileSections.css';
+import { useI18n } from '../../i18n';
+import { displayNames } from '../../lib/animal';
 
 export function ProfileSection({ title, action, children }) {
   return (
@@ -35,11 +36,11 @@ export function InfoRow({ label, value, icon: Icon, to, onClick, tone }) {
 }
 
 const STATUS = {
-  pending: { label: 'รอมูลนิธิตรวจสอบ', tone: 'pending' },
-  approved: { label: 'อนุมัติแล้ว · คุยต่อในแชท', tone: 'success' },
-  rejected: { label: 'ไม่ผ่านการพิจารณา', tone: 'danger' },
-  adopted: { label: 'รับเลี้ยงแล้ว', tone: 'success' },
-  completed: { label: 'รับเลี้ยงแล้ว', tone: 'success' },
+  pending: { key: 'pf.req.pending', tone: 'pending' },
+  approved: { key: 'pf.req.approved', tone: 'success' },
+  rejected: { key: 'pf.req.rejected', tone: 'danger' },
+  adopted: { key: 'pf.req.adopted', tone: 'success' },
+  completed: { key: 'pf.req.adopted', tone: 'success' },
 };
 
 function RequestThumb({ src }) {
@@ -52,6 +53,7 @@ function RequestThumb({ src }) {
 
 // Latest adoption requests with their status (newest first, as returned by the API).
 export function AdoptionRequests({ matches, limit = 3 }) {
+  const { t, lang } = useI18n();
   const shown = (matches || []).slice(0, limit);
   const [animals, setAnimals] = useState({});
 
@@ -70,8 +72,8 @@ export function AdoptionRequests({ matches, limit = 3 }) {
   if (shown.length === 0) {
     return (
       <div className="pf-empty">
-        <p>ยังไม่มีคำขอรับเลี้ยง</p>
-        <Link to="/" className="ui-btn ui-btn--secondary ui-btn--sm">ไปดูน้องๆ</Link>
+        <p>{t('pf.req.empty')}</p>
+        <Link to="/" className="ui-btn ui-btn--secondary ui-btn--sm">{t('pf.req.browse')}</Link>
       </div>
     );
   }
@@ -80,8 +82,8 @@ export function AdoptionRequests({ matches, limit = 3 }) {
     <ul className="pf-req-list">
       {shown.map((m) => {
         const animal = animals[m.animalId];
-        const status = STATUS[m.status] || { label: 'กำลังดำเนินการ', tone: 'neutral' };
-        const name = animal ? splitAnimalName(animal.name).main : 'กำลังโหลด…';
+        const status = STATUS[m.status] || { key: 'pf.req.other', tone: 'neutral' };
+        const name = animal ? displayNames(animal.name, lang).primary : t('common.loading');
         return (
           <li key={m.id}>
             <Link to={`/chat/${m.id}`} className="pf-req">
@@ -90,7 +92,7 @@ export function AdoptionRequests({ matches, limit = 3 }) {
                 <span className="pf-req__name">{name}</span>
                 <span className={`pf-req__status pf-req__status--${status.tone}`}>
                   <span className="pf-req__dot" aria-hidden="true" />
-                  {status.label}
+                  {t(status.key)}
                 </span>
               </span>
               <ChevronRight size={18} className="pf-row__chev" aria-hidden="true" />
@@ -103,38 +105,19 @@ export function AdoptionRequests({ matches, limit = 3 }) {
 }
 
 // Draft FAQ — answers follow how the app works today; review wording with the foundation.
-const FAQ = [
-  {
-    q: 'ขั้นตอนการรับเลี้ยงเป็นอย่างไร?',
-    a: [
-      'ปัดขวาหรือกด "ส่งคำขอรับเลี้ยง" ที่น้องที่สนใจ',
-      'มูลนิธิตรวจสอบข้อมูลและแบบประเมินของคุณ',
-      'ถ้าอนุมัติ คุยรายละเอียดและนัดพบน้องผ่านแชท',
-      'รับน้องกลับบ้าน มูลนิธิอาจขอติดตามความเป็นอยู่ของน้องหลังรับเลี้ยง',
-    ],
-  },
-  {
-    q: 'ทำไมต้องยืนยันตัวตน?',
-    a: 'เพื่อให้มูลนิธิมั่นใจว่าน้องจะได้บ้านที่ปลอดภัย มูลนิธิใช้ข้อมูลและแบบประเมินของคุณในการพิจารณาคำขอรับเลี้ยง',
-  },
-  {
-    q: 'ส่งคำขอแล้วต้องรอนานไหม?',
-    a: 'ขึ้นอยู่กับมูลนิธิแต่ละแห่ง ติดตามสถานะได้ที่ "คำขอรับเลี้ยงของฉัน" ด้านบน หรือในเมนูแชท เมื่อมีความคืบหน้าจะมีตัวเลขแจ้งเตือนที่เมนูแชท',
-  },
-  {
-    q: 'ยกเลิกคำขอรับเลี้ยงได้ไหม?',
-    a: 'ได้ เปิดห้องแชทของคำขอนั้น แตะเมนู ⋯ มุมขวาบน แล้วเลือก "ขอยกเลิกคำขอรับเลี้ยง"',
-  },
-];
+const FAQ_KEYS = ['faq.steps', 'faq.verify', 'faq.wait', 'faq.cancel'];
 
 export function FaqList() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(null);
   return (
     <div className="pf-faq">
-      {FAQ.map((item, i) => {
+      {FAQ_KEYS.map((key, i) => {
         const isOpen = open === i;
+        const q = t(`${key}.q`);
+        const answer = t(`${key}.a`);
         return (
-          <div key={item.q} className={`pf-faq__item${isOpen ? ' is-open' : ''}`}>
+          <div key={key} className={`pf-faq__item${isOpen ? ' is-open' : ''}`}>
             <button
               type="button"
               className="pf-faq__q"
@@ -142,15 +125,15 @@ export function FaqList() {
               aria-controls={`faq-a-${i}`}
               onClick={() => setOpen(isOpen ? null : i)}
             >
-              <span>{item.q}</span>
+              <span>{q}</span>
               <ChevronDown size={18} aria-hidden="true" />
             </button>
-            {isOpen && (Array.isArray(item.a) ? (
+            {isOpen && (Array.isArray(answer) ? (
               <ol id={`faq-a-${i}`} className="pf-faq__a pf-faq__steps">
-                {item.a.map((step) => <li key={step}>{step}</li>)}
+                {answer.map((step) => <li key={step}>{step}</li>)}
               </ol>
             ) : (
-              <p id={`faq-a-${i}`} className="pf-faq__a">{item.a}</p>
+              <p id={`faq-a-${i}`} className="pf-faq__a">{answer}</p>
             ))}
           </div>
         );

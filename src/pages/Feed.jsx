@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAlert, ChevronRight, PawPrint, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SwipeCard, splitAnimalName } from '../components/SwipeCard';
+import { SwipeCard } from '../components/SwipeCard';
+import { displayNames } from '../lib/animal';
+import { useI18n, localizeDistance } from '../i18n';
 import { Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
@@ -77,6 +79,8 @@ function Feed() {
   
   const navigate = useNavigate();
   const toast = useToast();
+  const { t, lang } = useI18n();
+  const nameOf = (animal) => displayNames(animal?.name, lang).primary;
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -186,7 +190,7 @@ function Feed() {
     if (saved) {
       locSourceRef.current = 'manual';
       setLocStatus('ready');
-      setLocLabel(saved.label || 'พื้นที่ที่เลือกไว้');
+      setLocLabel(saved.label || t('feed.savedArea'));
       applyCoords(saved);
       return undefined;
     }
@@ -200,7 +204,7 @@ function Feed() {
         locSourceRef.current = 'gps';
         setLocStatus('ready');
         applyCoords(coords);
-        setLocLabel('ตำแหน่งปัจจุบัน');
+        setLocLabel(t('feed.currentLocation'));
         const area = await getAreaLabel(coords.latitude, coords.longitude).catch(() => null);
         if (!cancelled && area && locSourceRef.current === 'gps') setLocLabel(area);
       } else {
@@ -275,13 +279,14 @@ function Feed() {
       setLocStatus('ready');
       setIsLocSheetOpen(false);
       await loadAnimals(filters, coords);
-      const area = await labelFromCoords(coords, 'ตำแหน่งปัจจุบัน');
-      toast(`แสดงน้องใกล้${area === 'ตำแหน่งปัจจุบัน' ? 'คุณ' : ` ${area}`}`, { tone: 'success' });
+      const fallback = t('feed.currentLocation');
+      const area = await labelFromCoords(coords, fallback);
+      toast(area === fallback ? t('feed.showingNearYou') : t('feed.showingNear', { area }), { tone: 'success' });
     } catch (err) {
       if (err?.code === 1) {
         setLocStatus('denied'); // sheet stays open and shows how to enable it
       } else {
-        toast('หาตำแหน่งไม่สำเร็จ ลองอีกครั้ง หรือเลือกพื้นที่เอง', { tone: 'error' });
+        toast(t('feed.locateFailed'), { tone: 'error' });
       }
     } finally {
       setIsLocating(false);
@@ -298,7 +303,7 @@ function Feed() {
     loadAnimals(filters, coords);
     const area = await labelFromCoords(coords, name);
     saveLocation({ ...coords, label: area });
-    toast(`แสดงน้องใกล้ ${area}`, { tone: 'success' });
+    toast(t('feed.showingNear', { area }), { tone: 'success' });
   };
 
   const removeCard = useCallback(async (cardIdentifier, action) => {
@@ -365,7 +370,7 @@ function Feed() {
     if (newMatch) {
       setShowMatch({ match: newMatch, animal });
     } else {
-      toast('ส่งคำขอไม่สำเร็จ กรุณาลองอีกครั้ง', { tone: 'error' });
+      toast(t('common.retryError'), { tone: 'error' });
     }
   };
 
@@ -439,12 +444,12 @@ function Feed() {
     <div className="feed-container">
       <header className="feed-header">
         <h1 className="logo-text">
-          4 ขา<span className="logo-text__accent">หาบ้าน</span>
+          {t('app.name.prefix')}<span className="logo-text__accent">{t('app.name.accent')}</span>
         </h1>
         <div className="feed-header__actions">
           <button className="filter-btn" onClick={() => setIsFilterOpen(true)}>
             <SlidersHorizontal size={18} aria-hidden="true" />
-            <span>ตัวกรอง</span>
+            <span>{t('feed.filters')}</span>
           </button>
         </div>
       </header>
@@ -452,18 +457,18 @@ function Feed() {
       <button
         className={`feed-location feed-location--${locStatus}`}
         onClick={() => setIsLocSheetOpen(true)}
-        aria-label={locStatus === 'ready' ? `ตำแหน่ง: ${locLabel} แตะเพื่อเปลี่ยน` : 'ตั้งตำแหน่งของคุณ'}
+        aria-label={locStatus === 'ready' ? t('feed.locationAria', { area: locLabel }) : t('feed.setLocationAria')}
       >
         {locStatus === 'locating'
           ? <Loader2 size={16} className="ui-spin" aria-hidden="true" />
           : <MapPin size={16} aria-hidden="true" />}
         <span className="feed-location__text">
-          {locStatus === 'locating' && 'กำลังหาตำแหน่งของคุณ…'}
-          {locStatus === 'ready' && <>ใกล้ <strong>{locLabel}</strong></>}
-          {(locStatus === 'unavailable' || locStatus === 'denied') && 'ยังไม่รู้ตำแหน่งของคุณ'}
+          {locStatus === 'locating' && t('feed.locating')}
+          {locStatus === 'ready' && <>{t('feed.near')} <strong>{locLabel}</strong></>}
+          {(locStatus === 'unavailable' || locStatus === 'denied') && t('feed.locationUnknown')}
         </span>
         {locStatus !== 'locating' && (
-          <span className="feed-location__cta">{locStatus === 'ready' ? 'เปลี่ยน' : 'ตั้งตำแหน่ง'}</span>
+          <span className="feed-location__cta">{locStatus === 'ready' ? t('feed.change') : t('feed.setLocation')}</span>
         )}
       </button>
 
@@ -480,8 +485,8 @@ function Feed() {
       {user && !isVerifiedUser && (
         <button className="feed-verify-banner" onClick={() => setShowVerificationPrompt(true)}>
           <ShieldAlert size={20} aria-hidden="true" />
-          <span className="feed-verify-banner__text">ยืนยันตัวตนก่อน เพื่อเริ่มส่งคำขอรับเลี้ยง</span>
-          <span className="feed-verify-banner__cta">ยืนยันเลย</span>
+          <span className="feed-verify-banner__text">{t('feed.verifyBanner')}</span>
+          <span className="feed-verify-banner__cta">{t('feed.verifyNow')}</span>
           <ChevronRight size={18} aria-hidden="true" />
         </button>
       )}
@@ -501,11 +506,11 @@ function Feed() {
         ) : cards.length === 0 ? (
           <EmptyState
             icon={Search}
-            title="ไม่พบน้องตามเงื่อนไขที่เลือก"
-            text="ลองขยายระยะค้นหา หรือเปลี่ยนชนิดและเพศของสัตว์"
+            title={t('feed.emptyTitle')}
+            text={t('feed.emptyText')}
             action={
               <Button variant="secondary" onClick={() => setIsFilterOpen(true)}>
-                <SlidersHorizontal size={18} aria-hidden="true" /> ปรับตัวกรอง
+                <SlidersHorizontal size={18} aria-hidden="true" /> {t('feed.adjustFilters')}
               </Button>
             }
           />
@@ -538,7 +543,7 @@ function Feed() {
         </div>
       ) : cards.length > 0 && (
         <div className="swiper-actions">
-          <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label="ข้าม" title="ข้าม (←)">
+          <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label={t('feed.skip')} title={t('feed.skipTitle')}>
             <X size={28} strokeWidth={2.5} />
           </button>
           {/* Rewind sits between skip and like, like Tinder's small middle button, so the row stays
@@ -547,12 +552,12 @@ function Feed() {
             className="swiper-btn btn-undo"
             onClick={handleUndo}
             disabled={history.length === 0}
-            aria-label="ย้อนกลับ ดูน้องตัวที่เพิ่งข้าม"
-            title={history.length > 0 ? 'ย้อนกลับ ดูน้องตัวที่เพิ่งข้าม (Backspace)' : 'ย้อนกลับได้หลังจากข้ามน้อง'}
+            aria-label={t('feed.rewindAria')}
+            title={history.length > 0 ? t('feed.rewindTitle') : t('feed.rewindDisabled')}
           >
             <RotateCcw size={20} strokeWidth={2.5} />
           </button>
-          <button className="swiper-btn btn-like" onClick={() => handleSwipeAction('right')} aria-label="ถูกใจ สนใจรับเลี้ยง" title="ถูกใจ (→)">
+          <button className="swiper-btn btn-like" onClick={() => handleSwipeAction('right')} aria-label={t('feed.likeAria')} title={t('feed.likeTitle')}>
             <Heart size={28} fill="currentColor" strokeWidth={0} />
           </button>
         </div>
@@ -562,16 +567,16 @@ function Feed() {
       <Dialog
         open={!!pendingMatch}
         onClose={handleCancelMatch}
-        title={pendingMatch ? `ส่งคำขอรับเลี้ยง${splitAnimalName(pendingMatch.animal.name).main}?` : ''}
+        title={pendingMatch ? t('feed.confirmTitle', { name: nameOf(pendingMatch.animal) }) : ''}
         actions={
           <>
-            <Button variant="secondary" onClick={handleCancelMatch}>ยังก่อน</Button>
-            <Button variant="primary" onClick={handleConfirmMatch}>ส่งคำขอรับเลี้ยง</Button>
+            <Button variant="secondary" onClick={handleCancelMatch}>{t('feed.notYet')}</Button>
+            <Button variant="primary" onClick={handleConfirmMatch}>{t('feed.sendRequest')}</Button>
           </>
         }
       >
         {pendingMatch && (
-          <>ระบบจะส่งข้อมูลแนะนำตัวของคุณให้ {pendingMatch.animal.shelter || 'มูลนิธิ'} เพื่อตรวจสอบและเปิดห้องแชทกับคุณ</>
+          <>{t('feed.confirmBody', { shelter: pendingMatch.animal.shelter || t('common.foundation') })}</>
         )}
       </Dialog>
 
@@ -605,17 +610,17 @@ function Feed() {
                 </span>
               </motion.div>
               <h2 id="match-title" className="match-title">
-                ส่งคำขอรับเลี้ยง{splitAnimalName(showMatch.animal?.name).main}แล้ว
+                {t('feed.sentTitle', { name: nameOf(showMatch.animal) })}
               </h2>
               <p className="match-text">
-                {showMatch.animal?.shelter || 'มูลนิธิ'} จะตรวจสอบข้อมูลของคุณ แล้วตอบกลับในกล่องข้อความ
+                {t('feed.sentBody', { shelter: showMatch.animal?.shelter || t('common.foundation') })}
               </p>
               <div className="match-actions">
                 <Button variant="primary" block onClick={() => navigate('/matches')}>
-                  <MessageCircle size={20} aria-hidden="true" /> ดูสถานะในกล่องข้อความ
+                  <MessageCircle size={20} aria-hidden="true" /> {t('feed.viewInbox')}
                 </Button>
                 <Button variant="ghost" onDark block onClick={() => setShowMatch(false)}>
-                  ดูน้องตัวอื่นต่อ
+                  {t('feed.keepBrowsing')}
                 </Button>
               </div>
             </div>

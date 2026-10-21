@@ -263,3 +263,6 @@
 .pf-faq__steps { margin: 0; padding-left: calc(var(--space-4) + 20px); list-style: decimal; }
 .pf-faq__steps li::marker { color: var(--primary-strong); font-weight: 600; }
 .pf-faq__steps li + li { margin-top: var(--space-1); }
+
+/* Language switch inside a profile row */
+.pf-row__value .ap-lang { display: inline-flex; }

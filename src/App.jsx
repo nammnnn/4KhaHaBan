@@ -7,6 +7,7 @@ import { Navigation } from './components/Navigation';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import { ToastProvider } from './components/ui';
+import { LanguageProvider } from './i18n';
 
 // Error Boundary to prevent blank white screens
 class ErrorBoundary extends React.Component {
@@ -205,6 +206,7 @@ const RoleEnforcer = ({ children }) => {
 
 function App() {
   return (
+    <LanguageProvider>
     <AuthProvider>
       <AppProvider>
       <ToastProvider>
@@ -268,6 +270,7 @@ function App() {
       </ToastProvider>
       </AppProvider>
     </AuthProvider>
+    </LanguageProvider>
   );
 }
 

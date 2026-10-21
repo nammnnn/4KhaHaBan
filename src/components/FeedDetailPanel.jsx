@@ -4,11 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, MapPin, ArrowUpRight } from 'lucide-react';
-import { splitAnimalName } from './SwipeCard';
-import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
+import { formatGender, formatType, formatSize, splitStory, displayNames } from '../lib/animal';
+import { useI18n, localizeAge, localizeDistance } from '../i18n';
 
 export function FeedDetailPanel({ animal }) {
-  const [lang, setLang] = useState('th'); // kept while browsing, like a reading preference
+  const { t, lang: appLang } = useI18n();
+  // Story language starts from the app language; kept while browsing, like a reading preference
+  const [lang, setLang] = useState(appLang);
+  useEffect(() => setLang(appLang), [appLang]);
   const [moreBelow, setMoreBelow] = useState(false); // fade the bottom edge while there's more to scroll
   const innerRef = useRef(null);
   const checkOverflow = useCallback(() => {
@@ -28,19 +31,19 @@ export function FeedDetailPanel({ animal }) {
 
   if (!animal) return <aside className="feed-panel" aria-hidden="true" />;
 
-  const { main: name, alias } = splitAnimalName(animal.name);
+  const { primary: name, secondary: alias } = displayNames(animal.name, appLang);
   const story = splitStory(animal.story || '');
   const hasEnglish = Boolean(story.en);
   const showEnglish = lang === 'en' && hasEnglish;
   const facts = [
-    { label: 'ชนิด', value: formatType(animal.type) },
-    { label: 'เพศ', value: formatGender(animal.gender) },
-    { label: 'อายุ', value: animal.age || 'ไม่ระบุ' },
-    { label: 'ขนาด', value: formatSize(animal.size) },
+    { label: t('animal.type'), value: formatType(animal.type, t) },
+    { label: t('animal.gender'), value: formatGender(animal.gender, t) },
+    { label: t('animal.age'), value: localizeAge(animal.age, appLang) || t('common.notSpecified') },
+    { label: t('animal.size'), value: formatSize(animal.size, t) },
   ];
 
   return (
-    <aside className="feed-panel" aria-label={`ข้อมูลของ${name}`}>
+    <aside className="feed-panel" aria-label={t('animal.detailsOf', { name })}>
       <AnimatePresence mode="wait">
         <motion.div
           key={animal.id}
@@ -58,7 +61,7 @@ export function FeedDetailPanel({ animal }) {
               {alias && <p className="feed-panel__alias">{alias}</p>}
             </div>
             <Link to={`/animal/${animal.id}`} className="feed-panel__more">
-              ดูประวัติเต็ม <ArrowUpRight size={16} aria-hidden="true" />
+              {t('animal.viewFullProfile')} <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           </header>
 
@@ -73,7 +76,7 @@ export function FeedDetailPanel({ animal }) {
 
           <section className="feed-panel__section">
             <div className="ap-section__head">
-              <h3 className="feed-panel__title">เรื่องราว</h3>
+              <h3 className="feed-panel__title">{t('animal.story')}</h3>
               {hasEnglish && (
                 <div className="ap-lang" role="group" aria-label="ภาษา / Language">
                   <button type="button" lang="th" aria-pressed={!showEnglish} onClick={() => setLang('th')}>ไทย</button>
@@ -82,18 +85,18 @@ export function FeedDetailPanel({ animal }) {
               )}
             </div>
             <p className="feed-panel__story" lang={showEnglish ? 'en' : 'th'}>
-              {(showEnglish ? story.en : story.th) || `ยังไม่มีเรื่องราวของ${name}`}
+              {(showEnglish ? story.en : story.th) || t('animal.noStory', { name })}
             </p>
           </section>
 
           <section className="feed-panel__section">
-            <h3 className="feed-panel__title">ผู้ดูแลน้อง</h3>
+            <h3 className="feed-panel__title">{t('animal.caretaker')}</h3>
             <p className="feed-panel__shelter">
-              <Building2 size={16} aria-hidden="true" /> {animal.shelter || 'ศูนย์พักพิงสัตว์'}
+              <Building2 size={16} aria-hidden="true" /> {animal.shelter || t('common.shelter')}
             </p>
             {animal.distance && (
               <p className="feed-panel__shelter feed-panel__shelter--sub">
-                <MapPin size={16} aria-hidden="true" /> ห่างจากคุณ {animal.distance}
+                <MapPin size={16} aria-hidden="true" /> {t('animal.distanceFromYou', { distance: localizeDistance(animal.distance, appLang) })}
               </p>
             )}
           </section>

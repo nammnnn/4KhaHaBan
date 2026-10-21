@@ -4,9 +4,11 @@ import { X, SlidersHorizontal, MapPin, Search } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './FilterModal.css';
+import { useI18n } from '../i18n';
 
 export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocation, onSetLocation }) {
   const { user } = useAuth();
+  const { t } = useI18n();
   
   const [maxDistance, setMaxDistance] = useState(100);
   const [animalType, setAnimalType] = useState('all');
@@ -49,7 +51,7 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
             <div className="filter-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <SlidersHorizontal size={20} color="var(--primary)" />
-                <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-dark)' }}>ตั้งค่าการค้นหา</h2>
+                <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-dark)' }}>{t('filters.title')}</h2>
               </div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={24} color="var(--text-medium)" />
@@ -60,8 +62,8 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
               {/* Distance Filter */}
               <div className="filter-section">
                 <div className="filter-section-header">
-                  <label><MapPin size={16} /> ระยะทางสูงสุด</label>
-                  <span className="filter-value">{maxDistance >= 300 ? 'ทุกระยะทาง (ทั่วประเทศ)' : `${maxDistance} กม.`}</span>
+                  <label><MapPin size={16} /> {t('filters.maxDistance')}</label>
+                  <span className="filter-value">{maxDistance >= 300 ? t('filters.anyDistance') : t('filters.km', { n: maxDistance })}</span>
                 </div>
                 <input
                   type="range"
@@ -72,18 +74,18 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
                   onChange={(e) => setMaxDistance(parseInt(e.target.value))}
                   className="range-slider"
                   disabled={!hasLocation}
-                  aria-label="ระยะทางสูงสุด"
+                  aria-label={t('filters.maxDistance')}
                 />
                 <div className="range-labels">
-                  <span>5 กม.</span>
-                  <span>150 กม.</span>
-                  <span>ทั่วประเทศ</span>
+                  <span>{t('filters.km', { n: 5 })}</span>
+                  <span>{t('filters.km', { n: 150 })}</span>
+                  <span>{t('filters.nationwide')}</span>
                 </div>
                 {!hasLocation && (
                   <div className="filter-location-hint">
-                    <span>ยังไม่รู้ตำแหน่งของคุณ</span>
+                    <span>{t('feed.locationUnknown')}</span>
                     {onSetLocation && (
-                      <button type="button" onClick={onSetLocation}>ตั้งตำแหน่ง</button>
+                      <button type="button" onClick={onSetLocation}>{t('feed.setLocation')}</button>
                     )}
                   </div>
                 )}
@@ -92,49 +94,49 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
               {/* Type Filter */}
               <div className="filter-section">
                 <div className="filter-section-header">
-                  <label>ชนิดสัตว์</label>
+                  <label>{t('filters.animalType')}</label>
                 </div>
                 <div className="segment-control">
                   <button 
                     className={animalType === 'all' ? 'active' : ''} 
                     onClick={() => setAnimalType('all')}
-                  >ทั้งหมด</button>
+                  >{t('filters.all')}</button>
                   <button 
                     className={animalType === 'dog' ? 'active' : ''} 
                     onClick={() => setAnimalType('dog')}
-                  >สุนัข</button>
+                  >{t('animal.dog')}</button>
                   <button 
                     className={animalType === 'cat' ? 'active' : ''} 
                     onClick={() => setAnimalType('cat')}
-                  >แมว</button>
+                  >{t('animal.cat')}</button>
                 </div>
               </div>
 
               {/* Gender Filter */}
               <div className="filter-section">
                 <div className="filter-section-header">
-                  <label>เพศ</label>
+                  <label>{t('animal.gender')}</label>
                 </div>
                 <div className="segment-control">
                   <button 
                     className={gender === 'all' ? 'active' : ''} 
                     onClick={() => setGender('all')}
-                  >ทั้งหมด</button>
+                  >{t('filters.all')}</button>
                   <button 
                     className={gender === 'male' ? 'active' : ''} 
                     onClick={() => setGender('male')}
-                  >ตัวผู้</button>
+                  >{t('animal.male')}</button>
                   <button 
                     className={gender === 'female' ? 'active' : ''} 
                     onClick={() => setGender('female')}
-                  >ตัวเมีย</button>
+                  >{t('animal.female')}</button>
                 </div>
               </div>
             </div>
 
             <div className="filter-modal-footer">
               <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} onClick={handleApply}>
-                <Search size={18} /> ค้นหาเลย
+                <Search size={18} /> {t('filters.search')}
               </button>
             </div>
           </motion.div>

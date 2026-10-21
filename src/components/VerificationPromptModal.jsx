@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '../i18n';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, FileText, CheckCircle2, ArrowRight, X, Lock } from 'lucide-react';
 
 export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   if (!isOpen) return null;
 
@@ -81,7 +83,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
               zIndex: 10,
               transition: 'all 0.15s ease'
             }}
-            aria-label="ปิดหน้าต่าง"
+            aria-label={t('verify.closeAria')}
           >
             <X size={18} />
           </button>
@@ -120,7 +122,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 margin: '0 0 6px'
               }}
             >
-              ยืนยันตัวตนเพื่อเริ่มปัด Match
+              {t('verify.title')}
             </h2>
             <p
               style={{
@@ -131,7 +133,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 fontWeight: 500
               }}
             >
-              กรอกข้อมูลและตอบแบบประเมินความพร้อม เพื่อส่งคำขอรับเลี้ยงน้องไปยังศูนย์พักพิง
+              {t('verify.subtitle')}
             </p>
           </div>
 
@@ -145,7 +147,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 margin: '0 0 16px'
               }}
             >
-              เพื่อความปลอดภัยและความพร้อมของน้องสัตว์เลี้ยง ศูนย์พักพิงจำเป็นต้องทราบข้อมูลเบื้องต้นและผลการประเมินความพร้อมของผู้รับเลี้ยงก่อนเปิดห้องสนทนา
+              {t('verify.why')}
             </p>
 
             {/* Checklist Box */}
@@ -180,10 +182,10 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1F2937' }}>
-                    1. ข้อมูลติดต่อเบื้องต้น
+                    {t('verify.step1')}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '2px' }}>
-                    ชื่อ-นามสกุล, เบอร์โทรศัพท์ และเลขบัตรประชาชน
+                    {t('verify.step1.text')}
                   </div>
                 </div>
               </div>
@@ -207,10 +209,10 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1F2937' }}>
-                    2. ตอบแบบประเมินความพร้อม 5 ข้อ
+                    {t('verify.step2')}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '2px' }}>
-                    ที่อยู่อาศัย, เวลาดูแล, งบประมาณ และความเห็นชอบของครอบครัว
+                    {t('verify.step2.text')}
                   </div>
                 </div>
               </div>
@@ -234,10 +236,10 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1F2937' }}>
-                    ข้อมูลปลอดภัยและเป็นความลับ
+                    {t('verify.private')}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '2px' }}>
-                    ส่งต่อให้เฉพาะศูนย์พักพิงที่ท่านส่งคำขอรับเลี้ยงเท่านั้น
+                    {t('verify.private.text')}
                   </div>
                 </div>
               </div>
@@ -268,7 +270,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#B45309')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#D97706')}
               >
-                <span>ไปกรอกข้อมูลและตอบแบบประเมิน</span>
+                <span>{t('verify.go')}</span>
                 <ArrowRight size={18} />
               </button>
 
@@ -290,7 +292,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F9FAFB')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                ไว้ภายหลัง
+                {t('verify.later')}
               </button>
             </div>
           </div>

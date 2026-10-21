@@ -3,15 +3,10 @@ import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 
 import { Heart, X, Info, PawPrint, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Chip } from './ui';
+import { useI18n, localizeAge, localizeDistance } from '../i18n';
+import { displayNames, formatGender, formatType } from '../lib/animal';
 
-const GENDER_LABEL = { male: 'ตัวผู้', female: 'ตัวเมีย' };
-const TYPE_LABEL = { dog: 'สุนัข', cat: 'แมว' };
-
-// "แชร์คาน (Shere Khan)" -> { main: "แชร์คาน", alias: "Shere Khan" }
-export function splitAnimalName(name = '') {
-  const match = name.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-  return match ? { main: match[1], alias: match[2] } : { main: name, alias: null };
-}
+export { splitAnimalName } from '../lib/animal';
 
 // Some uploads exist as .jpg and others as .jpeg — try the other extension once before giving up.
 function swapExtension(src) {
@@ -21,6 +16,7 @@ function swapExtension(src) {
 }
 
 function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger, canSwipeRight = true, onBlockedSwipeRight }) {
+  const { t, lang } = useI18n();
   const x = useMotionValue(0);
   const reduceMotion = useReducedMotion();
   const originalSrc = animal?.images?.[0] || null;
@@ -101,9 +97,14 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
       ? { scale: 0.96, opacity: 1 }
       : { scale: 0.92, opacity: 0 };
 
-  const { main: name, alias } = splitAnimalName(animal.name);
-  const meta = [animal.age, GENDER_LABEL[animal.gender], animal.distance].filter(Boolean);
-  const typeLabel = TYPE_LABEL[animal.type] || 'สัตว์';
+  const { primary: name, secondary: alias } = displayNames(animal.name, lang);
+  const age = localizeAge(animal.age, lang);
+  const meta = [
+    age,
+    animal.gender === 'male' || animal.gender === 'female' ? formatGender(animal.gender, t) : null,
+    localizeDistance(animal.distance, lang),
+  ].filter(Boolean);
+  const typeLabel = formatType(animal.type, t);
 
   return (
     <motion.div
@@ -123,12 +124,12 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
         {imgState === 'error' ? (
           <div className="swipe-card__fallback">
             <PawPrint size={48} aria-hidden="true" />
-            <span>ยังไม่มีรูปของ{name}</span>
+            <span>{t('animal.noPhoto', { name })}</span>
           </div>
         ) : (
           <img
             src={imgSrc}
-            alt={`${name} ${typeLabel}${animal.age ? ` อายุ ${animal.age}` : ''}`}
+            alt={age ? t('animal.photoAlt', { name, type: typeLabel, age }) : `${name} ${typeLabel}`}
             className={`swipe-card__img${imgState === 'loading' ? ' swipe-card__img--loading' : ''}`}
             draggable="false"
             loading={isFront ? 'eager' : 'lazy'}
@@ -143,10 +144,10 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
       <div className="swipe-card__scrim" />
 
       <motion.div className="feed-stamp feed-stamp--like" style={{ opacity: likeOpacity }} aria-hidden="true">
-        <Heart size={24} fill="currentColor" strokeWidth={0} /> ถูกใจ
+        <Heart size={24} fill="currentColor" strokeWidth={0} /> {t('feed.like')}
       </motion.div>
       <motion.div className="feed-stamp feed-stamp--nope" style={{ opacity: nopeOpacity }} aria-hidden="true">
-        <X size={24} strokeWidth={3} /> ข้าม
+        <X size={24} strokeWidth={3} /> {t('feed.skip')}
       </motion.div>
 
       <div className="swipe-card__info">
@@ -158,8 +159,8 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
           <Link
             to={`/animal/${animal.id}`}
             className="swipe-card__info-btn"
-            aria-label={`ดูประวัติของ${name}`}
-            title="ดูประวัติ"
+            aria-label={t('animal.viewProfile', { name })}
+            title={t('animal.viewProfileShort')}
             tabIndex={isFront ? 0 : -1}
             onClick={(e) => e.stopPropagation()}
             onPointerDownCapture={(e) => e.stopPropagation()}
@@ -181,7 +182,7 @@ function SwipeCardComponent({ animal, isFront, isSecond, onRemove, swipeTrigger,
 
         <div className="swipe-card__shelter">
           <Building2 size={14} aria-hidden="true" />
-          <span>{animal.shelter || 'ศูนย์พักพิงสัตว์'}</span>
+          <span>{animal.shelter || t('common.shelter')}</span>
         </div>
 
         {animal.tags?.length > 0 && (
