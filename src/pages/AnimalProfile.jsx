@@ -19,37 +19,10 @@ import { AnimalProfileSkeleton } from '../components/Skeletons';
 import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermission } from '../lib/geo';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { splitAnimalName } from '../components/SwipeCard';
+import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
 import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
 
 import './AnimalProfileBento.css';
-
-const formatGender = (gender) => {
-  const g = String(gender || '').toLowerCase();
-  if (g === 'female' || g === 'เพศเมีย' || g === 'เมีย') return 'ตัวเมีย';
-  if (g === 'male' || g === 'เพศผู้' || g === 'ผู้') return 'ตัวผู้';
-  return gender || 'ไม่ระบุ';
-};
-
-const formatType = (type) => {
-  const t = String(type || '').toLowerCase();
-  if (t === 'dog' || t === 'สุนัข' || t === 'หมา') return 'สุนัข';
-  if (t === 'cat' || t === 'แมว') return 'แมว';
-  return type || 'สัตว์เลี้ยง';
-};
-
-const formatSize = (size) => {
-  const s = String(size || '').toLowerCase();
-  if (s === 'small' || s === 'เล็ก') return 'เล็ก';
-  if (s === 'large' || s === 'ใหญ่') return 'ใหญ่';
-  return 'กลาง';
-};
-
-// Stories are stored as "ไทย: ... English: ..." — split them so Thai leads.
-const splitStory = (story = '') => {
-  if (!story.includes('English:')) return { th: story.trim(), en: '' };
-  const [th, en] = story.split('English:');
-  return { th: th.replace(/^ไทย:\s*/, '').trim(), en: (en || '').trim() };
-};
 
 function swapExtension(src) {
   if (/\.jpeg(\?|$)/.test(src)) return src.replace(/\.jpeg(\?|$)/, '.jpg$1');

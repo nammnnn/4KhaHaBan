@@ -15,6 +15,7 @@ import {
   onLocationPermissionChange, getAreaLabel, loadSavedLocation, saveLocation, clearSavedLocation,
 } from '../lib/geo';
 import { LocationSheet } from '../components/LocationSheet';
+import { FeedDetailPanel } from '../components/FeedDetailPanel';
 import { FeedOnboarding, hasSeenFeedOnboarding, markFeedOnboardingSeen } from '../components/FeedOnboarding';
 
 // Distance is only shown when we have the user's real location — never a guessed one.
@@ -627,6 +628,9 @@ function Feed() {
         onClose={() => setShowVerificationPrompt(false)}
         fromPath="/"
       />
+
+      {/* Wide screens: details of the top card beside the deck */}
+      <FeedDetailPanel animal={!loading ? cards[0] : null} />
 
       <FeedOnboarding open={showOnboarding && !isLocSheetOpen && !isFilterOpen} onClose={closeOnboarding} />
     </div>
