@@ -4,7 +4,7 @@ import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Buil
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
-import { DonationSkeleton } from '../components/Skeletons';
+import { DonationSkeleton, NeedsSkeleton } from '../components/Skeletons';
 import { Badge, Button, Dialog, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 import { QRCodeSVG } from 'qrcode.react';
@@ -42,6 +42,7 @@ function FoundationMeta({ f, t }) {
   );
 }
 
+// Same rows as NeedsList (name, note, badge) so nothing moves when the real list arrives
 function NeedsList({ items, t }) {
   return (
     <ul className="sp-needs">
@@ -149,7 +150,9 @@ function Donation() {
   const [selectedFoundationId, setSelectedFoundationId] = useState('');
   const [loadingFoundations, setLoadingFoundations] = useState(true);
   const [foundationNeeds, setFoundationNeeds] = useState([]);
-  const [loadingNeeds, setLoadingNeeds] = useState(false);
+  // Which foundation the list above belongs to. Until it matches the selected one we show a
+  // same-sized placeholder; live refreshes keep the old list on screen instead of flashing.
+  const [needsFor, setNeedsFor] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -172,14 +175,15 @@ function Donation() {
   useEffect(() => {
     if (!selectedFoundationId) return;
     let channel = null;
+    let cancelled = false;
     const fetchNeeds = async () => {
-      setLoadingNeeds(true);
       try {
-        setFoundationNeeds((await api.getFoundationNeeds(selectedFoundationId)) || []);
+        const list = (await api.getFoundationNeeds(selectedFoundationId)) || [];
+        if (!cancelled) setFoundationNeeds(list);
       } catch (err) {
         console.warn('Error fetching foundation needs:', err);
       } finally {
-        setLoadingNeeds(false);
+        if (!cancelled) setNeedsFor(selectedFoundationId);
       }
     };
     fetchNeeds();
@@ -189,7 +193,7 @@ function Donation() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'foundation_needs' }, fetchNeeds)
         .subscribe();
     }
-    return () => { if (channel && supabase) supabase.removeChannel(channel); };
+    return () => { cancelled = true; if (channel && supabase) supabase.removeChannel(channel); };
   }, [selectedFoundationId]);
 
   const foundation = foundations.find((f) => f.id === selectedFoundationId) || null;
@@ -364,10 +368,8 @@ function Donation() {
           <p className="sp-card__hint">{t('donate.items.desc')}</p>
 
           <h3 className="sp-label">{t('donate.items.needs')}</h3>
-          {loadingNeeds ? (
-            <div className="sp-list">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 48, borderRadius: 12 }} />)}
-            </div>
+          {needsFor !== selectedFoundationId ? (
+            <NeedsSkeleton />
           ) : needs.length === 0 ? (
             <p className="sp-empty">{t('donate.items.none')}</p>
           ) : (

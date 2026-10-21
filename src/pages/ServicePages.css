@@ -438,10 +438,12 @@
 .sp-needs { list-style: none; margin: calc(var(--space-2) * -1) 0 0; padding: 0; }
 .sp-needs li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line-200); }
 .sp-needs li:last-child { border-bottom: 0; }
-.sp-needs span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.sp-needs li > span:first-child { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .sp-needs strong { font-size: var(--text-label); font-weight: 600; color: var(--ink-900); }
 .sp-needs small { font-size: var(--text-caption); color: var(--ink-500); }
 .sp-needs .ui-badge { flex-shrink: 0; }
+/* Placeholder text: keeps the real line boxes, hides the letters */
+.sp-sk-text { color: transparent !important; border-radius: 6px; user-select: none; }
 .sp-more {
   display: inline-flex;
   align-items: center;

@@ -557,31 +557,81 @@ export const FoundationPendingSkeleton = () => (
 );
 
 // 13. Donation Page Skeleton (Donation)
+// Same elements as NeedsList with hidden placeholder text, so it is exactly the same size
+export function NeedsSkeleton() {
+  const bar = (text) => <span className="skeleton sp-sk-text">{text}</span>;
+  return (
+    <>
+      <ul className="sp-needs" aria-hidden="true">
+        {['อาหารเม็ดสำหรับสุนัข', 'อาหารเปียกและนมลูกแมวอ่อน', 'แผ่นรองซับขนาดใหญ่'].map((name) => (
+          <li key={name}>
+            <span>
+              <strong>{bar(name)}</strong>
+              <small>{bar('รายละเอียดสั้น ๆ ของสิ่งที่ต้องการ')}</small>
+            </span>
+            <span className="ui-badge skeleton sp-sk-text">ต้องการด่วน</span>
+          </li>
+        ))}
+      </ul>
+      <span className="sp-more" aria-hidden="true">{bar('ดูทั้งหมด (0)')}</span>
+    </>
+  );
+}
+
+
 // Mirrors pages/Donation.jsx (DESIGN.md §7.23)
 export const DonationSkeleton = () => (
   <div className="sp-page sp-page--wide" aria-hidden="true">
+    {/* Header and picker use the real elements with hidden text, so nothing below shifts */}
     <div className="sp-head">
-      <div className="skeleton skeleton-text" style={{ width: '120px', height: '32px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '70%', maxWidth: '460px', height: '16px', marginTop: '10px' }} />
+      <h1 className="sp-head__title"><span className="skeleton sp-sk-text">บริจาค</span></h1>
+      <p className="sp-head__sub"><span className="skeleton sp-sk-text">ช่วยค่าอาหาร ยา และการรักษาน้องในมูลนิธิ ด้วยเงินหรือสิ่งของ</span></p>
     </div>
     <div className="sp-card sp-picked">
-      <div className="skeleton" style={{ width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '60px', height: '12px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '55%', height: '18px' }} />
-      </div>
+      <span className="sp-avatar skeleton" />
+      <span className="sp-picked__body">
+        <small><span className="skeleton sp-sk-text">บริจาคให้</span></small>
+        <strong><span className="skeleton sp-sk-text">มูลนิธิช่วยเหลือสัตว์</span></strong>
+        <span className="sp-picked__meta"><span className="skeleton sp-sk-text">ขอนแก่น</span></span>
+      </span>
     </div>
     <div className="sp-two">
-      {[0, 1].map((col) => (
-        <div key={col} className={`sp-card ${col === 1 ? 'sp-hide-mobile' : ''}`}>
-          <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
-          <div className="sp-tiers">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '12px' }} />)}
-          </div>
+      {/* Money: same blocks as the real card */}
+      <div className="sp-card">
+        <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
+        <div className="sp-tiers">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: '76px', borderRadius: '12px' }} />)}
+          <div className="skeleton" style={{ gridColumn: '1 / -1', height: '52px', borderRadius: '12px' }} />
+        </div>
+        <div className="skeleton" style={{ height: '46px', borderRadius: '12px' }} />
+        <div className="sp-card__foot">
+          <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px' }} />
           <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
         </div>
-      ))}
+      </div>
+      {/* Supplies: real elements with hidden text, so it is the same height as the loaded card */}
+      <div className="sp-card sp-hide-mobile">
+        <div className="sp-card__head">
+          <h2 className="sp-card__title"><span className="skeleton sp-sk-text">ส่งของ</span></h2>
+          <span className="sp-tip__btn skeleton sp-sk-text">วิธีส่ง</span>
+        </div>
+        <p className="sp-card__hint"><span className="skeleton sp-sk-text">สั่งออนไลน์หรือส่งพัสดุถึงมูลนิธิได้โดยตรง</span></p>
+        <h3 className="sp-label"><span className="skeleton sp-sk-text">ของที่ต้องการตอนนี้</span></h3>
+        <NeedsSkeleton />
+        <div className="sp-address">
+          <div className="sp-address__head">
+            <h3 className="sp-label"><span className="skeleton sp-sk-text">ที่อยู่จัดส่ง</span></h3>
+            <span className="ui-btn ui-btn--ghost ui-btn--sm" style={{ visibility: 'hidden' }}>คัดลอก</span>
+          </div>
+          <address>
+            <strong><span className="skeleton sp-sk-text">มูลนิธิช่วยเหลือสัตว์</span></strong>
+            {/* Thai addresses usually wrap to two lines */}
+            <span><span className="skeleton sp-sk-text">123 หมู่ 4 ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น จ.ขอนแก่น 40000 (ศูนย์พักพิงสัตว์)</span></span>
+          </address>
+        </div>
+      </div>
     </div>
   </div>
 );
