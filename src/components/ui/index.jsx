@@ -1,13 +1,14 @@
 // Shared UI components. Spec: DESIGN.md §7.
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import './ui.css';
 
-export function Button({ variant = 'primary', size, block, loading, onDark, className, children, disabled, ...props }) {
+export const Button = forwardRef(function Button({ variant = 'primary', size, block, loading, onDark, className, children, disabled, ...props }, ref) {
   return (
     <button
+      ref={ref}
       className={cn(
         'ui-btn',
         `ui-btn--${variant}`,
@@ -24,7 +25,7 @@ export function Button({ variant = 'primary', size, block, loading, onDark, clas
       {children}
     </button>
   );
-}
+});
 
 // Icon-only buttons must have a Thai aria-label (DESIGN.md §9).
 export function IconButton({ label, className, children, ...props }) {

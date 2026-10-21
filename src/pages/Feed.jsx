@@ -15,6 +15,7 @@ import {
   onLocationPermissionChange, getAreaLabel, loadSavedLocation, saveLocation, clearSavedLocation,
 } from '../lib/geo';
 import { LocationSheet } from '../components/LocationSheet';
+import { FeedOnboarding, hasSeenFeedOnboarding, markFeedOnboardingSeen } from '../components/FeedOnboarding';
 
 // Distance is only shown when we have the user's real location — never a guessed one.
 const withDistance = (animal, coords) => {
@@ -68,6 +69,7 @@ function Feed() {
   const [locStatus, setLocStatus] = useState('locating');
   const [locLabel, setLocLabel] = useState('');
   const [isLocSheetOpen, setIsLocSheetOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const locSourceRef = useRef(null); // 'gps' | 'manual'
   const loadSeqRef = useRef(0);       // ignore results from superseded loads
   const hasSwipedRef = useRef(false); // once the user starts swiping, don't reshuffle the deck
@@ -407,8 +409,18 @@ function Feed() {
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  // First visit: explain swipe gestures once, after the first cards are on screen
+  useEffect(() => {
+    if (!loading && cards.length > 0 && !hasSeenFeedOnboarding()) setShowOnboarding(true);
+  }, [loading, cards.length]);
+
+  const closeOnboarding = useCallback(() => {
+    markFeedOnboardingSeen();
+    setShowOnboarding(false);
+  }, []);
+
   // DESIGN.md §7.2: keyboard parity for swipe gestures
-  const anyOverlayOpen = isFilterOpen || isLocSheetOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
+  const anyOverlayOpen = showOnboarding || isFilterOpen || isLocSheetOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
   useEffect(() => {
     const onKey = (e) => {
       if (anyOverlayOpen || loading) return;
@@ -614,6 +626,8 @@ function Feed() {
         onClose={() => setShowVerificationPrompt(false)}
         fromPath="/"
       />
+
+      <FeedOnboarding open={showOnboarding && !isLocSheetOpen && !isFilterOpen} onClose={closeOnboarding} />
     </div>
   );
 }

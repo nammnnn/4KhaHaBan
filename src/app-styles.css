@@ -3298,3 +3298,118 @@
 
 
 
+
+/* ===========================================
+   FEED ONBOARDING (first visit) — DESIGN.md §7.17
+   =========================================== */
+.feed-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(28, 25, 23, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.feed-onboarding__panel {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--elev-floating);
+}
+
+.feed-onboarding__demo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 96px;
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--primary-wash);
+}
+
+.feed-onboarding__side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--elev-raised);
+}
+
+.feed-onboarding__side--nope { color: var(--action-nope); }
+.feed-onboarding__side--like { color: var(--action-like); }
+
+.feed-onboarding__hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -20px 0 0 -20px;
+  color: var(--ink-700);
+}
+
+.feed-onboarding__title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink-900);
+  text-align: center;
+}
+
+.feed-onboarding__tips {
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feed-onboarding__tips li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.feed-onboarding__tips strong {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--ink-900);
+  line-height: 1.4;
+}
+
+.feed-onboarding__tips small {
+  display: block;
+  font-size: var(--text-label);
+  color: var(--ink-600);
+  line-height: 1.5;
+}
+
+.feed-onboarding__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--elev-raised);
+}
+
+.feed-onboarding__icon--like { color: var(--action-like); }
+.feed-onboarding__icon--nope { color: var(--action-nope); }
+.feed-onboarding__icon--rewind { color: var(--action-superlike); }
+.feed-onboarding__icon--info { color: #fff; background: var(--ink-600); box-shadow: none; }
