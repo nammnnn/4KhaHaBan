@@ -452,7 +452,12 @@ export async function getAreaLabel(latitude, longitude) {
   if (!res) return null;
   const a = res.details || {};
   const isBkk = [a.state, a.province, a.city].includes('กรุงเทพมหานคร');
-  const dist = a.city_district || a.district || a.county || a.municipality;
+  // OpenStreetMap fills these inconsistently in Thailand (city_district is often a ตำบล),
+  // so prefer a value that is clearly an อำเภอ/เขต and never label a ตำบล/แขวง as one.
+  const candidates = [a.county, a.district, a.city_district, a.municipality].filter(Boolean);
+  const isSubdistrict = (v) => /^(ตำบล|ต\.|แขวง)/.test(v.trim());
+  const dist = candidates.find((v) => /^(อำเภอ|อ\.|เขต)/.test(v.trim()))
+    || candidates.find((v) => !isSubdistrict(v) && !/^(เทศบาล)/.test(v.trim()));
   if (dist) {
     const d = cleanThaiPrefix(dist, 'district');
     if (d) return isBkk ? `เขต${d}` : `อ.${d}`;

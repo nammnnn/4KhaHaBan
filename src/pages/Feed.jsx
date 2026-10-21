@@ -24,6 +24,29 @@ const withDistance = (animal, coords) => {
   return { ...animal, distanceKm: distKm, distance: distKm !== null ? formatDistance(distKm) : '' };
 };
 
+// Keep the deck across navigation (e.g. open a profile and come back) and page reloads
+// in the same tab, so the animal the user was looking at doesn't disappear.
+const DECK_TTL_MS = 30 * 60 * 1000;
+const deckKey = (userId) => `4kh_feed_deck_${userId || 'guest'}`;
+
+function readDeck(userId) {
+  try {
+    const deck = JSON.parse(sessionStorage.getItem(deckKey(userId)) || 'null');
+    if (!deck || Date.now() - deck.savedAt > DECK_TTL_MS || !deck.cards?.length) return null;
+    return deck;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeDeck(userId, deck) {
+  try {
+    sessionStorage.setItem(deckKey(userId), JSON.stringify({ ...deck, savedAt: Date.now() }));
+  } catch (e) {
+    // storage full or blocked — the deck just won't survive navigation
+  }
+}
+
 const makeCard = (animal) => ({
   ...animal,
   cardKey: `${animal.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
@@ -201,8 +224,29 @@ function Feed() {
 
 
   useEffect(() => {
+    const deck = readDeck(user?.id);
+    if (deck) {
+      poolRef.current = deck.pool || [];
+      setCards(deck.cards);
+      setHistory(deck.history || []);
+      if (deck.filters) setFilters(deck.filters);
+      hasSwipedRef.current = true; // location updates only fill in distances, never reshuffle
+      setLoading(false);
+      return;
+    }
     loadAnimals();
   }, [user?.id]);
+
+  // Save the deck whenever it changes (only the next few cards are needed to resume)
+  useEffect(() => {
+    if (loading || cards.length === 0) return;
+    writeDeck(user?.id, {
+      cards: cards.slice(0, 20),
+      pool: poolRef.current,
+      history: history.slice(-10),
+      filters,
+    });
+  }, [cards, history, filters, loading, user?.id]);
 
   const handleApplyFilters = (newFilters) => {
     setFilters(newFilters);
