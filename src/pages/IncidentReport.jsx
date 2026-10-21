@@ -69,6 +69,8 @@ function IncidentReport() {
   });
   const [userReports, setUserReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [reportsError, setReportsError] = useState(false);
+  const [reportsReload, setReportsReload] = useState(0);
 
   const fileInputRef = useRef(null);
 
@@ -109,24 +111,30 @@ function IncidentReport() {
   // My reports
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     const fetchMyReports = async () => {
       setLoadingReports(true);
+      setReportsError(false);
       try {
         if (!supabase) { setUserReports([]); return; }
+        // The reporter is stored in user_id (see migration 007)
         const { data, error } = await supabase
           .from('incident_reports')
           .select('*')
-          .eq('reporter_id', user.id)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-        if (!error && data) setUserReports(data);
+        if (error) throw error;
+        if (!cancelled) setUserReports(data || []);
       } catch (err) {
         console.warn('Error fetching user reports:', err);
+        if (!cancelled) setReportsError(true);
       } finally {
-        setLoadingReports(false);
+        if (!cancelled) setLoadingReports(false);
       }
     };
     fetchMyReports();
-  }, [user, submittedReport]);
+    return () => { cancelled = true; };
+  }, [user?.id, submittedReport, reportsReload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -187,6 +195,11 @@ function IncidentReport() {
       return;
     }
 
+    send(imageFile);
+  };
+
+  // Sends the report; `photo` is null when the reporter chose to send without the photo
+  const send = async (photo) => {
     setIsSubmitting(true);
     try {
       const result = await api.submitIncidentReport({
@@ -199,9 +212,9 @@ function IncidentReport() {
         longitude: coordinates?.longitude,
         reporterName: reporterName.trim() || 'ผู้แจ้งไม่ประสงค์ออกนาม',
         reporterPhone,
-      }, imageFile);
+      }, photo);
 
-      setSubmittedReport(result || { id: 'temp_' + Date.now() });
+      setSubmittedReport(result);
       setSymptoms('');
       setLocationText('');
       setCoordinates(null);
@@ -209,7 +222,16 @@ function IncidentReport() {
       document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Report submit error:', err);
-      toast(t('report.err.submit'), { tone: 'error' });
+      if (err?.code === 'INCIDENT_PHOTO_FAILED') {
+        // Keep everything filled in; let them retry or send without the photo
+        toast(t('report.err.photo'), {
+          tone: 'error',
+          duration: 10000,
+          action: { label: t('report.err.photoSkip'), onClick: () => send(null) },
+        });
+      } else {
+        toast(t('report.err.submit'), { tone: 'error', duration: 8000 });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -419,6 +441,15 @@ function IncidentReport() {
           {loadingReports ? (
             <div className="sp-list">
               {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 112, borderRadius: 16 }} />)}
+            </div>
+          ) : reportsError ? (
+            <div className="sp-card">
+              <EmptyState
+                icon={History}
+                title={t('report.mine.errorTitle')}
+                text={t('report.mine.errorText')}
+                action={<Button variant="secondary" onClick={() => setReportsReload((n) => n + 1)}>{t('report.mine.retry')}</Button>}
+              />
             </div>
           ) : userReports.length === 0 ? (
             <div className="sp-card">
