@@ -396,8 +396,11 @@
 
 .swiper-btn:active { transform: scale(0.92); }
 
-.swiper-btn.btn-undo { width: 44px; height: 44px; color: var(--ink-600); }
-.swiper-btn.btn-undo:hover { background: var(--surface-sunken); }
+.swiper-btn.btn-undo { width: 48px; height: 48px; color: var(--action-superlike); }
+.swiper-btn.btn-undo:hover:not(:disabled),
+.swiper-btn.btn-undo:active:not(:disabled) { background: var(--action-superlike); color: #fff; }
+.swiper-btn.btn-undo:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.swiper-btn.btn-undo:disabled:hover { background: var(--surface); }
 
 .swiper-btn.btn-nope { color: var(--action-nope); }
 .swiper-btn.btn-nope:hover,

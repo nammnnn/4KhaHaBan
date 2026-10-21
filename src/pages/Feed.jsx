@@ -524,13 +524,16 @@ function Feed() {
         </div>
       ) : cards.length > 0 && (
         <div className="swiper-actions">
-          {history.length > 0 ? (
-            <button className="swiper-btn btn-undo" onClick={handleUndo} aria-label="ย้อนกลับการ์ดก่อนหน้า" title="ย้อนกลับ (Backspace)">
-              <RotateCcw size={20} />
-            </button>
-          ) : (
-            <span className="swiper-btn-spacer" aria-hidden="true" />
-          )}
+          {/* Rewind (like Tinder): always in the same place, dimmed until there's a skip to undo */}
+          <button
+            className="swiper-btn btn-undo"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            aria-label="ย้อนกลับ ดูน้องตัวที่เพิ่งข้าม"
+            title={history.length > 0 ? 'ย้อนกลับ ดูน้องตัวที่เพิ่งข้าม (Backspace)' : 'ย้อนกลับได้หลังจากข้ามน้อง'}
+          >
+            <RotateCcw size={20} strokeWidth={2.5} />
+          </button>
           <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label="ข้าม" title="ข้าม (←)">
             <X size={28} strokeWidth={2.5} />
           </button>
