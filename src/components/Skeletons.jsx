@@ -1,4 +1,5 @@
 import React from 'react';
+import { PawPrint } from 'lucide-react';
 import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
 
@@ -7,17 +8,20 @@ import '../pages/AnimalProfileBento.css';
  * Shimmer placeholders that strictly match current UI designs and layouts.
  */
 
-// 1. Swipe Card Deck Skeleton (Feed) — matches SwipeCard layout (DESIGN.md §7.12)
+// 1. Swipe Card Deck Skeleton (Feed) — same layout as SwipeCard (DESIGN.md §7.12)
 export const FeedCardSkeleton = () => (
-  <div className="swipe-card" aria-hidden="true" style={{ pointerEvents: 'none' }}>
-    <div className="skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />
-    <div className="swipe-card__info" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--space-2)' }}>
-      <div className="skeleton skeleton-text" style={{ width: '55%', height: '32px', background: 'var(--line-300)' }} />
-      <div className="skeleton skeleton-text" style={{ width: '40%', height: '14px', background: 'var(--line-300)' }} />
-      <div className="skeleton skeleton-text" style={{ width: '65%', height: '14px', background: 'var(--line-300)' }} />
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-        {[64, 76, 56].map((w) => (
-          <div key={w} className="skeleton" style={{ width: `${w}px`, height: '32px', borderRadius: 'var(--radius-full)', background: 'var(--line-300)' }} />
+  <div className="swipe-card feed-skel" aria-hidden="true">
+    <div className="feed-skel__photo">
+      <PawPrint size={56} strokeWidth={1.5} className="feed-skel__paw" />
+    </div>
+    <div className="feed-skel__info">
+      <span className="feed-skel__bar feed-skel__bar--name" />
+      <span className="feed-skel__bar" style={{ width: '24%' }} />
+      <span className="feed-skel__bar" style={{ width: '46%', marginTop: '6px' }} />
+      <span className="feed-skel__bar" style={{ width: '62%' }} />
+      <div className="feed-skel__chips">
+        {[72, 96, 64].map((w) => (
+          <span key={w} className="feed-skel__bar feed-skel__bar--chip" style={{ width: `${w}px` }} />
         ))}
       </div>
     </div>
