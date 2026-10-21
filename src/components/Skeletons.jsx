@@ -47,6 +47,7 @@ export const FeedPageSkeleton = () => (
 
     <div className="swiper-actions" aria-hidden="true">
       <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px' }} />
       <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
     </div>
   </div>

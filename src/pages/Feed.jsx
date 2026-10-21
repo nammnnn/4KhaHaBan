@@ -532,11 +532,16 @@ function Feed() {
       {loading ? (
         <div className="swiper-actions" aria-hidden="true">
           <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
+          <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px' }} />
           <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
         </div>
       ) : cards.length > 0 && (
         <div className="swiper-actions">
-          {/* Rewind (like Tinder): always in the same place, dimmed until there's a skip to undo */}
+          <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label="ข้าม" title="ข้าม (←)">
+            <X size={28} strokeWidth={2.5} />
+          </button>
+          {/* Rewind sits between skip and like, like Tinder's small middle button, so the row stays
+              symmetric; always shown, dimmed until there's a skip to undo */}
           <button
             className="swiper-btn btn-undo"
             onClick={handleUndo}
@@ -546,13 +551,9 @@ function Feed() {
           >
             <RotateCcw size={20} strokeWidth={2.5} />
           </button>
-          <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label="ข้าม" title="ข้าม (←)">
-            <X size={28} strokeWidth={2.5} />
-          </button>
           <button className="swiper-btn btn-like" onClick={() => handleSwipeAction('right')} aria-label="ถูกใจ สนใจรับเลี้ยง" title="ถูกใจ (→)">
             <Heart size={28} fill="currentColor" strokeWidth={0} />
           </button>
-          <span className="swiper-btn-spacer" aria-hidden="true" />
         </div>
       )}
 

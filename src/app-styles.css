@@ -150,6 +150,16 @@
 
 @media (min-width: 768px) {
   .card-stack-container { max-width: 480px; margin: 0 auto; }
+
+  /* Desktop: keep header, card and buttons together in the middle of the screen
+     instead of pinning the buttons to the bottom edge */
+  .feed-container { justify-content: center; }
+  .card-stack-container {
+    flex: 0 1 auto;
+    height: min(640px, calc(100dvh - 260px));
+    min-height: 420px;
+  }
+  .swiper-actions { min-height: 0; padding-top: var(--space-4); }
 }
 
 .swipe-card {
@@ -410,8 +420,6 @@
 .swiper-btn.btn-like:hover,
 .swiper-btn.btn-like:active { background: var(--action-like); color: #fff; }
 
-/* Spacer keeps nope/like centered when undo is hidden */
-.swiper-btn-spacer { width: 44px; height: 44px; }
 
 /* Request-sent moment (DESIGN.md §7.3) */
 .match-overlay {
