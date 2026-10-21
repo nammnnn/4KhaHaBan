@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Heart, X, PawPrint, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Heart, X, RotateCcw, PawPrint, ShieldCheck, MessageCircle } from 'lucide-react';
 import { useI18n, localizeAge } from '../i18n';
 
 // Real animals from the foundation (the 800px cat photos are sharp enough for a hero)
@@ -25,6 +25,20 @@ export function LoginShowcase() {
     : {
         animate: { opacity: [0, 0, 1, 1, 0] },
         transition: { duration: 4.4, times: [0, 0.38, 0.5, 0.72, 0.84], repeat: Infinity, ease: 'easeInOut' },
+      };
+  // The like button lights up green while the card swipes, as if it was tapped
+  const press = reduceMotion
+    ? {}
+    : {
+        animate: {
+          backgroundColor: ['#FFFFFF', '#FFFFFF', '#059669', '#059669', '#FFFFFF'],
+          color: ['#059669', '#059669', '#FFFFFF', '#FFFFFF', '#059669'],
+          scale: [1, 1, 0.9, 1, 1, 1],
+        },
+        transition: {
+          default: { duration: 4.4, times: [0, 0.34, 0.42, 0.72, 0.84], repeat: Infinity, ease: 'easeInOut' },
+          scale: { duration: 4.4, times: [0, 0.32, 0.36, 0.42, 0.9, 1], repeat: Infinity, ease: 'easeInOut' },
+        },
       };
 
   return (
@@ -60,8 +74,10 @@ export function LoginShowcase() {
             </motion.div>
           </div>
           <div className="ls-actions">
-            <span className="ls-btn ls-btn--nope"><X size={22} strokeWidth={2.6} /></span>
-            <span className="ls-btn ls-btn--like"><Heart size={22} strokeWidth={2.4} fill="currentColor" /></span>
+            {/* Same buttons as the feed (DESIGN.md §7.2), scaled down */}
+            <span className="ls-btn ls-btn--nope"><X size={24} strokeWidth={2.5} /></span>
+            <span className="ls-btn ls-btn--undo"><RotateCcw size={16} strokeWidth={2.5} /></span>
+            <motion.span className="ls-btn ls-btn--like" {...press}><Heart size={24} fill="currentColor" strokeWidth={0} /></motion.span>
           </div>
         </div>
 
