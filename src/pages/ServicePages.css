@@ -127,6 +127,41 @@
 }
 .sp-textbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
 .sp-textbtn:disabled { color: var(--ink-500); cursor: default; text-decoration: none; }
+.sp-gps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1.5px dashed var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+.sp-gps:hover:not(:disabled) { background: var(--surface-sunken); }
+.sp-gps:disabled { cursor: progress; }
+.sp-gps__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+.sp-gps__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sp-gps__text strong { font-size: var(--text-body); color: var(--ink-900); }
+.sp-gps__text small { font-size: var(--text-caption); color: var(--ink-500); }
+.sp-gps__again { flex-shrink: 0; font-size: var(--text-label); font-weight: 600; color: var(--primary-strong); }
+.sp-gps.is-pinned { border-style: solid; border-color: var(--success); background: var(--success-soft); }
+.sp-gps.is-pinned .sp-gps__icon { background: var(--surface); color: var(--success); }
+.sp-gps.is-pinned .sp-gps__text strong { color: var(--success); }
+
 .sp-divider { height: 1px; margin: var(--space-1) 0; background: var(--line-200); }
 
 /* Photo as one row */

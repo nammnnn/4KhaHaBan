@@ -358,14 +358,30 @@ function IncidentReport() {
           {/* Where + contact + send */}
           <section className="sp-card sp-card--tight sp-form__side">
             <h2 className="sp-card__title">{t('report.s2')}</h2>
+            {/* GPS first and big: an exact pin finds the animal much faster than a description */}
+            <button
+              type="button"
+              className={`sp-gps ${coordinates ? 'is-pinned' : ''}`}
+              onClick={handleGetLocation}
+              disabled={isGettingLocation}
+              aria-describedby="rp-gps-hint"
+            >
+              <span className="sp-gps__icon" aria-hidden="true">
+                {isGettingLocation ? <Loader2 size={22} className="ui-spin" /> : coordinates ? <CheckCircle2 size={22} /> : <Crosshair size={22} />}
+              </span>
+              <span className="sp-gps__text">
+                <strong>{isGettingLocation ? t('report.gps.loading') : coordinates ? t('report.gps.pinned') : t('report.gps.use')}</strong>
+                <small id="rp-gps-hint">
+                  {coordinates
+                    ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+                    : t('report.gps.why')}
+                </small>
+              </span>
+              {coordinates && !isGettingLocation && <span className="sp-gps__again">{t('report.gps.again')}</span>}
+            </button>
+
             <div className="sp-fieldset">
-              <div className="sp-label-row">
-                <label className="sp-label" htmlFor="rp-location">{t('report.location')}</label>
-                <button type="button" className="sp-textbtn" onClick={handleGetLocation} disabled={isGettingLocation}>
-                  {isGettingLocation ? <Loader2 size={16} className="ui-spin" aria-hidden="true" /> : <Crosshair size={16} aria-hidden="true" />}
-                  {isGettingLocation ? t('report.gps.loading') : t('report.gps.use')}
-                </button>
-              </div>
+              <label className="sp-label" htmlFor="rp-location">{t('report.location')}</label>
               <div className="sp-input-icon">
                 <MapPin size={18} aria-hidden="true" />
                 <input
@@ -378,7 +394,6 @@ function IncidentReport() {
                   aria-invalid={errors.location ? 'true' : undefined}
                 />
               </div>
-              {coordinates && <span className="sp-ok"><CheckCircle2 size={14} aria-hidden="true" /> {t('report.gps.pinned')}</span>}
               {errors.location && <span className="ui-field__error">{errors.location}</span>}
             </div>
 
