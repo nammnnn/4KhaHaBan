@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import {
   MapPin, Camera, CheckCircle2, Send, Dog, Cat, PawPrint, Crosshair, Phone, User, X,
-  History, ShieldCheck, Loader2, Siren
+  History, ShieldCheck, Loader2, Siren, AlertTriangle, Map as MapIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { getAddressFromCoordinates } from '../lib/geo';
-import { Badge, Button, EmptyState, useToast } from '../components/ui';
+import { Badge, Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 import './ServicePages.css';
 
@@ -20,6 +20,14 @@ const ANIMALS = [
   { id: 'other', icon: PawPrint },
 ];
 const URGENCY = ['critical', 'urgent', 'normal'];
+const GOOD_ACCURACY_M = 30; // stop listening once GPS is this precise
+const ROUGH_ACCURACY_M = 100; // above this, ask the reporter to check the pin on the map
+const GPS_WAIT_MS = 8000;
+const MapPicker = lazy(() => import('../components/MapPicker'));
+
+const formatDistance = (m, t) => (m >= 1000 ? t('report.gps.km', { n: (m / 1000).toFixed(1) }) : t('report.gps.m', { n: m }));
+const formatAccuracy = (m, t) => t('report.gps.acc', { d: formatDistance(m, t) });
+
 const STATUS_TONE = { pending: 'danger', in_progress: 'pending', resolved: 'success', cancelled: 'neutral' };
 
 // Phone number auto-formatter (e.g. 081-234-5678 or 02-123-4567)
@@ -50,6 +58,11 @@ function IncidentReport() {
   const [locationText, setLocationText] = useState('');
   const [coordinates, setCoordinates] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [accuracy, setAccuracy] = useState(null); // metres, for a GPS fix
+  const [gpsFix, setGpsFix] = useState(null); // last GPS point, shown on the map
+  const [locSource, setLocSource] = useState(null); // 'gps' | 'map'
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapDraft, setMapDraft] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [reporterName, setReporterName] = useState('');
@@ -136,34 +149,67 @@ function IncidentReport() {
     return () => { cancelled = true; };
   }, [user?.id, submittedReport, reportsReload]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fills the address from a point; leaves out nearby building names (they mislead next to a rough pin)
+  const fillAddress = async ({ latitude, longitude }) => {
+    let resolved = '';
+    try {
+      const rev = await getAddressFromCoordinates(latitude, longitude, { place: false });
+      resolved = rev?.formattedAddress || '';
+    } catch (e) {
+      console.warn('Reverse geocode error:', e);
+    }
+    setLocationText(resolved || `GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+    setErrors((e) => ({ ...e, location: undefined }));
+  };
+
+  // Phones often give a coarse first fix; listen for a few seconds and keep the most accurate one
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       toast(t('report.gps.unsupported'), { tone: 'error' });
       return;
     }
     setIsGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setCoordinates({ latitude, longitude });
-        let resolved = '';
-        try {
-          const rev = await getAddressFromCoordinates(latitude, longitude);
-          resolved = rev?.formattedAddress || '';
-        } catch (e) {
-          console.warn('Reverse geocode error:', e);
-        }
-        setLocationText(resolved || `GPS: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        setErrors((e) => ({ ...e, location: undefined }));
+    let best = null;
+    let done = false;
+    const finish = async () => {
+      if (done) return;
+      done = true;
+      navigator.geolocation.clearWatch(watchId);
+      clearTimeout(timer);
+      if (!best) {
         setIsGettingLocation(false);
+        toast(t('report.gps.failed'), { tone: 'error' });
+        return;
+      }
+      const point = { latitude: best.latitude, longitude: best.longitude };
+      setCoordinates(point);
+      setGpsFix(point);
+      setAccuracy(Math.round(best.accuracy));
+      setLocSource('gps');
+      await fillAddress(point);
+      setIsGettingLocation(false);
+    };
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (!best || pos.coords.accuracy < best.accuracy) best = pos.coords;
+        if (pos.coords.accuracy <= GOOD_ACCURACY_M) finish();
       },
       (err) => {
-        setIsGettingLocation(false);
         console.warn('Geolocation error:', err);
-        toast(t('report.gps.failed'), { tone: 'error' });
+        finish();
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
+    const timer = setTimeout(finish, GPS_WAIT_MS);
+  };
+
+  const confirmMapPin = async () => {
+    if (!mapDraft) return;
+    setMapOpen(false);
+    setCoordinates(mapDraft);
+    setAccuracy(null); // placed by hand on the map
+    setLocSource('map');
+    await fillAddress(mapDraft);
   };
 
   const handleImageSelect = (e) => {
@@ -218,6 +264,8 @@ function IncidentReport() {
       setSymptoms('');
       setLocationText('');
       setCoordinates(null);
+      setAccuracy(null);
+      setLocSource(null);
       removeImage();
       document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -359,26 +407,38 @@ function IncidentReport() {
           <section className="sp-card sp-card--tight sp-form__side">
             <h2 className="sp-card__title">{t('report.s2')}</h2>
             {/* GPS first and big: an exact pin finds the animal much faster than a description */}
-            <button
-              type="button"
-              className={`sp-gps ${coordinates ? 'is-pinned' : ''}`}
-              onClick={handleGetLocation}
-              disabled={isGettingLocation}
-              aria-describedby="rp-gps-hint"
-            >
-              <span className="sp-gps__icon" aria-hidden="true">
-                {isGettingLocation ? <Loader2 size={22} className="ui-spin" /> : coordinates ? <CheckCircle2 size={22} /> : <Crosshair size={22} />}
-              </span>
-              <span className="sp-gps__text">
-                <strong>{isGettingLocation ? t('report.gps.loading') : coordinates ? t('report.gps.pinned') : t('report.gps.use')}</strong>
-                <small id="rp-gps-hint">
-                  {coordinates
-                    ? `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
-                    : t('report.gps.why')}
-                </small>
-              </span>
-              {coordinates && !isGettingLocation && <span className="sp-gps__again">{t('report.gps.again')}</span>}
-            </button>
+            {(() => {
+              const rough = locSource === 'gps' && accuracy > ROUGH_ACCURACY_M;
+              const state = coordinates ? (rough ? 'is-rough' : 'is-pinned') : '';
+              let sub = t('report.gps.why');
+              if (coordinates && locSource === 'map') sub = t('report.gps.fromMap');
+              else if (coordinates && rough) sub = t('report.gps.roughHint', { d: formatDistance(accuracy, t) });
+              else if (coordinates && accuracy) sub = formatAccuracy(accuracy, t);
+              return (
+                <div className="sp-gps-wrap">
+                  <button
+                    type="button"
+                    className={`sp-gps ${state}`}
+                    onClick={handleGetLocation}
+                    disabled={isGettingLocation}
+                    aria-describedby="rp-gps-hint"
+                  >
+                    <span className="sp-gps__icon" aria-hidden="true">
+                      {isGettingLocation ? <Loader2 size={22} className="ui-spin" /> : rough ? <AlertTriangle size={22} /> : coordinates ? <CheckCircle2 size={22} /> : <Crosshair size={22} />}
+                    </span>
+                    <span className="sp-gps__text">
+                      <strong>{isGettingLocation ? t('report.gps.loading') : rough ? t('report.gps.rough') : coordinates ? t('report.gps.pinned') : t('report.gps.use')}</strong>
+                      <small id="rp-gps-hint">{isGettingLocation ? t('report.gps.waiting') : sub}</small>
+                    </span>
+                    {coordinates && !isGettingLocation && <span className="sp-gps__again">{t('report.gps.again')}</span>}
+                  </button>
+                  <button type="button" className={`sp-textbtn sp-gps-map ${rough ? 'is-urgent' : ''}`} onClick={() => { setMapDraft(coordinates); setMapOpen(true); }}>
+                    <MapIcon size={16} aria-hidden="true" />
+                    {coordinates ? t('report.map.adjust') : t('report.map.pick')}
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="sp-fieldset">
               <label className="sp-label" htmlFor="rp-location">{t('report.location')}</label>
@@ -504,6 +564,24 @@ function IncidentReport() {
           )}
         </motion.section>
       )}
+      <Dialog
+        open={mapOpen}
+        className="sp-map-dialog"
+        onClose={() => setMapOpen(false)}
+        title={t('report.map.title')}
+        actions={(
+          <>
+            <Button variant="secondary" onClick={() => setMapOpen(false)}>{t('common.cancel')}</Button>
+            <Button variant="primary" onClick={confirmMapPin} disabled={!mapDraft}>{t('report.map.use')}</Button>
+          </>
+        )}
+      >
+        {mapOpen && (
+          <Suspense fallback={<div className="skeleton" style={{ height: 340, borderRadius: 12 }} />}>
+            <MapPicker initial={coordinates || gpsFix} accuracy={locSource === 'gps' ? accuracy : null} gps={gpsFix} onChange={setMapDraft} />
+          </Suspense>
+        )}
+      </Dialog>
     </div>
   );
 }

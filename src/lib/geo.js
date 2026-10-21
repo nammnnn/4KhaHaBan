@@ -360,12 +360,14 @@ export async function searchCoordinatesFromAddress(addressQuery) {
  * @param {number|string} longitude 
  * @returns {Promise<{ formattedAddress: string, displayName: string, details: object } | null>}
  */
-export async function getAddressFromCoordinates(latitude, longitude) {
+// `place: false` leaves out the nearest building/amenity name: next to a rough pin it reads like
+// the wrong place (e.g. a shop the reporter has never seen).
+export async function getAddressFromCoordinates(latitude, longitude, { place = true } = {}) {
   const lat = parseFloat(latitude);
   const lon = parseFloat(longitude);
   if (isNaN(lat) || isNaN(lon)) return null;
 
-  const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  const key = `${lat.toFixed(5)},${lon.toFixed(5)},${place ? 1 : 0}`;
   if (reverseGeocodeCache.has(key)) {
     return reverseGeocodeCache.get(key);
   }
@@ -384,14 +386,15 @@ export async function getAddressFromCoordinates(latitude, longitude) {
 
     // ชื่อสถานที่สำคัญ / อาคาร / มหาวิทยาลัย (ถ้ามี)
     const placeName = addr.amenity || addr.building || addr.university || addr.college || addr.school || addr.hospital || addr.office;
-    if (placeName) {
+    if (placeName && place) {
       parts.push(placeName);
     }
 
     // ถนน
     if (addr.road) {
       const cleanRoad = addr.road.replace(/^(ถนน|ถ\.)\s*/, '');
-      parts.push(`ถ.${cleanRoad}`);
+      // Lanes already say what they are ("ซอยอุทัยรุ่งโรจน์") — don't turn them into "ถ.ซอย…"
+      parts.push(/^(ซอย|ซ\.|ตรอก|แยก)/.test(cleanRoad) ? cleanRoad : `ถ.${cleanRoad}`);
     }
     
     // ตำบล / แขวง

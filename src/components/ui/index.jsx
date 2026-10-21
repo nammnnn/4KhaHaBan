@@ -90,9 +90,12 @@ export function EmptyState({ icon: Icon, title, text, action }) {
 }
 
 // Bottom sheet on mobile, centered modal on desktop. Replaces window.confirm().
-export function Dialog({ open, onClose, title, children, actions }) {
+export function Dialog({ open, onClose, title, children, actions, className }) {
   const reduce = useReducedMotion();
   const panelRef = useRef(null);
+  // Close on backdrop clicks only when the press also started on the backdrop — otherwise dragging
+  // inside the panel (e.g. a map) and releasing outside it would close the dialog.
+  const downOnBackdrop = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -111,11 +114,12 @@ export function Dialog({ open, onClose, title, children, actions }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          onClick={onClose}
+          onPointerDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
+          onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose?.(); }}
         >
           <motion.div
             ref={panelRef}
-            className="ui-dialog"
+            className={cn('ui-dialog', className)}
             role="dialog"
             aria-modal="true"
             aria-label={typeof title === 'string' ? title : undefined}
