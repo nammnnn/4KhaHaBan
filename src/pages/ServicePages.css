@@ -439,8 +439,22 @@
 .sp-needs li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line-200); }
 .sp-needs li:last-child { border-bottom: 0; }
 .sp-needs li > span:first-child { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.sp-needs strong { font-size: var(--text-label); font-weight: 600; color: var(--ink-900); }
-.sp-needs small { font-size: var(--text-caption); color: var(--ink-500); }
+.sp-needs strong, .sp-needs small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sp-needs strong { font-size: var(--text-label); line-height: 1.5; font-weight: 600; color: var(--ink-900); }
+.sp-needs small { font-size: var(--text-caption); line-height: 1.5; min-height: 1.5em; color: var(--ink-500); }
+/* In the full list sheet there is room to wrap */
+.ui-dialog .sp-needs strong, .ui-dialog .sp-needs small { white-space: normal; }
+/* Reserve 3 rows + the "see all" link */
+.sp-needs-area {
+  --row: calc(var(--space-3) * 2 + var(--text-label) * 1.5 + var(--text-caption) * 1.5 + 1px);
+  --more: calc(8px + var(--text-label) * 1.5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: calc(var(--row) * 3 + 4px + var(--more));
+}
+.sp-needs-area .sp-more { margin-top: 0; }
+.sp-needs-area .sp-needs { margin-top: calc(var(--space-2) * -1); }
 .sp-needs .ui-badge { flex-shrink: 0; }
 /* Placeholder text: keeps the real line boxes, hides the letters */
 .sp-sk-text { color: transparent !important; border-radius: 6px; user-select: none; }
@@ -463,7 +477,15 @@
 .sp-address { padding: var(--space-4); border-radius: var(--radius-md); background: var(--surface-sunken); }
 .sp-address__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
 .sp-address address { display: flex; flex-direction: column; gap: 2px; font-style: normal; font-size: var(--text-label); line-height: 1.55; color: var(--ink-700); }
-.sp-address address strong { color: var(--ink-900); }
+.sp-address address strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-900); }
+.sp-address__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(3 * 1.55em);
+}
 
 /* Shipping tips tooltip */
 .sp-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

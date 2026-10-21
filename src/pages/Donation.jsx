@@ -50,7 +50,8 @@ function NeedsList({ items, t }) {
         <li key={item.id}>
           <span>
             <strong>{item.item_name}</strong>
-            {item.note && <small>{item.note}</small>}
+            {/* Always a note line (blank if none) so every row is the same height */}
+            <small>{item.note || '\u00a0'}</small>
           </span>
           <Badge tone={NEED_TONE[item.urgency] || 'neutral'}>{t(`donate.need.${NEED_TONE[item.urgency] ? item.urgency : 'normal'}`)}</Badge>
         </li>
@@ -368,21 +369,24 @@ function Donation() {
           <p className="sp-card__hint">{t('donate.items.desc')}</p>
 
           <h3 className="sp-label">{t('donate.items.needs')}</h3>
-          {needsFor !== selectedFoundationId ? (
-            <NeedsSkeleton />
-          ) : needs.length === 0 ? (
-            <p className="sp-empty">{t('donate.items.none')}</p>
-          ) : (
-            <>
-            <NeedsList items={needs.slice(0, NEEDS_PREVIEW)} t={t} />
-            {needs.length > NEEDS_PREVIEW && (
-              <button type="button" className="sp-more" onClick={() => setSheet('needs')} aria-haspopup="dialog">
-                {t('donate.items.more', { count: needs.length })}
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
+          {/* Fixed-height area (3 rows + "see all"), so loading or a short list never moves the cards */}
+          <div className="sp-needs-area">
+            {needsFor !== selectedFoundationId ? (
+              <NeedsSkeleton />
+            ) : needs.length === 0 ? (
+              <p className="sp-empty">{t('donate.items.none')}</p>
+            ) : (
+              <>
+                <NeedsList items={needs.slice(0, NEEDS_PREVIEW)} t={t} />
+                {needs.length > NEEDS_PREVIEW && (
+                  <button type="button" className="sp-more" onClick={() => setSheet('needs')} aria-haspopup="dialog">
+                    {t('donate.items.more', { count: needs.length })}
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                )}
+              </>
             )}
-            </>
-          )}
+          </div>
 
           {foundation && (
             <div className="sp-address">
@@ -393,10 +397,12 @@ function Donation() {
                   {copied === 'address' ? t('donate.copied') : t('donate.copy')}
                 </Button>
               </div>
-              <address>
+              {/* Fixed size: name 1 line, address up to 3 lines, phone line always reserved.
+                  "Copy" and the tooltip give the full address. */}
+              <address title={addressText}>
                 <strong>{foundation.full_name}</strong>
-                <span>{foundation.address || t('donate.items.noAddress')}</span>
-                {foundation.phone && <span>{t('donate.items.tel')} {foundation.phone}</span>}
+                <span className="sp-address__text">{foundation.address || t('donate.items.noAddress')}</span>
+                <span className="sp-address__tel">{foundation.phone ? `${t('donate.items.tel')} ${foundation.phone}` : '\u00a0'}</span>
               </address>
             </div>
           )}

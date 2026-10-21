@@ -619,7 +619,7 @@ export const DonationSkeleton = () => (
         </div>
         <p className="sp-card__hint"><span className="skeleton sp-sk-text">สั่งออนไลน์หรือส่งพัสดุถึงมูลนิธิได้โดยตรง</span></p>
         <h3 className="sp-label"><span className="skeleton sp-sk-text">ของที่ต้องการตอนนี้</span></h3>
-        <NeedsSkeleton />
+        <div className="sp-needs-area"><NeedsSkeleton /></div>
         <div className="sp-address">
           <div className="sp-address__head">
             <h3 className="sp-label"><span className="skeleton sp-sk-text">ที่อยู่จัดส่ง</span></h3>
@@ -627,8 +627,8 @@ export const DonationSkeleton = () => (
           </div>
           <address>
             <strong><span className="skeleton sp-sk-text">มูลนิธิช่วยเหลือสัตว์</span></strong>
-            {/* Thai addresses usually wrap to two lines */}
-            <span><span className="skeleton sp-sk-text">123 หมู่ 4 ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น จ.ขอนแก่น 40000 (ศูนย์พักพิงสัตว์)</span></span>
+            <span className="sp-address__text"><span className="skeleton sp-sk-text">123 หมู่ 4 ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น</span></span>
+            <span className="sp-address__tel"><span className="skeleton sp-sk-text">โทร. 000-000-0000</span></span>
           </address>
         </div>
       </div>
