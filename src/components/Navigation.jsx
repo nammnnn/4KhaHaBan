@@ -240,6 +240,10 @@ export function Navigation() {
 
   const isActive = (path) => location.pathname === path;
 
+  // Hooks must run before the early return below, or React crashes when the nav hides (e.g. after logout)
+  const { t } = useI18n();
+  const isDesktop = useIsDesktop();
+
   // Hide navbar on login, onboarding
   const hiddenPaths = ['/login', '/foundation/onboarding'];
   if (hiddenPaths.some(p => location.pathname.startsWith(p))) {
@@ -259,8 +263,6 @@ export function Navigation() {
     </span>
   );
   const path = location.pathname;
-  const { t } = useI18n();
-  const isDesktop = useIsDesktop();
 
   return (
     <nav className="main-nav" aria-label={t('nav.main')}>
