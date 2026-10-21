@@ -16,7 +16,7 @@ import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { AnimalProfileSkeleton } from '../components/Skeletons';
-import { calculateDistance, formatDistance, getUserCoordinates } from '../lib/geo';
+import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermission } from '../lib/geo';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { splitAnimalName } from '../components/SwipeCard';
 import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
@@ -119,22 +119,27 @@ function AnimalProfile() {
   const existingMatch = matches?.find((m) => m.animalId === id || m.animal_id === id);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchAnimal = async () => {
+      let data;
       try {
-        const data = await api.getAnimalById(id);
-        const coords = await getUserCoordinates(true);
-        let distance = data.distance;
-        if (data.latitude && data.longitude && coords) {
-          distance = formatDistance(calculateDistance(coords.latitude, coords.longitude, data.latitude, data.longitude));
-        }
-        setAnimal({ ...data, distance });
+        data = await api.getAnimalById(id);
+        // Show the page right away; distance is filled in only from the user's real location
+        if (!cancelled) setAnimal({ ...data, distance: '' });
       } catch (err) {
-        setNotFound(true);
+        if (!cancelled) setNotFound(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+      if (!data?.latitude || !data?.longitude) return;
+      if ((await getLocationPermission()) !== 'granted') return;
+      const coords = await getUserCoordinates(false, 5000);
+      if (cancelled || !coords) return;
+      const distance = formatDistance(calculateDistance(coords.latitude, coords.longitude, data.latitude, data.longitude));
+      setAnimal((prev) => (prev ? { ...prev, distance } : prev));
     };
     fetchAnimal();
+    return () => { cancelled = true; };
   }, [id]);
 
   const isVerifiedUser =

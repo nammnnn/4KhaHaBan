@@ -117,6 +117,41 @@ export function getUserCoordinates(fallbackToDefault = true, timeoutMs = 2000) {
 }
 
 /**
+ * สถานะสิทธิ์ตำแหน่งของเบราว์เซอร์: 'granted' | 'prompt' | 'denied' | 'unknown'
+ * 'unknown' = เบราว์เซอร์ไม่รองรับ Permissions API (เช่น Safari รุ่นเก่า) — ให้ลองขอพิกัดตามปกติ
+ */
+export async function getLocationPermission() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return 'denied';
+  try {
+    const status = await navigator.permissions?.query({ name: 'geolocation' });
+    return status?.state || 'unknown';
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+/**
+ * เรียก callback เมื่อผู้ใช้เปลี่ยนสิทธิ์ตำแหน่ง (เช่น เพิ่งกดอนุญาตในการตั้งค่า)
+ * @returns {() => void} ฟังก์ชันยกเลิกการติดตาม
+ */
+export function onLocationPermissionChange(callback) {
+  let status = null;
+  let cancelled = false;
+  const handler = () => callback(status.state);
+  navigator.permissions?.query({ name: 'geolocation' })
+    .then((s) => {
+      if (cancelled) return;
+      status = s;
+      status.addEventListener('change', handler);
+    })
+    .catch(() => {});
+  return () => {
+    cancelled = true;
+    status?.removeEventListener('change', handler);
+  };
+}
+
+/**
  * ขอพิกัด GPS แบบเจาะจงเมื่อผู้ใช้กดปุ่ม (User-initiated Gesture)
  * เบราว์เซอร์บนมือถือจะยอมแสดงหน้าต่างขอสิทธิ์พิกัดเมื่อถูกเรียกจากการแตะของผู้ใช้
  */

@@ -1,16 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, Loader2, SlidersHorizontal, MessageCircle, Search, MapPin, ShieldAlert, ChevronRight, PawPrint } from 'lucide-react';
+import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAlert, ChevronRight, PawPrint } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard, splitAnimalName } from '../components/SwipeCard';
-import { Button, IconButton, Dialog, EmptyState, useToast } from '../components/ui';
+import { Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { FeedCardSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { calculateDistance, formatDistance, getUserCoordinates, requestUserLocation, DEFAULT_USER_COORDS } from '../lib/geo';
+import { calculateDistance, formatDistance, getUserCoordinates, requestUserLocation, getLocationPermission, onLocationPermissionChange } from '../lib/geo';
+
+// Distance is only shown when we have the user's real location — never a guessed one.
+const withDistance = (animal, coords) => {
+  const distKm = coords && !coords.isFallback && animal.latitude && animal.longitude
+    ? calculateDistance(coords.latitude, coords.longitude, animal.latitude, animal.longitude)
+    : null;
+  return { ...animal, distanceKm: distKm, distance: distKm !== null ? formatDistance(distKm) : '' };
+};
 
 const makeCard = (animal) => ({
   ...animal,
@@ -29,6 +37,8 @@ function Feed() {
   const [pendingMatch, setPendingMatch] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
+  const loadSeqRef = useRef(0);       // ignore results from superseded loads
+  const hasSwipedRef = useRef(false); // once the user starts swiping, don't reshuffle the deck
   
   const navigate = useNavigate();
   const toast = useToast();
@@ -47,6 +57,7 @@ function Feed() {
     user?.user_metadata?.user_verification_status === 'verified';
 
   const loadAnimals = async (appliedFilters = filters, forcedCoords = null) => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     try {
       let currentFilters = appliedFilters;
@@ -56,40 +67,24 @@ function Feed() {
         appliedFilters === filters && !isFilterOpen
           ? api.getUserPreferences(user?.id).catch(() => ({ maxDistance: 100, animalType: 'all', gender: 'all' }))
           : Promise.resolve(appliedFilters),
-        forcedCoords ? Promise.resolve(forcedCoords) : (userCoords ? Promise.resolve(userCoords) : getUserCoordinates(true, 1800)),
+        Promise.resolve(forcedCoords || userCoords || null),
         api.getAnimals(user?.id).catch(err => {
           console.error("Failed to fetch animals from API:", err);
           return [];
         })
       ]);
 
+      if (seq !== loadSeqRef.current) return;
+
       if (appliedFilters === filters && !isFilterOpen && userPrefsResult) {
         currentFilters = userPrefsResult;
         setFilters(userPrefsResult);
       }
 
-      const activeCoords = forcedCoords || coordsResult || DEFAULT_USER_COORDS;
-      if (!userCoords || forcedCoords) {
-        setUserCoords(activeCoords);
-      }
+      const activeCoords = forcedCoords || coordsResult;
+      if (forcedCoords) setUserCoords(forcedCoords);
 
-      // คำนวณระยะทางจริงจาก GPS ระหว่างผู้ใช้กับสัตว์แต่ละตัว
-      const animalsWithDistance = (data || []).map(animal => {
-        let distKm = null;
-        if (animal.latitude && animal.longitude && activeCoords) {
-          distKm = calculateDistance(activeCoords.latitude, activeCoords.longitude, animal.latitude, animal.longitude);
-        } else if (animal.distance && !isNaN(parseFloat(animal.distance))) {
-          distKm = parseFloat(animal.distance);
-        }
-
-        const distFormatted = distKm !== null ? formatDistance(distKm) : (animal.distance || 'ใกล้คุณ');
-
-        return {
-          ...animal,
-          distanceKm: distKm,
-          distance: distFormatted
-        };
-      });
+      const animalsWithDistance = (data || []).map((animal) => withDistance(animal, activeCoords));
 
       // กรองตามเงื่อนไข ชนิด เพศ และระยะทางจริง
       let filteredData = animalsWithDistance.filter(animal => {
@@ -126,9 +121,47 @@ function Feed() {
     } catch (error) {
       console.error("Failed to fetch animals", error);
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
   };
+
+  const loadAnimalsRef = useRef(loadAnimals);
+  loadAnimalsRef.current = loadAnimals;
+
+  // Use the user's location as soon as the browser allows it — no extra tap needed.
+  const applyCoords = useCallback((coords) => {
+    if (!coords || coords.isFallback) return;
+    setUserCoords(coords);
+    if (!hasSwipedRef.current) {
+      // Nothing swiped yet: reload so distance filters and ordering use the real location
+      loadAnimalsRef.current(undefined, coords);
+    } else {
+      // Mid-session: just fill in distances without reshuffling the deck
+      poolRef.current = poolRef.current.map((a) => withDistance(a, coords));
+      setCards((prev) => prev.map((c) => ({ ...withDistance(c, coords), cardKey: c.cardKey })));
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const locate = async () => {
+      // Generous timeout so the user has time to answer the browser's permission prompt
+      const coords = await getUserCoordinates(false, 20000);
+      if (!cancelled) applyCoords(coords);
+    };
+
+    getLocationPermission().then((state) => {
+      if (!cancelled && state !== 'denied') locate();
+    });
+    const stopWatching = onLocationPermissionChange((state) => {
+      if (state === 'granted') locate();
+    });
+
+    return () => {
+      cancelled = true;
+      stopWatching();
+    };
+  }, [applyCoords]);
 
 
   useEffect(() => {
@@ -160,6 +193,7 @@ function Feed() {
     if (!swipedAnimal) return;
 
     const realAnimalId = swipedAnimal.id;
+    hasSwipedRef.current = true;
     setSwipeTrigger(null);
 
     if (action === 'right') {
@@ -276,14 +310,6 @@ function Feed() {
           4 ขา<span className="logo-text__accent">หาบ้าน</span>
         </h1>
         <div className="feed-header__actions">
-          <IconButton
-            label={userCoords && !userCoords.isFallback ? 'อัปเดตตำแหน่งของฉัน' : 'ใช้ตำแหน่งของฉัน'}
-            className={userCoords && !userCoords.isFallback ? 'gps-btn--active' : undefined}
-            onClick={handleRequestGps}
-            disabled={isLocating}
-          >
-            {isLocating ? <Loader2 size={20} className="ui-spin" /> : <MapPin size={20} />}
-          </IconButton>
           <button className="filter-btn" onClick={() => setIsFilterOpen(true)}>
             <SlidersHorizontal size={18} aria-hidden="true" />
             <span>ตัวกรอง</span>
