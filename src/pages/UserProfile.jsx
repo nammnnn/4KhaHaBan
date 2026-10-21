@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
@@ -12,11 +12,20 @@ import {
 } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
+import { useAppContext } from '../context/AppContext';
+import { api } from '../services/api';
+import { loadSavedLocation } from '../lib/geo';
+import { Badge, Button, Dialog, Field, useToast } from '../components/ui';
+import { ProfileSection, InfoRow, AdoptionRequests, FaqList } from '../components/profile/ProfileSections';
+import '../components/profile/ProfileSections.css';
 
 export default function UserProfile() {
   const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const { matches } = useAppContext();
   const [searchParams] = useSearchParams();
+  const [searchPrefs, setSearchPrefs] = useState(null);
   const [imgError, setImgError] = useState(false);
   
   // Settings Modal states
@@ -125,12 +134,12 @@ export default function UserProfile() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('กรุณาเลือกไฟล์รูปภาพ');
+      toast('กรุณาเลือกไฟล์รูปภาพ (JPG หรือ PNG)', { tone: 'error' });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+      toast('รูปต้องมีขนาดไม่เกิน 5MB ลองเลือกรูปที่เล็กลง', { tone: 'error' });
       return;
     }
 
@@ -155,7 +164,7 @@ export default function UserProfile() {
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert('ไม่สามารถอัปโหลดรูปโปรไฟล์ได้ กรุณาลองใหม่อีกครั้ง');
+      toast('อัปโหลดรูปโปรไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง', { tone: 'error' });
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -596,269 +605,197 @@ export default function UserProfile() {
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ผู้ใช้งาน';
   const displayEmail = user?.email || 'user@example.com';
 
-  return (
-    <div className="page-container" style={{ padding: '24px 16px 100px', backgroundColor: 'var(--background)', minHeight: '100dvh' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+  // Search preferences shown in the "การค้นหา" section (adopters only)
+  useEffect(() => {
+    if (role !== 'user' || !user?.id) return;
+    api.getUserPreferences(user.id).then(setSearchPrefs).catch(() => {});
+  }, [role, user?.id]);
 
-        {/* Hidden File Input for Avatar */}
-        <input 
-          type="file" 
-          ref={avatarInputRef} 
-          accept="image/*" 
-          style={{ display: 'none' }} 
-          onChange={handleAvatarSelect} 
+  const savedArea = loadSavedLocation();
+  // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
+  const prefsSummary = searchPrefs
+    ? [
+        { dog: 'สุนัข', cat: 'แมว' }[searchPrefs.animalType],
+        { male: 'ตัวผู้', female: 'ตัวเมีย' }[searchPrefs.gender],
+      ].filter(Boolean).concat(searchPrefs.maxDistance >= 300 ? 'ทุกระยะ' : `${searchPrefs.maxDistance} กม.`)
+        .join(' · ')
+        .replace(/^(\d+ กม\.|ทุกระยะ)$/, 'ทั้งหมด · $1')
+    : '…';
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+  const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));
+  const settingsOpen = () => {
+    setSaveErrorMsg('');
+    setSaveSuccessMsg('');
+    setIsSettingsOpen(true);
+  };
+
+  return (
+    <div className="page-container" style={{ padding: 0, minHeight: '100dvh' }}>
+      <div className="pf-page">
+        <input
+          type="file"
+          ref={avatarInputRef}
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleAvatarSelect}
         />
 
-        {/* Profile Header */}
-        <motion.section
+        {/* Header */}
+        <motion.header
+          className="pf-header"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          style={{ 
-            background: '#FFFFFF',
-            borderRadius: '16px', padding: '24px 32px', display: 'flex', alignItems: 'center', 
-            gap: '24px', marginBottom: '24px', border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}
         >
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: '88px', height: '88px', borderRadius: '50%', overflow: 'hidden', border: '3px solid #E5E7EB', backgroundColor: 'var(--gray-100)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="pf-avatar">
+            <div className="pf-avatar__img">
               {isUploadingAvatar ? (
-                <Loader className="spin" size={32} color="var(--primary)" />
+                <Loader className="spin" size={28} />
               ) : avatarUrl && !imgError ? (
-                <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setImgError(true)} />
+                <img src={avatarUrl} alt="" onError={() => setImgError(true)} />
               ) : (
-                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D97706&color=fff&size=128`} alt="Profile Default" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                initial
               )}
             </div>
-            <button 
+            <button
+              type="button"
+              className="pf-avatar__edit"
               onClick={() => avatarInputRef.current?.click()}
               disabled={isUploadingAvatar}
+              aria-label="เปลี่ยนรูปโปรไฟล์"
               title="เปลี่ยนรูปโปรไฟล์"
-              style={{ position: 'absolute', bottom: '2px', right: '2px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '50%', padding: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}
             >
-              <Edit3 size={15} />
+              <Camera size={18} />
             </button>
           </div>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-dark)', margin: '0 0 4px 0' }}>{displayName}</h2>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--text-medium)' }}>{displayEmail}</p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: roleBadge.bg, color: roleBadge.text, fontSize: '0.85rem', fontWeight: 600, border: `1px solid ${roleBadge.border}` }}>
-                {role === 'foundation' ? <Building2 size={14} /> : <User size={14} />}
-                {getRoleDisplayName(role)}
-              </span>
-              {role === 'user' && (
-                isVerified ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #A7F3D0' }}>
-                    <ShieldCheck size={14} /> ยืนยันตัวตนแล้ว
-                  </span>
-                ) : (
-                  <button 
-                    onClick={() => navigate('/verify-user')} 
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: '#FEF3C7', color: '#D97706', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #FCD34D', cursor: 'pointer' }}
-                  >
-                    <Shield size={14} /> ยังไม่ยืนยันตัวตน
-                  </button>
-                )
+          <div className="pf-header__text">
+            <h1 className="pf-header__name">{displayName}</h1>
+            <div className="pf-header__badges">
+              {role === 'user' ? (
+                isVerified
+                  ? <Badge tone="success" icon={ShieldCheck}>ยืนยันตัวตนแล้ว</Badge>
+                  : <Badge tone="pending" icon={Shield}>ยังไม่ยืนยันตัวตน</Badge>
+              ) : (
+                <Badge tone="neutral" icon={role === 'foundation' ? Building2 : User}>{getRoleDisplayName(role)}</Badge>
               )}
             </div>
           </div>
-        </motion.section>
+        </motion.header>
 
+        {/* Not verified yet: the one thing blocking adoption requests */}
+        {role === 'user' && !isVerified && (
+          <div className="pf-verify">
+            <p className="pf-verify__title">ยืนยันตัวตนเพื่อส่งคำขอรับเลี้ยง</p>
+            <p className="pf-verify__text">กรอกข้อมูลส่วนตัวและแบบประเมินความพร้อม 2 ขั้นตอน มูลนิธิใช้ข้อมูลนี้พิจารณาคำขอของคุณ</p>
+            <Button variant="primary" onClick={() => navigate('/verify-user')}>
+              <ShieldCheck size={20} aria-hidden="true" /> เริ่มยืนยันตัวตน
+            </Button>
+          </div>
+        )}
 
-        {/* Menu List */}
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          style={{ 
-            background: '#FFFFFF',
-            borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '20px'
-          }}
+        {role === 'user' && (
+          <ProfileSection
+            title="คำขอรับเลี้ยงของฉัน"
+            action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">ดูทั้งหมด</Link>}
+          >
+            <AdoptionRequests matches={matches} />
+          </ProfileSection>
+        )}
+
+        {role === 'foundation' && foundationMenu.length > 0 && (
+          <ProfileSection title="มูลนิธิของฉัน">
+            {foundationMenu.map((item) => (
+              <InfoRow
+                key={item.key}
+                label={item.label}
+                value={item.badge ? item.desc : ''}
+                tone={item.badge && foundationStatus === 'approved' ? 'success' : item.badge ? 'muted' : undefined}
+                onClick={item.onClick}
+              />
+            ))}
+          </ProfileSection>
+        )}
+
+        <ProfileSection
+          title="ข้อมูลของฉัน"
+          action={<button type="button" className="pf-section__action" onClick={settingsOpen}>แก้ไข</button>}
         >
-          {menuItems.map((item, index) => (
-            <div
-              key={item.key}
-              onClick={item.onClick}
-              style={{
-                display: 'flex', alignItems: 'center', padding: '16px 20px',
-                borderBottom: index < menuItems.length - 1 ? '1px solid #F3F4F6' : 'none',
-                cursor: 'pointer', transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <div style={{ color: 'var(--text-medium)', marginRight: '14px', display: 'flex', alignItems: 'center' }}>
-                {item.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.95rem', color: 'var(--text-dark)', fontWeight: 500 }}>
-                  {item.label}
-                </div>
-                {item.desc && !item.badge && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-medium)', marginTop: '2px' }}>
-                    {item.desc}
-                  </div>
-                )}
-              </div>
-              {item.badge && (
-                <span style={{ 
-                  padding: '3px 10px', 
-                  backgroundColor: item.badgeColor || '#F3F4F6', 
-                  color: item.badgeTextColor || 'var(--text-medium)', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 600, 
-                  borderRadius: '6px', 
-                  marginRight: '10px' 
-                }}>
-                  {item.desc}
-                </span>
-              )}
-              <ChevronRight size={18} color="var(--gray-300)" />
-            </div>
-          ))}
-        </motion.section>
+          <InfoRow label="ชื่อ" value={profile?.full_name || user?.user_metadata?.full_name || '—'} />
+          <InfoRow label="เบอร์โทร" value={profile?.phone ? formatPhoneNumber(profile.phone) : 'ยังไม่ได้ระบุ'} tone={profile?.phone ? undefined : 'muted'} />
+          <InfoRow label="อีเมล" value={displayEmail} />
+          {role === 'user' && (
+            <InfoRow
+              label="ยืนยันตัวตน"
+              value={isVerified ? 'เรียบร้อย' : 'ยังไม่ยืนยัน'}
+              tone={isVerified ? 'success' : 'muted'}
+              to="/verify-user"
+            />
+          )}
+        </ProfileSection>
 
-        {/* Logout Button */}
-        <motion.button
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.1 }}
-          onClick={handleLogout}
-          style={{
-            width: '100%', height: '44px', backgroundColor: '#FFFFFF', color: '#DC2626',
-            borderRadius: '8px', border: '1px solid #FCA5A5', boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-            fontSize: '0.95rem', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-            cursor: 'pointer', transition: 'all 0.15s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEF2F2'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
-        >
-          <LogOut size={16} />
-          ออกจากระบบ
-        </motion.button>
+        {role === 'user' && (
+          <ProfileSection title="การค้นหา">
+            <InfoRow
+              icon={MapPin}
+              label="พื้นที่"
+              value={savedArea?.label ? `ใกล้ ${savedArea.label}` : 'ตำแหน่งปัจจุบัน (GPS)'}
+              to="/?sheet=location"
+            />
+            <InfoRow icon={Search} label="ตัวกรอง" value={prefsSummary} to="/?sheet=filters" />
+          </ProfileSection>
+        )}
 
+        {role !== 'super_admin' && (
+          <ProfileSection title="ช่วยเหลือ">
+            <FaqList />
+            <InfoRow icon={MessageSquare} label="แชทกับทีมงาน" value="" to="/support-chat" />
+          </ProfileSection>
+        )}
+
+        <Button variant="secondary" className="pf-logout" onClick={handleLogout}>
+          <LogOut size={18} aria-hidden="true" /> ออกจากระบบ
+        </Button>
       </div>
 
-      {/* Account Settings Modal */}
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={() => setIsSettingsOpen(false)}
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              backgroundColor: 'rgba(0, 0, 0, 0.45)', 
-              backdropFilter: 'blur(8px)', 
-              WebkitBackdropFilter: 'blur(8px)',
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              zIndex: 1000, 
-              padding: '16px' 
-            }}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              onClick={e => e.stopPropagation()}
-              style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>ตั้งค่าบัญชีผู้ใช้</h2>
-                <button onClick={() => setIsSettingsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-medium)', padding: '4px' }}>
-                  <X size={20} />
-                </button>
-              </div>
-
-              {saveSuccessMsg && (
-                <div style={{ padding: '10px 14px', backgroundColor: '#ECFDF5', color: '#059669', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid #A7F3D0' }}>
-                  <CheckCircle size={18} /> {saveSuccessMsg}
-                </div>
-              )}
-
-              {saveErrorMsg && (
-                <div style={{ padding: '10px 14px', backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid #FCA5A5' }}>
-                  {saveErrorMsg}
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>ชื่อ - นามสกุล</label>
-                  <div style={{ position: 'relative' }}>
-                    <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="text" 
-                      value={editFullName} 
-                      onChange={e => setEditFullName(e.target.value)} 
-                      placeholder="ระบุชื่อของคุณ" 
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-300)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>เบอร์โทรศัพท์</label>
-                  <div style={{ position: 'relative' }}>
-                    <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="tel" 
-                      value={editPhone} 
-                      onChange={e => setEditPhone(formatPhoneNumber(e.target.value))} 
-                      placeholder="เช่น 0812345678 หรือ 021234567" 
-                      maxLength={12}
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-300)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                    พิมพ์เฉพาะตัวเลขได้ ระบบจะจัดรูปแบบขีด (-) ให้อัตโนมัติ
-                  </span>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>อีเมล (ไม่สามารถเปลี่ยนแปลงได้)</label>
-                  <div style={{ position: 'relative' }}>
-                    <Mail size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="email" 
-                      value={displayEmail} 
-                      disabled 
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)', color: 'var(--text-medium)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setIsSettingsOpen(false)} 
-                    style={{ flex: 1, height: '44px', borderRadius: '8px', border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    ยกเลิก
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={isSavingProfile} 
-                    className="btn btn-primary" 
-                    style={{ flex: 1, height: '44px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}
-                  >
-                    {isSavingProfile ? <Loader className="spin" size={20} /> : 'บันทึกข้อมูล'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Edit "ข้อมูลของฉัน" — DESIGN.md §7.10 bottom sheet */}
+      <Dialog open={isSettingsOpen} onClose={() => !isSavingProfile && setIsSettingsOpen(false)} title="แก้ไขข้อมูลของฉัน">
+        <form onSubmit={handleSaveSettings} className="pf-edit-form">
+          {saveSuccessMsg && (
+            <p className="pf-edit-form__msg pf-edit-form__msg--success" role="status">
+              <CheckCircle size={18} aria-hidden="true" /> {saveSuccessMsg}
+            </p>
+          )}
+          {saveErrorMsg && (
+            <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
+              <AlertCircle size={18} aria-hidden="true" /> {saveErrorMsg}
+            </p>
+          )}
+          <Field
+            id="pf-name"
+            label="ชื่อ - นามสกุล"
+            value={editFullName}
+            onChange={(e) => setEditFullName(e.target.value)}
+            placeholder="ระบุชื่อของคุณ"
+            autoComplete="name"
+            required
+          />
+          <Field
+            id="pf-phone"
+            label="เบอร์โทรศัพท์"
+            type="tel"
+            inputMode="tel"
+            value={editPhone}
+            onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
+            placeholder="เช่น 081-234-5678"
+            autoComplete="tel"
+          />
+          <Field id="pf-email" label="อีเมล (เปลี่ยนไม่ได้)" type="email" value={displayEmail} disabled readOnly />
+          <div className="ui-dialog__actions">
+            <Button type="button" variant="secondary" onClick={() => setIsSettingsOpen(false)} disabled={isSavingProfile}>ยกเลิก</Button>
+            <Button type="submit" variant="primary" loading={isSavingProfile}>บันทึกข้อมูล</Button>
+          </div>
+        </form>
+      </Dialog>
 
       {/* Foundation Verification Certificate & Status Modal */}
       <AnimatePresence>

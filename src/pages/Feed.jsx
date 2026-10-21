@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAlert, ChevronRight, PawPrint, MapPin, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwipeCard, splitAnimalName } from '../components/SwipeCard';
 import { Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
@@ -51,6 +51,7 @@ function Feed() {
   
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({ maxDistance: 100, animalType: 'all', gender: 'all' });
@@ -352,6 +353,15 @@ function Feed() {
       setSwipeTrigger({ id: cards[0].cardKey || cards[0].id, direction });
     }
   };
+
+  // Deep links from the profile page: /?sheet=location or /?sheet=filters
+  useEffect(() => {
+    const sheet = searchParams.get('sheet');
+    if (!sheet) return;
+    if (sheet === 'location') setIsLocSheetOpen(true);
+    if (sheet === 'filters') setIsFilterOpen(true);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // DESIGN.md §7.2: keyboard parity for swipe gestures
   const anyOverlayOpen = isFilterOpen || isLocSheetOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
