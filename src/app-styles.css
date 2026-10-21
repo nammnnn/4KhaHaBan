@@ -3463,6 +3463,11 @@
     box-shadow: var(--elev-raised);
   }
 
+  /* No visible scrollbar here (it sat on the rounded edge); the panel still scrolls with
+     wheel/trackpad/keyboard, and the bottom fade shows there's more */
+  .feed-panel__inner { scrollbar-width: none; }
+  .feed-panel__inner::-webkit-scrollbar { display: none; }
+
   /* Soft fade pinned to the bottom edge hints that the panel scrolls */
   .feed-panel__fade {
     position: sticky;
