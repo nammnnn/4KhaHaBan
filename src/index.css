@@ -510,8 +510,6 @@ button {
 
   .nav-badge { top: -6px; left: 14px; }
 
-  /* Profile lives in the user card on desktop */
-  .nav-items .nav-item[href="/profile"] { display: none; }
 
   .nav-user {
     display: flex;
@@ -525,6 +523,9 @@ button {
   }
 
   .nav-user:hover { background: var(--line-200); }
+  .nav-user.active { background: var(--primary-soft); }
+  .nav-user.active .nav-user__hint { color: var(--primary-deep); }
+  .nav-user.active .nav-avatar { box-shadow: 0 0 0 2px var(--primary); }
   .nav-user .nav-avatar { width: 40px; height: 40px; font-size: var(--text-body); box-shadow: none; }
   .nav-user__text { display: flex; flex-direction: column; min-width: 0; }
   .nav-user__name {

@@ -7,6 +7,20 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
 
+// Desktop shows the sidebar, where the profile lives in the user card instead of a tab
+function useIsDesktop() {
+  const query = '(min-width: 768px)';
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia?.(query);
+    if (!mql) return undefined;
+    const onChange = (e) => setMatches(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return matches;
+}
+
 // One tab in the dock (mobile) / sidebar (desktop). DESIGN.md §7.4
 function NavItem({ to, active, icon: Icon, label, ariaLabel, badge = 0, children }) {
   const reduceMotion = useReducedMotion();
@@ -243,6 +257,7 @@ export function Navigation() {
     </span>
   );
   const path = location.pathname;
+  const isDesktop = useIsDesktop();
 
   return (
     <nav className="main-nav" aria-label="เมนูหลัก">
@@ -286,18 +301,24 @@ export function Navigation() {
           <NavItem to="/admin" active={isActive('/admin')} icon={Shield} label="ระบบจัดการ" ariaLabel="ระบบจัดการผู้ใช้งาน" />
         )}
 
-        {user ? (
+        {/* Not rendered (rather than CSS-hidden) on desktop, so the sliding pill never
+            animates out of an invisible 0x0 tab in the corner */}
+        {user && !isDesktop ? (
           <NavItem to="/profile" active={isActive('/profile')} label="โปรไฟล์" ariaLabel="โปรไฟล์ของฉัน">
             {avatar}
           </NavItem>
-        ) : (
+        ) : user ? null : (
           <NavItem to="/login" active={false} icon={LogIn} label="เข้าสู่ระบบ" />
         )}
       </div>
 
       {/* Desktop: signed-in user card at the bottom of the sidebar */}
       {user && (
-        <Link to="/profile" className="nav-user">
+        <Link
+          to="/profile"
+          className={`nav-user${isActive('/profile') ? ' active' : ''}`}
+          aria-current={isActive('/profile') ? 'page' : undefined}
+        >
           {avatar}
           <span className="nav-user__text">
             <span className="nav-user__name">{displayName}</span>
