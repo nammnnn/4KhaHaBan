@@ -362,6 +362,7 @@ export default {
   'report.gps.pinned': 'GPS location pinned',
   'report.gps.unsupported': 'This device can’t share its location. Please type the place instead.',
   'report.gps.failed': 'Couldn’t get your location. Allow location access or type the place instead.',
+  'report.photo.added': 'Photo added',
   'report.photo.add': 'Take or choose a photo',
   'report.photo.hint': 'A photo helps the team bring the right equipment and medicine.',
   'report.photo.remove': 'Remove photo',

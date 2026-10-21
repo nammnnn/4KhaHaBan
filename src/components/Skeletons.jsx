@@ -588,22 +588,27 @@ export const DonationSkeleton = () => (
 
 // Mirrors pages/IncidentReport.jsx (DESIGN.md §7.22)
 export const IncidentReportSkeleton = () => (
-  <div className="sp-page" aria-hidden="true">
+  <div className="sp-page sp-page--wide" aria-hidden="true">
     <div className="sp-head">
       <div className="skeleton skeleton-text" style={{ width: '75%', maxWidth: '420px', height: '32px' }} />
       <div className="skeleton skeleton-text" style={{ width: '90%', maxWidth: '520px', height: '16px', marginTop: '10px' }} />
       <div className="skeleton skeleton-text" style={{ width: '180px', height: '14px', marginTop: '14px' }} />
     </div>
     <div className="skeleton" style={{ height: '48px', maxWidth: '400px', borderRadius: '12px' }} />
-    <div className="sp-card">
-      <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
-      <div className="sp-options sp-options--3">
-        {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '12px' }} />)}
+    <div className="sp-form">
+      <div className="sp-card sp-card--tight">
+        <div className="skeleton skeleton-text" style={{ width: '120px', height: '20px' }} />
+        <div className="sp-chips">{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '12px' }} />)}</div>
+        <div className="sp-chips">{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '12px' }} />)}</div>
+        <div className="skeleton" style={{ height: '96px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ height: '70px', borderRadius: '12px' }} />
       </div>
-      <div className="sp-urgency">
-        {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />)}
+      <div className="sp-card sp-card--tight sp-hide-mobile">
+        <div className="skeleton skeleton-text" style={{ width: '100px', height: '20px' }} />
+        <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
       </div>
-      <div className="skeleton" style={{ height: '96px', borderRadius: '12px' }} />
     </div>
   </div>
 );

@@ -362,6 +362,7 @@ export default {
   'report.gps.pinned': 'ปักหมุดตำแหน่ง GPS แล้ว',
   'report.gps.unsupported': 'อุปกรณ์นี้ดึงตำแหน่งอัตโนมัติไม่ได้ กรุณาพิมพ์สถานที่แทน',
   'report.gps.failed': 'ดึงตำแหน่งไม่ได้ กรุณาเปิดสิทธิ์ตำแหน่ง หรือพิมพ์สถานที่แทน',
+  'report.photo.added': 'แนบรูปแล้ว',
   'report.photo.add': 'ถ่ายรูปหรือเลือกจากเครื่อง',
   'report.photo.hint': 'รูปช่วยให้ทีมเตรียมอุปกรณ์และยาได้ถูกต้อง',
   'report.photo.remove': 'ลบรูป',

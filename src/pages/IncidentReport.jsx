@@ -55,6 +55,7 @@ function IncidentReport() {
   const [reporterName, setReporterName] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
   const [errors, setErrors] = useState({});
+  const [contactLocked, setContactLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReport, setSubmittedReport] = useState(null);
 
@@ -74,8 +75,13 @@ function IncidentReport() {
   // Pre-fill contact details from the profile
   useEffect(() => {
     if (!user) return;
-    setReporterName((v) => v || profile?.full_name || user?.user_metadata?.full_name || '');
-    setReporterPhone((v) => v || (profile?.phone ? formatPhoneNumber(profile.phone) : ''));
+    const name = profile?.full_name || user?.user_metadata?.full_name || '';
+    const phone = profile?.phone ? formatPhoneNumber(profile.phone) : '';
+    setReporterName((v) => v || name);
+    setReporterPhone((v) => v || phone);
+    // Both known from the profile: show them as one line with "Edit"
+    const digits = phone.replace(/\D/g, '');
+    if (name && digits.length >= 9) setContactLocked(true);
   }, [user, profile]);
 
   // Live rescue stats
@@ -174,6 +180,7 @@ function IncidentReport() {
       phone: cleanPhone.length >= 9 && cleanPhone.length <= 10 ? undefined : t('report.err.phone'),
     };
     setErrors(next);
+    if (next.phone) setContactLocked(false);
     const firstError = Object.keys(next).find((k) => next[k]);
     if (firstError) {
       document.getElementById(`rp-${firstError}`)?.focus();
@@ -212,7 +219,7 @@ function IncidentReport() {
   const dateLocale = lang === 'en' ? 'en-GB' : 'th-TH';
 
   return (
-    <div className="sp-page">
+    <div className="sp-page sp-page--wide">
       <motion.header
         className="sp-head"
         initial={{ opacity: 0, y: 8 }}
@@ -260,18 +267,18 @@ function IncidentReport() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.05 }}
         >
-          {/* 1. What happened */}
-          <section className="sp-card">
-            <h2 className="sp-card__title"><span className="sp-step">1</span>{t('report.s1')}</h2>
+          {/* What happened (+ photo) */}
+          <section className="sp-card sp-card--tight">
+            <h2 className="sp-card__title">{t('report.s1')}</h2>
 
             <fieldset className="sp-fieldset">
               <legend className="sp-label">{t('report.animal')}</legend>
-              <div className="sp-options sp-options--3">
+              <div className="sp-chips">
                 {ANIMALS.map(({ id, icon: Icon }) => (
-                  <label key={id} className={`sp-option ${animalType === id ? 'is-on' : ''}`}>
+                  <label key={id} className={`sp-chip ${animalType === id ? 'is-on' : ''}`}>
                     <input type="radio" name="animal" value={id} checked={animalType === id} onChange={() => setAnimalType(id)} />
-                    <Icon size={22} aria-hidden="true" />
-                    <span>{t(`report.animal.${id}`)}</span>
+                    <Icon size={18} aria-hidden="true" />
+                    {t(`report.animal.${id}`)}
                   </label>
                 ))}
               </div>
@@ -279,18 +286,17 @@ function IncidentReport() {
 
             <fieldset className="sp-fieldset">
               <legend className="sp-label">{t('report.urgency')}</legend>
-              <div className="sp-urgency">
+              <div className="sp-chips">
                 {URGENCY.map((id) => (
-                  <label key={id} className={`sp-urgency__item sp-urgency__item--${id} ${urgencyLevel === id ? 'is-on' : ''}`}>
-                    <input type="radio" name="urgency" value={id} checked={urgencyLevel === id} onChange={() => setUrgencyLevel(id)} />
+                  <label key={id} className={`sp-chip sp-chip--${id} ${urgencyLevel === id ? 'is-on' : ''}`}>
+                    <input type="radio" name="urgency" value={id} checked={urgencyLevel === id} onChange={() => setUrgencyLevel(id)} aria-describedby="rp-urgency-hint" />
                     <i className="sp-dot" aria-hidden="true" />
-                    <span>
-                      <strong>{t(`report.urgency.${id}`)}</strong>
-                      <small>{t(`report.urgency.${id}.hint`)}</small>
-                    </span>
+                    {t(`report.urgency.${id}`)}
                   </label>
                 ))}
               </div>
+              {/* One hint for the selected level instead of three long tiles */}
+              <p id="rp-urgency-hint" className="sp-hint">{t(`report.urgency.${urgencyLevel}.hint`)}</p>
             </fieldset>
 
             <div className="sp-fieldset">
@@ -306,17 +312,38 @@ function IncidentReport() {
               />
               {errors.symptoms && <span className="ui-field__error">{errors.symptoms}</span>}
             </div>
+
+            <div className="sp-fieldset">
+              <span className="sp-label">{t('report.s3')} <em className="sp-optional">{t('common.optional')}</em></span>
+              <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageSelect} />
+              {imagePreview ? (
+                <div className="sp-filerow">
+                  <img src={imagePreview} alt="" className="sp-filerow__thumb" />
+                  <span className="sp-filerow__text"><strong>{t('report.photo.added')}</strong><small>{imageFile?.name}</small></span>
+                  <button type="button" className="sp-filerow__remove" onClick={removeImage} aria-label={t('report.photo.remove')}>
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="sp-filerow sp-filerow--add" onClick={() => fileInputRef.current?.click()}>
+                  <span className="sp-filerow__thumb" aria-hidden="true"><Camera size={22} /></span>
+                  <span className="sp-filerow__text"><strong>{t('report.photo.add')}</strong><small>{t('report.photo.hint')}</small></span>
+                </button>
+              )}
+            </div>
           </section>
 
-          {/* 2. Where */}
-          <section className="sp-card">
-            <h2 className="sp-card__title"><span className="sp-step">2</span>{t('report.s2')}</h2>
-            <Button type="button" variant="secondary" block onClick={handleGetLocation} disabled={isGettingLocation}>
-              {isGettingLocation ? <Loader2 size={18} className="ui-spin" aria-hidden="true" /> : <Crosshair size={18} aria-hidden="true" />}
-              {isGettingLocation ? t('report.gps.loading') : t('report.gps.use')}
-            </Button>
+          {/* Where + contact + send */}
+          <section className="sp-card sp-card--tight sp-form__side">
+            <h2 className="sp-card__title">{t('report.s2')}</h2>
             <div className="sp-fieldset">
-              <label className="sp-label" htmlFor="rp-location">{t('report.location')}</label>
+              <div className="sp-label-row">
+                <label className="sp-label" htmlFor="rp-location">{t('report.location')}</label>
+                <button type="button" className="sp-textbtn" onClick={handleGetLocation} disabled={isGettingLocation}>
+                  {isGettingLocation ? <Loader2 size={16} className="ui-spin" aria-hidden="true" /> : <Crosshair size={16} aria-hidden="true" />}
+                  {isGettingLocation ? t('report.gps.loading') : t('report.gps.use')}
+                </button>
+              </div>
               <div className="sp-input-icon">
                 <MapPin size={18} aria-hidden="true" />
                 <input
@@ -329,72 +356,61 @@ function IncidentReport() {
                   aria-invalid={errors.location ? 'true' : undefined}
                 />
               </div>
-              {coordinates && (
-                <span className="sp-ok"><CheckCircle2 size={14} aria-hidden="true" /> {t('report.gps.pinned')}</span>
-              )}
+              {coordinates && <span className="sp-ok"><CheckCircle2 size={14} aria-hidden="true" /> {t('report.gps.pinned')}</span>}
               {errors.location && <span className="ui-field__error">{errors.location}</span>}
             </div>
-          </section>
 
-          {/* 3. Photo */}
-          <section className="sp-card">
-            <h2 className="sp-card__title"><span className="sp-step">3</span>{t('report.s3')} <em>{t('common.optional')}</em></h2>
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageSelect} />
-            {imagePreview ? (
-              <div className="sp-photo">
-                <img src={imagePreview} alt="" />
-                <button type="button" className="sp-photo__remove" onClick={removeImage} aria-label={t('report.photo.remove')}>
-                  <X size={18} />
-                </button>
+            <div className="sp-divider" />
+
+            <h2 className="sp-card__title">{t('report.s4')}</h2>
+            {contactLocked ? (
+              // Already filled from the profile: one line instead of two fields
+              <div className="sp-contact">
+                <span className="sp-contact__icon" aria-hidden="true"><Phone size={18} /></span>
+                <span className="sp-contact__text">
+                  <strong>{reporterName}</strong>
+                  <small>{reporterPhone}</small>
+                </span>
+                <button type="button" className="sp-textbtn" onClick={() => setContactLocked(false)}>{t('common.edit')}</button>
               </div>
             ) : (
-              <button type="button" className="sp-drop" onClick={() => fileInputRef.current?.click()}>
-                <Camera size={28} aria-hidden="true" />
-                <strong>{t('report.photo.add')}</strong>
-                <span>{t('report.photo.hint')}</span>
-              </button>
+              <div className="sp-grid-2">
+                <div className="sp-fieldset">
+                  <label className="sp-label" htmlFor="rp-name">{t('report.name')}</label>
+                  <div className="sp-input-icon">
+                    <User size={18} aria-hidden="true" />
+                    <input id="rp-name" type="text" className="ui-input" value={reporterName} onChange={(e) => setReporterName(e.target.value)} placeholder={t('report.name.ph')} autoComplete="name" />
+                  </div>
+                </div>
+                <div className="sp-fieldset">
+                  <label className="sp-label" htmlFor="rp-phone">{t('report.phone')}</label>
+                  <div className="sp-input-icon">
+                    <Phone size={18} aria-hidden="true" />
+                    <input
+                      id="rp-phone"
+                      type="tel"
+                      inputMode="tel"
+                      className="ui-input"
+                      value={reporterPhone}
+                      onChange={(e) => { setReporterPhone(formatPhoneNumber(e.target.value)); if (errors.phone) setErrors((x) => ({ ...x, phone: undefined })); }}
+                      placeholder="08x-xxx-xxxx"
+                      autoComplete="tel"
+                      aria-invalid={errors.phone ? 'true' : undefined}
+                    />
+                  </div>
+                  {errors.phone && <span className="ui-field__error">{errors.phone}</span>}
+                </div>
+              </div>
             )}
-          </section>
+            <p className="sp-hint">{t('report.s4.hint')}</p>
 
-          {/* 4. Contact */}
-          <section className="sp-card">
-            <h2 className="sp-card__title"><span className="sp-step">4</span>{t('report.s4')}</h2>
-            <p className="sp-card__hint">{t('report.s4.hint')}</p>
-            <div className="sp-grid-2">
-              <div className="sp-fieldset">
-                <label className="sp-label" htmlFor="rp-name">{t('report.name')}</label>
-                <div className="sp-input-icon">
-                  <User size={18} aria-hidden="true" />
-                  <input id="rp-name" type="text" className="ui-input" value={reporterName} onChange={(e) => setReporterName(e.target.value)} placeholder={t('report.name.ph')} autoComplete="name" />
-                </div>
-              </div>
-              <div className="sp-fieldset">
-                <label className="sp-label" htmlFor="rp-phone">{t('report.phone')}</label>
-                <div className="sp-input-icon">
-                  <Phone size={18} aria-hidden="true" />
-                  <input
-                    id="rp-phone"
-                    type="tel"
-                    inputMode="tel"
-                    className="ui-input"
-                    value={reporterPhone}
-                    onChange={(e) => { setReporterPhone(formatPhoneNumber(e.target.value)); if (errors.phone) setErrors((x) => ({ ...x, phone: undefined })); }}
-                    placeholder="08x-xxx-xxxx"
-                    autoComplete="tel"
-                    aria-invalid={errors.phone ? 'true' : undefined}
-                  />
-                </div>
-                {errors.phone && <span className="ui-field__error">{errors.phone}</span>}
-              </div>
+            <div className="sp-submit">
+              <Button type="submit" variant="danger" block loading={isSubmitting}>
+                {!isSubmitting && <Send size={18} aria-hidden="true" />}
+                {isSubmitting ? t('report.submitting') : t('report.submit')}
+              </Button>
             </div>
           </section>
-
-          <div className="sp-submit">
-            <Button type="submit" variant="danger" block loading={isSubmitting}>
-              {!isSubmitting && <Send size={18} aria-hidden="true" />}
-              {isSubmitting ? t('report.submitting') : t('report.submit')}
-            </Button>
-          </div>
         </motion.form>
       )}
 
