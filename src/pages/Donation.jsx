@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Building2, ChevronDown, AlertCircle } from 'lucide-react';
+import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Building2, ChevronDown, ChevronRight, AlertCircle, Lightbulb, ShoppingBag, Pill, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
@@ -42,6 +42,22 @@ function FoundationMeta({ f, t }) {
   );
 }
 
+function NeedsList({ items, t }) {
+  return (
+    <ul className="sp-needs">
+      {items.map((item) => (
+        <li key={item.id}>
+          <span>
+            <strong>{item.item_name}</strong>
+            {item.note && <small>{item.note}</small>}
+          </span>
+          <Badge tone={NEED_TONE[item.urgency] || 'neutral'}>{t(`donate.need.${NEED_TONE[item.urgency] ? item.urgency : 'normal'}`)}</Badge>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Donation() {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -54,7 +70,7 @@ function Donation() {
 
   const [payOpen, setPayOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [showAllNeeds, setShowAllNeeds] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'needs' | 'tips'
   const [slipFile, setSlipFile] = useState(null);
   const [slipPreview, setSlipPreview] = useState(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -86,7 +102,6 @@ function Donation() {
 
   useEffect(() => {
     if (!selectedFoundationId) return;
-    setShowAllNeeds(false);
     let channel = null;
     const fetchNeeds = async () => {
       setLoadingNeeds(true);
@@ -285,21 +300,11 @@ function Donation() {
             <p className="sp-empty">{t('donate.items.none')}</p>
           ) : (
             <>
-            <ul className="sp-needs">
-              {(showAllNeeds ? needs : needs.slice(0, NEEDS_PREVIEW)).map((item) => (
-                <li key={item.id}>
-                  <span>
-                    <strong>{item.item_name}</strong>
-                    {item.note && <small>{item.note}</small>}
-                  </span>
-                  <Badge tone={NEED_TONE[item.urgency] || 'neutral'}>{t(`donate.need.${NEED_TONE[item.urgency] ? item.urgency : 'normal'}`)}</Badge>
-                </li>
-              ))}
-            </ul>
+            <NeedsList items={needs.slice(0, NEEDS_PREVIEW)} t={t} />
             {needs.length > NEEDS_PREVIEW && (
-              <button type="button" className="sp-more" onClick={() => setShowAllNeeds((v) => !v)} aria-expanded={showAllNeeds}>
-                {showAllNeeds ? t('donate.items.less') : t('donate.items.more', { count: needs.length })}
-                <ChevronDown size={16} aria-hidden="true" />
+              <button type="button" className="sp-more" onClick={() => setSheet('needs')} aria-haspopup="dialog">
+                {t('donate.items.more', { count: needs.length })}
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
             )}
             </>
@@ -322,17 +327,39 @@ function Donation() {
             </div>
           )}
 
-          <details className="sp-tips">
-            <summary>{t('donate.tips.title')}<ChevronDown size={16} aria-hidden="true" /></summary>
-            <ul>
-              <li>{t('donate.tips.1')}</li>
-              <li>{t('donate.tips.2')}</li>
-              <li>{t('donate.tips.3')}</li>
-              <li>{t('donate.tips.4')}</li>
-            </ul>
-          </details>
+          {/* Opens in a sheet so the card never changes height */}
+          <button type="button" className="sp-tips-link" onClick={() => setSheet('tips')} aria-haspopup="dialog">
+            <Lightbulb size={18} aria-hidden="true" />
+            <span>{t('donate.tips.title')}</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
         </section>
       </div>
+
+      {/* All needs */}
+      <Dialog open={sheet === 'needs'} onClose={() => setSheet(null)} title={t('donate.items.needs')}>
+        <NeedsList items={needs} t={t} />
+      </Dialog>
+
+      {/* Shipping tips */}
+      <Dialog
+        open={sheet === 'tips'}
+        onClose={() => setSheet(null)}
+        title={t('donate.tips.title')}
+        actions={<Button variant="primary" block onClick={() => setSheet(null)}>{t('donate.tips.ok')}</Button>}
+      >
+        <ul className="sp-tip-list">
+          {[ShoppingBag, Package, Sparkles, Pill].map((Icon, i) => (
+            <li key={i}>
+              <span className="sp-tip-list__icon" aria-hidden="true"><Icon size={18} /></span>
+              <span>
+                <strong>{t(`donate.tips.${i + 1}.title`)}</strong>
+                <small>{t(`donate.tips.${i + 1}`)}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Dialog>
 
       {/* Foundation list */}
       <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} title={t('donate.pick')}>
