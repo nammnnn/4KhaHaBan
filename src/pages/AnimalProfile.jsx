@@ -114,7 +114,7 @@ function AnimalProfile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [showEnglish, setShowEnglish] = useState(false);
+  const [storyLang, setStoryLang] = useState('th');
 
   const existingMatch = matches?.find((m) => m.animalId === id || m.animal_id === id);
 
@@ -233,11 +233,18 @@ function AnimalProfile() {
   const story = splitStory(animal.story || '');
   const typeLabel = formatType(animal.type);
   const facts = [
+    { label: 'ชนิด', value: typeLabel },
     { label: 'เพศ', value: formatGender(animal.gender) },
     { label: 'อายุ', value: animal.age || 'ไม่ระบุ' },
     { label: 'ขนาด', value: formatSize(animal.size) },
-    { label: 'สายพันธุ์', value: animal.breed || 'พันธุ์ผสม' },
   ];
+  // Breed is only worth a chip when the foundation actually filled it in
+  const tags = [animal.breed, ...(animal.tags || [])].filter(Boolean);
+  const hasEnglish = Boolean(story.en);
+  const storyText = storyLang === 'en' && hasEnglish ? story.en : story.th;
+  const adoptHint = existingMatch
+    ? 'คุณส่งคำขอรับเลี้ยงน้องแล้ว คุยต่อกับมูลนิธิได้ในแชท'
+    : 'มูลนิธิจะตรวจสอบข้อมูลของคุณ แล้วเปิดแชทให้คุยเรื่องการรับเลี้ยง';
   const showPrev = () => setPhotoIndex((i) => (i === 0 ? images.length - 1 : i - 1));
   const showNext = () => setPhotoIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
@@ -303,6 +310,14 @@ function AnimalProfile() {
               ))}
             </div>
           )}
+
+          {/* Desktop: the adopt action stays under the photo while reading */}
+          <div className="ap-cta-inline">
+            <Button variant="primary" block loading={isSubmitting} onClick={handleAdopt}>
+              {!isSubmitting && adoptIcon} {isSubmitting ? 'กำลังส่งคำขอ…' : adoptLabel}
+            </Button>
+            <p className="ap-cta-inline__text">{adoptHint}</p>
+          </div>
         </section>
 
         {/* Details */}
@@ -312,20 +327,13 @@ function AnimalProfile() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
         >
+          {/* 1. Who */}
           <header className="ap-header">
             <h1 className="ap-name">{name}</h1>
             {alias && <p className="ap-alias">{alias}</p>}
-            <p className="ap-meta">
-              {typeLabel}
-              {animal.distance && (
-                <>
-                  <span aria-hidden="true"> · </span>
-                  <MapPin size={14} aria-hidden="true" /> ห่างจากคุณ {animal.distance}
-                </>
-              )}
-            </p>
           </header>
 
+          {/* 2. Basics at a glance */}
           <dl className="ap-facts">
             {facts.map((f) => (
               <div key={f.label} className="ap-fact">
@@ -335,32 +343,33 @@ function AnimalProfile() {
             ))}
           </dl>
 
-          {animal.tags?.length > 0 && (
+          {/* 3. Story — Thai first, English on request */}
+          <section className="ap-section">
+            <div className="ap-section__head">
+              <h2 className="ap-section__title">เรื่องราวของ{name}</h2>
+              {hasEnglish && (
+                <div className="ap-lang" role="group" aria-label="ภาษา / Language">
+                  <button type="button" lang="th" aria-pressed={storyLang === 'th'} onClick={() => setStoryLang('th')}>ไทย</button>
+                  <button type="button" lang="en" aria-pressed={storyLang === 'en'} onClick={() => setStoryLang('en')}>English</button>
+                </div>
+              )}
+            </div>
+            <p className="ap-story" lang={storyLang === 'en' && hasEnglish ? 'en' : 'th'}>
+              {storyText || `ยังไม่มีเรื่องราวของ${name}`}
+            </p>
+          </section>
+
+          {/* 4. Personality */}
+          {tags.length > 0 && (
             <section className="ap-section">
               <h2 className="ap-section__title">นิสัยและสุขภาพ</h2>
               <div className="ap-tags">
-                {animal.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}
+                {tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}
               </div>
             </section>
           )}
 
-          <section className="ap-section">
-            <h2 className="ap-section__title">เรื่องราวของ{name}</h2>
-            <p className="ap-story">{story.th || `ยังไม่มีเรื่องราวของ${name}`}</p>
-            {story.en && (
-              <>
-                <button
-                  className="ap-lang-toggle"
-                  onClick={() => setShowEnglish((v) => !v)}
-                  aria-expanded={showEnglish}
-                >
-                  {showEnglish ? 'ซ่อนภาษาอังกฤษ' : 'อ่านภาษาอังกฤษ'}
-                </button>
-                {showEnglish && <p className="ap-story ap-story--en" lang="en">{story.en}</p>}
-              </>
-            )}
-          </section>
-
+          {/* 5. Where */}
           <section className="ap-section">
             <h2 className="ap-section__title">ผู้ดูแลน้อง</h2>
             <div className="ap-shelter">
@@ -368,7 +377,7 @@ function AnimalProfile() {
               <div className="ap-shelter__text">
                 <p className="ap-shelter__name">{animal.shelter || 'ศูนย์พักพิงสัตว์'}</p>
                 <p className="ap-shelter__sub">
-                  {animal.distance ? `ห่างจากคุณ ${animal.distance}` : 'อยู่ในพื้นที่บริการ'}
+                  {animal.distance ? <><MapPin size={14} aria-hidden="true" /> ห่างจากคุณ {animal.distance}</> : 'อยู่ในพื้นที่บริการ'}
                 </p>
               </div>
               {animal.latitude && animal.longitude && (
@@ -383,23 +392,12 @@ function AnimalProfile() {
               )}
             </div>
           </section>
-
-          {/* Desktop CTA, inline at the end of the details */}
-          <div className="ap-cta-inline">
-            <p className="ap-cta-inline__text">
-              {existingMatch
-                ? 'คุณส่งคำขอรับเลี้ยงน้องแล้ว คุยรายละเอียดกับมูลนิธิได้ในแชท'
-                : 'มูลนิธิจะตรวจสอบข้อมูลของคุณ แล้วเปิดห้องแชทเพื่อคุยเรื่องการรับเลี้ยง'}
-            </p>
-            <Button variant="primary" block loading={isSubmitting} onClick={handleAdopt}>
-              {!isSubmitting && adoptIcon} {isSubmitting ? 'กำลังส่งคำขอ…' : adoptLabel}
-            </Button>
-          </div>
         </motion.section>
       </div>
 
       {/* Mobile sticky CTA (DESIGN.md §7.5) */}
       <div className="ap-cta-dock">
+        <p className="ap-cta-dock__hint">{adoptHint}</p>
         <Button variant="primary" block loading={isSubmitting} onClick={handleAdopt}>
           {!isSubmitting && adoptIcon} {isSubmitting ? 'กำลังส่งคำขอ…' : adoptLabel}
         </Button>
