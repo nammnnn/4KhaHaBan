@@ -57,12 +57,20 @@ export const FeedPageSkeleton = () => (
 export const ChatListSkeleton = () => {
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const isChatRoomRoute = path.includes('/chat/');
+  // Adopter chat list has no tabs or count pill (DESIGN.md §7.21); the foundation list still does
+  const simple = !path.startsWith('/foundation');
 
   return (
     <div className="page-container match-page matches-split-view">
       {/* Left Panel: Matches List (hidden on mobile when chat room is active) */}
       <div className={`matches-list-panel ${isChatRoomRoute ? 'hidden-on-mobile' : ''}`}>
         {/* Header */}
+        {simple ? (
+          <div style={{ padding: '24px 20px 12px' }}>
+            <div className="skeleton skeleton-text" style={{ width: '72px', height: '28px' }} />
+            <div className="skeleton skeleton-text" style={{ width: '96px', height: '14px', marginTop: '20px' }} />
+          </div>
+        ) : (
         <div className="list-header" style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="skeleton skeleton-text" style={{ width: '100px', height: '24px' }} />
@@ -82,23 +90,25 @@ export const ChatListSkeleton = () => {
           </div>
         </div>
 
+        )}
+
         {/* Matches List */}
         <div className="matches-list" style={{ padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'hidden' }}>
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
-              className="match-item"
+              className={simple ? undefined : 'match-item'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 14px',
+                padding: simple ? '12px 8px' : '12px 14px',
                 borderRadius: '16px',
-                border: '1px solid #F3F4F6',
-                backgroundColor: '#FFFFFF'
+                border: simple ? 'none' : '1px solid #F3F4F6',
+                backgroundColor: simple ? 'transparent' : '#FFFFFF'
               }}
             >
-              <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
+              <div className="skeleton skeleton-circle" style={{ width: simple ? '52px' : '48px', height: simple ? '52px' : '48px', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 25}px`, height: '16px' }} />
