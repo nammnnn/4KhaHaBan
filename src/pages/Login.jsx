@@ -3,12 +3,13 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   PawPrint, Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield, CheckCircle2
+  X, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
 import './Login.css';
 import { useI18n, LanguageSwitch } from '../i18n';
+import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
 
 const Login = () => {
   const { user, loginWithGoogle, loginWithEmail, registerWithEmail, loading: authLoading } = useAuth();
@@ -138,47 +139,7 @@ const Login = () => {
         transition={{ duration: 0.25 }}
         className="login-desktop-showcase"
       >
-        <div className="login-showcase-inner">
-          
-          {/* Logo Badge */}
-          <div className="login-brand-badge">
-            <div className="login-brand-icon-box">
-              <PawPrint size={16} strokeWidth={2.4} />
-            </div>
-            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>
-              {t('app.name.prefix')}<span style={{ color: '#D97706' }}>{t('app.name.accent')}</span>
-            </span>
-          </div>
-
-          <h1 className="login-showcase-title">
-            {t('login.heroTitle1')} <br />
-            {t('login.heroTitle2')}
-          </h1>
-
-          <p className="login-showcase-desc">
-            {t('login.heroDesc')}
-          </p>
-
-          {/* Feature Highlights */}
-          <div className="login-showcase-features">
-            {[
-              { title: t('login.f1.title'), desc: t('login.f1.desc') },
-              { title: t('login.f2.title'), desc: t('login.f2.desc') },
-              { title: t('login.f3.title'), desc: t('login.f3.desc') }
-            ].map((f, i) => (
-              <div key={i} className="login-feature-item">
-                <div className="login-feature-icon">
-                  <CheckCircle2 size={16} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>{f.title}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '2px' }}>{f.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
+        <LoginShowcase />
       </motion.div>
 
       {/* Right Panel - Auth Form */}
@@ -200,6 +161,14 @@ const Login = () => {
                 {t('app.name.prefix')}<span style={{ color: '#D97706' }}>{t('app.name.accent')}</span>
               </span>
             </div>
+          </div>
+
+          {/* Mobile: a few real faces instead of the desktop card stack */}
+          <div className="login-mobile-faces">
+            <div className="login-mobile-faces__row" aria-hidden="true">
+              {MOBILE_FACES.map((src) => <img key={src} src={src} alt="" />)}
+            </div>
+            <span>{t('login.waiting')}</span>
           </div>
 
           <LanguageSwitch className="login-lang" />

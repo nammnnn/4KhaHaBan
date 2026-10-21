@@ -249,11 +249,10 @@ export default {
   'faq.cancel.a': 'Yes. Open the chat for that request, tap the ⋯ menu at the top right and choose to cancel the adoption request.',
 
   // Login
-  'login.heroTitle1': 'Find a four-legged friend',
-  'login.heroTitle2': 'and give them a warm home',
-  'login.heroDesc': 'A platform that matches stray dogs and cats with kind adopters, working with verified shelters and foundations across Thailand.',
-  'login.f1.title': 'Swipe to find the one',
-  'login.f1.desc': 'Pick the personality, breed and size that fit your life',
+  'login.heroTitle1': 'Swipe to meet',
+  'login.heroTitle2': 'your new best friend',
+  'login.heroDesc': 'Dogs and cats from foundations across Thailand are waiting for you. Swipe right on the one you like, then chat with their caretakers.',
+  'login.waiting': 'Lots of four-legged friends are waiting for a home',
   'login.f2.title': 'Verified foundations',
   'login.f2.desc': 'Registered organisations, transparent on every case',
   'login.f3.title': 'Chat and arrange a visit',
