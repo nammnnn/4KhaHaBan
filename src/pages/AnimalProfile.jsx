@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { AnimalProfileSkeleton } from '../components/Skeletons';
 import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermission } from '../lib/geo';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
-import { splitAnimalName } from '../components/SwipeCard';
+import { splitAnimalName, LOW_RES_WIDTH } from '../components/SwipeCard';
 import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
 
 import './AnimalProfileBento.css';
@@ -62,11 +62,13 @@ function ProfilePhoto({ src, alt, name, className }) {
   const [current, setCurrent] = useState(src);
   const [state, setState] = useState(src ? 'loading' : 'error');
   const [triedSwap, setTriedSwap] = useState(false);
+  const [lowRes, setLowRes] = useState(false);
 
   useEffect(() => {
     setCurrent(src);
     setState(src ? 'loading' : 'error');
     setTriedSwap(false);
+    setLowRes(false);
   }, [src]);
 
   if (state === 'error') {
@@ -81,12 +83,17 @@ function ProfilePhoto({ src, alt, name, className }) {
   return (
     <>
       {state === 'loading' && <div className="skeleton ap-photo-skeleton" />}
+      {lowRes && <div className="photo-backdrop" style={{ backgroundImage: `url("${current}")` }} aria-hidden="true" />}
       <img
         src={current}
         alt={alt}
-        className={className}
+        className={`${className || ''}${lowRes ? ' is-lowres' : ''}`}
         style={{ opacity: state === 'loaded' ? 1 : 0 }}
-        onLoad={() => setState('loaded')}
+        onLoad={(e) => {
+          // Small photos (e.g. 150px from the old PDF list) are shown near their real size
+          setLowRes(e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth < LOW_RES_WIDTH);
+          setState('loaded');
+        }}
         onError={() => {
           const swapped = !triedSwap && current ? swapExtension(current) : null;
           if (swapped) {

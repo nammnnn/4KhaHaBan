@@ -7,6 +7,10 @@ import { ChevronLeft, Save, Upload, X, Loader2, Image as ImageIcon, CheckCircle2
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { useToast } from '../components/ui';
+
+// Card photos fill ~900px-wide screens; anything much smaller looks blurry (DESIGN.md §5)
+const MIN_SHARP_WIDTH = 800;
 
 const AnimalForm = () => {
   const { id } = useParams(); // ถ้ามี id = แก้ไข, ถ้าไม่มี = สร้างใหม่
@@ -39,6 +43,8 @@ const AnimalForm = () => {
 
   // รูปภาพ
   const [images, setImages] = useState([]); // ไฟล์ใหม่ที่กำลังจะอัปโหลด
+  const [smallImages, setSmallImages] = useState({}); // preview url -> natural width (only small ones)
+  const toast = useToast();
   const [previewImages, setPreviewImages] = useState([]); // URL ของรูป (ทั้งของเดิมและที่กำลัง preview)
   const [deletedImages, setDeletedImages] = useState([]); // URL ของรูปเดิมที่ถูกกดลบ
 
@@ -216,11 +222,11 @@ const AnimalForm = () => {
     // กรองเฉพาะรูปภาพและจำกัดขนาด 5MB
     const validFiles = files.filter(f => {
       if (!f.type.startsWith('image/')) {
-        alert(`${f.name} ไม่ใช่ไฟล์รูปภาพ`);
+        toast(`${f.name} ไม่ใช่ไฟล์รูปภาพ เลือกไฟล์ JPG หรือ PNG`, { tone: 'error' });
         return false;
       }
       if (f.size > 5 * 1024 * 1024) {
-        alert(`${f.name} ขนาดเกิน 5MB`);
+        toast(`${f.name} ใหญ่เกิน 5MB ลองเลือกรูปที่เล็กลง`, { tone: 'error' });
         return false;
       }
       return true;
@@ -249,6 +255,11 @@ const AnimalForm = () => {
     }
 
     setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    setSmallImages((prev) => {
+      const next = { ...prev };
+      delete next[targetUrl];
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -467,7 +478,7 @@ const AnimalForm = () => {
               รูปภาพสัตว์เลี้ยง
             </label>
             <p style={{ fontSize: '0.8rem', color: '#6B7280', margin: '0 0 12px' }}>
-              รูปแรกจะใช้เป็นภาพหน้าปกบนการ์ดค้นหา (แนะนำขนาดสัดส่วน 4:5 หรือรูปแนวตั้ง)
+              รูปแรกจะใช้เป็นภาพหน้าปกบนการ์ดค้นหา แนะนำรูปแนวตั้ง (4:5) กว้างอย่างน้อย 800px
             </p>
             
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -482,7 +493,27 @@ const AnimalForm = () => {
                   border: '1px solid #D1D5DB',
                   backgroundColor: '#F3F4F6'
                 }}>
-                  <img src={src} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img
+                    src={src}
+                    alt={`รูปที่ ${idx + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onLoad={(e) => {
+                      const w = e.currentTarget.naturalWidth;
+                      setSmallImages((prev) => {
+                        const next = { ...prev };
+                        if (w > 0 && w < MIN_SHARP_WIDTH) next[src] = w; else delete next[src];
+                        return next;
+                      });
+                    }}
+                  />
+                  {smallImages[src] && (
+                    <span
+                      title={`รูปกว้าง ${smallImages[src]}px อาจไม่ชัดบนการ์ด`}
+                      style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.6875rem', fontWeight: 600, padding: '1px 6px', borderRadius: '9999px' }}
+                    >
+                      รูปเล็ก
+                    </span>
+                  )}
                   {idx === 0 && (
                     <span style={{
                       position: 'absolute',
@@ -543,6 +574,15 @@ const AnimalForm = () => {
                 <input type="file" multiple accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
               </label>
             </div>
+            {previewImages.some((src) => smallImages[src]) && (
+              <p role="note" style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '12px', padding: '10px 14px', borderRadius: '12px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
+                <span>
+                  รูปที่มีป้าย "รูปเล็ก" กว้างไม่ถึง {MIN_SHARP_WIDTH}px อาจดูเบลอบนการ์ด
+                  แนะนำใช้รูปที่ถ่ายจากมือถือโดยตรง (ไม่ใช่รูปที่แคปหน้าจอหรือส่งผ่านแชท ซึ่งมักถูกย่อ)
+                </span>
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
