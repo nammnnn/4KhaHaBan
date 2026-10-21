@@ -114,7 +114,7 @@ const PageLoader = () => {
   }
   if (path.startsWith('/animal/')) {
     return (
-      <div className="page-container" style={{ padding: '16px' }}>
+      <div className="animal-profile-page">
         <AnimalProfileSkeleton />
       </div>
     );

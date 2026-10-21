@@ -373,4 +373,4 @@ components:
 ลำดับการย้ายที่แนะนำ:
 1. ✅ token อยู่ที่ `src/index.css` (`:root` + `@theme inline` ของ Tailwind) — ชื่อ v1 ยังใช้ได้ผ่าน alias แต่โค้ดใหม่ให้ใช้ชื่อ v2
 2. ✅ component กลางอยู่ที่ `src/components/ui/` (`Button`, `IconButton`, `Card`, `Field`, `Badge`, `Chip`, `EmptyState`, `Dialog`, `ToastProvider`/`useToast`)
-3. ย้ายทีละหน้า: ✅ Feed → AnimalProfile → MatchChat/ChatRoom → Donation → Login → UserProfile → หน้า workspace
+3. ย้ายทีละหน้า: ✅ Feed → ✅ AnimalProfile → MatchChat/ChatRoom → Donation → Login → UserProfile → หน้า workspace

@@ -1,5 +1,6 @@
 import React from 'react';
 import '../pages/Login.css';
+import '../pages/AnimalProfileBento.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -458,29 +459,27 @@ export const FoundationNeedsSkeleton = () => (
 
 // 10. Animal Profile Skeleton (AnimalProfile)
 export const AnimalProfileSkeleton = () => (
-  <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 16px 100px' }}>
-    {/* Large Image Carousel Box */}
-    <div className="skeleton" style={{ width: '100%', aspectRatio: '4/3', borderRadius: '20px', marginBottom: '20px' }} />
-    {/* Name and Basic Info */}
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-      <div className="skeleton skeleton-text" style={{ width: '45%', height: '28px' }} />
-      <div className="skeleton" style={{ width: '70px', height: '26px', borderRadius: '12px' }} />
+  <div className="ap-layout" aria-hidden="true">
+    <div className="ap-media">
+      <div className="ap-hero"><div className="skeleton ap-photo-skeleton" /></div>
     </div>
-    {/* Tag badges */}
-    <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-      <div className="skeleton" style={{ width: '80px', height: '28px', borderRadius: '14px' }} />
-      <div className="skeleton" style={{ width: '95px', height: '28px', borderRadius: '14px' }} />
-      <div className="skeleton" style={{ width: '75px', height: '28px', borderRadius: '14px' }} />
+    <div className="ap-sheet">
+      <div>
+        <div className="skeleton skeleton-text" style={{ width: '45%', height: '32px', marginBottom: '10px' }} />
+        <div className="skeleton skeleton-text" style={{ width: '30%', height: '14px' }} />
+      </div>
+      <div className="skeleton" style={{ height: '64px', borderRadius: 'var(--radius-lg)' }} />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {[80, 96, 72].map((w) => (
+          <div key={w} className="skeleton" style={{ width: `${w}px`, height: '32px', borderRadius: 'var(--radius-full)' }} />
+        ))}
+      </div>
+      <div>
+        {[95, 88, 60].map((w) => (
+          <div key={w} className="skeleton skeleton-text" style={{ width: `${w}%`, height: '14px', marginBottom: '10px' }} />
+        ))}
+      </div>
     </div>
-    {/* Story Card */}
-    <div className="skeleton-card" style={{ marginBottom: '24px' }}>
-      <div className="skeleton skeleton-text" style={{ width: '30%', height: '18px', marginBottom: '12px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '95%', height: '14px', marginBottom: '8px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px', marginBottom: '8px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-    </div>
-    {/* Bottom Button */}
-    <div className="skeleton" style={{ width: '100%', height: '48px', borderRadius: '14px' }} />
   </div>
 );
 
