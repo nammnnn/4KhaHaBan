@@ -442,3 +442,79 @@ export async function getAddressFromCoordinates(latitude, longitude) {
   }
 }
 
+
+/**
+ * ชื่อพื้นที่แบบสั้นสำหรับแสดงบน UI เช่น "อ.เมืองขอนแก่น" หรือ "เขตบางรัก"
+ * @returns {Promise<string|null>}
+ */
+export async function getAreaLabel(latitude, longitude) {
+  const res = await getAddressFromCoordinates(latitude, longitude);
+  if (!res) return null;
+  const a = res.details || {};
+  const isBkk = [a.state, a.province, a.city].includes('กรุงเทพมหานคร');
+  const dist = a.city_district || a.district || a.county || a.municipality;
+  if (dist) {
+    const d = cleanThaiPrefix(dist, 'district');
+    if (d) return isBkk ? `เขต${d}` : `อ.${d}`;
+  }
+  const prov = a.state || a.province || a.city;
+  if (prov) return isBkk ? 'กรุงเทพฯ' : `จ.${cleanThaiPrefix(prov, 'province')}`;
+  return res.displayName?.split(',')[0]?.trim() || null;
+}
+
+// ---- พื้นที่ที่ผู้ใช้เลือกเอง (เก็บในเครื่องผู้ใช้เท่านั้น ไม่ส่งขึ้นเซิร์ฟเวอร์) ----
+const SAVED_LOCATION_KEY = '4kh_manual_location';
+
+export function loadSavedLocation() {
+  try {
+    const raw = localStorage.getItem(SAVED_LOCATION_KEY);
+    if (!raw) return null;
+    const loc = JSON.parse(raw);
+    if (typeof loc?.latitude !== 'number' || typeof loc?.longitude !== 'number') return null;
+    return { ...loc, isFallback: false };
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveLocation(loc) {
+  try {
+    localStorage.setItem(SAVED_LOCATION_KEY, JSON.stringify({
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      label: loc.label || null,
+    }));
+  } catch (e) {
+    // storage blocked (private mode) — the choice just won't persist
+  }
+}
+
+export function clearSavedLocation() {
+  try {
+    localStorage.removeItem(SAVED_LOCATION_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+
+/**
+ * ตรวจว่าเปิดจากเบราว์เซอร์ในแอป (LINE, Facebook, Instagram) ซึ่งมักขอตำแหน่งไม่ได้
+ * @returns {'LINE'|'Facebook'|'Instagram'|null}
+ */
+export function detectInAppBrowser() {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent || '';
+  if (/\bLine\//i.test(ua)) return 'LINE';
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook';
+  if (/Instagram/i.test(ua)) return 'Instagram';
+  return null;
+}
+
+/** 'ios' | 'android' | 'other' — ใช้เลือกคำแนะนำวิธีเปิดสิทธิ์ตำแหน่ง */
+export function detectPlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  return 'other';
+}

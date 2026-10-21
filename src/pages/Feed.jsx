@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAlert, ChevronRight, PawPrint } from 'lucide-react';
+import { Heart, X, RotateCcw, SlidersHorizontal, MessageCircle, Search, ShieldAlert, ChevronRight, PawPrint, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SwipeCard, splitAnimalName } from '../components/SwipeCard';
 import { Button, Dialog, EmptyState, useToast } from '../components/ui';
@@ -10,7 +10,11 @@ import { FeedCardSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { calculateDistance, formatDistance, getUserCoordinates, requestUserLocation, getLocationPermission, onLocationPermissionChange } from '../lib/geo';
+import {
+  calculateDistance, formatDistance, getUserCoordinates, requestUserLocation, getLocationPermission,
+  onLocationPermissionChange, getAreaLabel, loadSavedLocation, saveLocation, clearSavedLocation,
+} from '../lib/geo';
+import { LocationSheet } from '../components/LocationSheet';
 
 // Distance is only shown when we have the user's real location — never a guessed one.
 const withDistance = (animal, coords) => {
@@ -37,6 +41,11 @@ function Feed() {
   const [pendingMatch, setPendingMatch] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
+  // 'locating' | 'ready' | 'unavailable' | 'denied'  (DESIGN.md §7.15)
+  const [locStatus, setLocStatus] = useState('locating');
+  const [locLabel, setLocLabel] = useState('');
+  const [isLocSheetOpen, setIsLocSheetOpen] = useState(false);
+  const locSourceRef = useRef(null); // 'gps' | 'manual'
   const loadSeqRef = useRef(0);       // ignore results from superseded loads
   const hasSwipedRef = useRef(false); // once the user starts swiping, don't reshuffle the deck
   
@@ -144,17 +153,43 @@ function Feed() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // A place the user picked earlier wins over GPS until they choose "use current location"
+    const saved = loadSavedLocation();
+    if (saved) {
+      locSourceRef.current = 'manual';
+      setLocStatus('ready');
+      setLocLabel(saved.label || 'พื้นที่ที่เลือกไว้');
+      applyCoords(saved);
+      return undefined;
+    }
+
     const locate = async () => {
+      setLocStatus('locating');
       // Generous timeout so the user has time to answer the browser's permission prompt
       const coords = await getUserCoordinates(false, 20000);
-      if (!cancelled) applyCoords(coords);
+      if (cancelled || locSourceRef.current === 'manual') return;
+      if (coords) {
+        locSourceRef.current = 'gps';
+        setLocStatus('ready');
+        applyCoords(coords);
+        setLocLabel('ตำแหน่งปัจจุบัน');
+        const area = await getAreaLabel(coords.latitude, coords.longitude).catch(() => null);
+        if (!cancelled && area && locSourceRef.current === 'gps') setLocLabel(area);
+      } else {
+        const state = await getLocationPermission();
+        if (!cancelled) setLocStatus(state === 'denied' ? 'denied' : 'unavailable');
+      }
     };
 
     getLocationPermission().then((state) => {
-      if (!cancelled && state !== 'denied') locate();
+      if (cancelled) return;
+      if (state === 'denied') setLocStatus('denied');
+      else locate();
     });
     const stopWatching = onLocationPermissionChange((state) => {
-      if (state === 'granted') locate();
+      if (state === 'granted' && locSourceRef.current !== 'manual') locate();
+      if (state === 'denied' && locSourceRef.current !== 'manual') setLocStatus('denied');
     });
 
     return () => {
@@ -174,18 +209,48 @@ function Feed() {
     loadAnimals(newFilters);
   };
 
-  const handleRequestGps = async () => {
+  const labelFromCoords = async (coords, fallback) => {
+    setLocLabel(fallback);
+    const area = await getAreaLabel(coords.latitude, coords.longitude).catch(() => null);
+    if (area) setLocLabel(area);
+    return area || fallback;
+  };
+
+  // "ใช้ตำแหน่งปัจจุบัน" in the location sheet
+  const handleUseGps = async () => {
     setIsLocating(true);
     try {
-      const coords = await requestUserLocation(8000);
+      const coords = await requestUserLocation(10000);
+      clearSavedLocation();
+      locSourceRef.current = 'gps';
       setUserCoords(coords);
+      setLocStatus('ready');
+      setIsLocSheetOpen(false);
       await loadAnimals(filters, coords);
+      const area = await labelFromCoords(coords, 'ตำแหน่งปัจจุบัน');
+      toast(`แสดงน้องใกล้${area === 'ตำแหน่งปัจจุบัน' ? 'คุณ' : ` ${area}`}`, { tone: 'success' });
     } catch (err) {
-      console.warn('GPS permission denied or unavailable:', err);
-      toast('ระบุตำแหน่งไม่สำเร็จ กรุณาเปิด GPS และอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง', { tone: 'error' });
+      if (err?.code === 1) {
+        setLocStatus('denied'); // sheet stays open and shows how to enable it
+      } else {
+        toast('หาตำแหน่งไม่สำเร็จ ลองอีกครั้ง หรือเลือกพื้นที่เอง', { tone: 'error' });
+      }
     } finally {
       setIsLocating(false);
     }
+  };
+
+  // Area picked by search in the location sheet
+  const handlePickPlace = async ({ latitude, longitude, name }) => {
+    const coords = { latitude, longitude, isFallback: false };
+    locSourceRef.current = 'manual';
+    setUserCoords(coords);
+    setLocStatus('ready');
+    setIsLocSheetOpen(false);
+    loadAnimals(filters, coords);
+    const area = await labelFromCoords(coords, name);
+    saveLocation({ ...coords, label: area });
+    toast(`แสดงน้องใกล้ ${area}`, { tone: 'success' });
   };
 
   const removeCard = useCallback(async (cardIdentifier, action) => {
@@ -289,7 +354,7 @@ function Feed() {
   };
 
   // DESIGN.md §7.2: keyboard parity for swipe gestures
-  const anyOverlayOpen = isFilterOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
+  const anyOverlayOpen = isFilterOpen || isLocSheetOpen || !!pendingMatch || !!showMatch || showVerificationPrompt;
   useEffect(() => {
     const onKey = (e) => {
       if (anyOverlayOpen || loading) return;
@@ -317,6 +382,34 @@ function Feed() {
         </div>
       </header>
 
+      <button
+        className={`feed-location feed-location--${locStatus}`}
+        onClick={() => setIsLocSheetOpen(true)}
+        aria-label={locStatus === 'ready' ? `ตำแหน่ง: ${locLabel} แตะเพื่อเปลี่ยน` : 'ตั้งตำแหน่งของคุณ'}
+      >
+        {locStatus === 'locating'
+          ? <Loader2 size={16} className="ui-spin" aria-hidden="true" />
+          : <MapPin size={16} aria-hidden="true" />}
+        <span className="feed-location__text">
+          {locStatus === 'locating' && 'กำลังหาตำแหน่งของคุณ…'}
+          {locStatus === 'ready' && <>ใกล้ <strong>{locLabel}</strong></>}
+          {(locStatus === 'unavailable' || locStatus === 'denied') && 'ยังไม่รู้ตำแหน่งของคุณ'}
+        </span>
+        {locStatus !== 'locating' && (
+          <span className="feed-location__cta">{locStatus === 'ready' ? 'เปลี่ยน' : 'ตั้งตำแหน่ง'}</span>
+        )}
+      </button>
+
+      <LocationSheet
+        open={isLocSheetOpen}
+        onClose={() => setIsLocSheetOpen(false)}
+        status={locStatus}
+        label={locLabel}
+        isLocating={isLocating}
+        onUseGps={handleUseGps}
+        onPickPlace={handlePickPlace}
+      />
+
       {user && !isVerifiedUser && (
         <button className="feed-verify-banner" onClick={() => setShowVerificationPrompt(true)}>
           <ShieldAlert size={20} aria-hidden="true" />
@@ -329,9 +422,8 @@ function Feed() {
       <FilterModal
         isOpen={isFilterOpen}
         currentFilters={filters}
-        userCoords={userCoords}
-        onRequestGps={handleRequestGps}
-        isLocating={isLocating}
+        hasLocation={!!userCoords}
+        onSetLocation={() => { setIsFilterOpen(false); setIsLocSheetOpen(true); }}
         onClose={() => setIsFilterOpen(false)}
         onApply={handleApplyFilters}
       />

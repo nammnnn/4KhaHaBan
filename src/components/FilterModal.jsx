@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, SlidersHorizontal, MapPin, Search, Loader2 } from 'lucide-react';
+import { X, SlidersHorizontal, MapPin, Search } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './FilterModal.css';
 
-export function FilterModal({ isOpen, onClose, onApply, currentFilters, userCoords, onRequestGps, isLocating }) {
+export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocation, onSetLocation }) {
   const { user } = useAuth();
   
   const [maxDistance, setMaxDistance] = useState(100);
@@ -63,53 +63,29 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, userCoor
                   <label><MapPin size={16} /> ระยะทางสูงสุด</label>
                   <span className="filter-value">{maxDistance >= 300 ? 'ทุกระยะทาง (ทั่วประเทศ)' : `${maxDistance} กม.`}</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="5" 
-                  max="300" 
+                <input
+                  type="range"
+                  min="5"
+                  max="300"
                   step="5"
-                  value={maxDistance} 
+                  value={maxDistance}
                   onChange={(e) => setMaxDistance(parseInt(e.target.value))}
                   className="range-slider"
+                  disabled={!hasLocation}
+                  aria-label="ระยะทางสูงสุด"
                 />
                 <div className="range-labels">
                   <span>5 กม.</span>
                   <span>150 กม.</span>
                   <span>ทั่วประเทศ</span>
                 </div>
-
-                {onRequestGps && (
-                  <button
-                    type="button"
-                    onClick={onRequestGps}
-                    disabled={isLocating}
-                    style={{
-                      width: '100%',
-                      marginTop: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      border: userCoords && !userCoords.isFallback ? '1px solid #A7F3D0' : '1px solid #E5E7EB',
-                      backgroundColor: userCoords && !userCoords.isFallback ? '#ECFDF5' : '#F9FAFB',
-                      color: userCoords && !userCoords.isFallback ? '#065F46' : '#374151',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isLocating ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <MapPin size={14} color={userCoords && !userCoords.isFallback ? '#059669' : '#D97706'} />
+                {!hasLocation && (
+                  <div className="filter-location-hint">
+                    <span>ยังไม่รู้ตำแหน่งของคุณ</span>
+                    {onSetLocation && (
+                      <button type="button" onClick={onSetLocation}>ตั้งตำแหน่ง</button>
                     )}
-                    <span>
-                      {userCoords && !userCoords.isFallback 
-                        ? 'กำลังใช้พิกัด GPS จริง (แตะเพื่ออัปเดตใหม่)' 
-                        : 'แตะเพื่อขอสิทธิ์และใช้ตำแหน่ง GPS ปัจจุบัน'}
-                    </span>
-                  </button>
+                  </div>
                 )}
               </div>
 
