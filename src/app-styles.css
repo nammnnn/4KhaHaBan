@@ -3461,8 +3461,22 @@
     border-radius: var(--radius-xl);
     background: var(--surface);
     box-shadow: var(--elev-raised);
-    scrollbar-width: thin;
   }
+
+  /* Soft fade pinned to the bottom edge hints that the panel scrolls */
+  .feed-panel__fade {
+    position: sticky;
+    bottom: calc(var(--space-6) * -1);
+    flex-shrink: 0;
+    height: 56px;
+    margin: -56px calc(var(--space-6) * -1) calc(var(--space-6) * -1);
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--surface) 85%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-base);
+  }
+
+  .feed-panel__inner.has-more .feed-panel__fade { opacity: 1; }
 
   .feed-panel__head {
     display: flex;

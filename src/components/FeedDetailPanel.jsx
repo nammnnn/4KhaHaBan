@@ -1,6 +1,6 @@
 // Wide screens only: details of the card on top, next to the deck (like Tinder on the web)
 // so desktop users can decide without opening every profile — DESIGN.md §7.18
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, MapPin, ArrowUpRight } from 'lucide-react';
@@ -9,6 +9,22 @@ import { formatGender, formatType, formatSize, splitStory } from '../lib/animal'
 
 export function FeedDetailPanel({ animal }) {
   const [lang, setLang] = useState('th'); // kept while browsing, like a reading preference
+  const [moreBelow, setMoreBelow] = useState(false); // fade the bottom edge while there's more to scroll
+  const innerRef = useRef(null);
+  const checkOverflow = useCallback(() => {
+    const el = innerRef.current;
+    setMoreBelow(Boolean(el) && el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+  }, []);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return undefined;
+    el.scrollTop = 0;
+    checkOverflow();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(checkOverflow) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [animal?.id, lang, checkOverflow]);
 
   if (!animal) return <aside className="feed-panel" aria-hidden="true" />;
 
@@ -28,7 +44,9 @@ export function FeedDetailPanel({ animal }) {
       <AnimatePresence mode="wait">
         <motion.div
           key={animal.id}
-          className="feed-panel__inner"
+          ref={innerRef}
+          onScroll={checkOverflow}
+          className={`feed-panel__inner${moreBelow ? ' has-more' : ''}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
@@ -80,6 +98,7 @@ export function FeedDetailPanel({ animal }) {
             )}
           </section>
 
+          <div className="feed-panel__fade" aria-hidden="true" />
         </motion.div>
       </AnimatePresence>
 
