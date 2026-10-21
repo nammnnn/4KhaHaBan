@@ -102,11 +102,6 @@ export function FeedDetailPanel({ animal }) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="feed-panel__keys" aria-label="คีย์ลัด">
-        <span><kbd>←</kbd> ข้าม</span>
-        <span><kbd>→</kbd> ถูกใจ</span>
-        <span><kbd>⌫</kbd> ย้อนกลับ</span>
-      </div>
     </aside>
   );
 }

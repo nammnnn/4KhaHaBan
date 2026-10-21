@@ -3548,28 +3548,4 @@
     color: var(--primary-strong);
   }
 
-  .feed-panel__keys {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    padding-top: var(--space-4);
-    font-size: var(--text-caption);
-    color: var(--ink-500);
-  }
-
-  .feed-panel__keys kbd {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    margin-right: var(--space-1);
-    padding: 0 6px;
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    box-shadow: inset 0 -1px 0 var(--line-300), 0 0 0 1px var(--line-200);
-    font-family: inherit;
-    font-size: var(--text-caption);
-    color: var(--ink-700);
-  }
 }
