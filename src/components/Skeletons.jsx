@@ -463,30 +463,50 @@ export const FoundationNeedsSkeleton = () => (
 );
 
 // 10. Animal Profile Skeleton (AnimalProfile)
-export const AnimalProfileSkeleton = () => (
-  <div className="ap-layout" aria-hidden="true">
-    <div className="ap-media">
-      <div className="ap-hero"><div className="skeleton ap-photo-skeleton" /></div>
+// Mirrors AnimalProfile: photo (+ adopt button on desktop) | name, facts, story, tags, caretaker
+export const AnimalProfileSkeleton = () => {
+  const bar = (w, h = 14, extra = {}) => (
+    <div className="skeleton" style={{ width: w, height: `${h}px`, borderRadius: 'var(--radius-full)', ...extra }} />
+  );
+  const heading = (w) => bar(w, 20, { borderRadius: 'var(--radius-sm)' });
+  return (
+    <div className="ap-layout" aria-hidden="true">
+      <div className="ap-media">
+        <div className="ap-hero"><div className="skeleton ap-photo-skeleton" /></div>
+        <div className="ap-cta-inline">
+          <div className="skeleton" style={{ height: '48px', borderRadius: 'var(--radius-md)' }} />
+          {bar('70%', 12, { margin: '0 auto' })}
+        </div>
+      </div>
+      <div className="ap-sheet">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {bar('40%', 36, { borderRadius: 'var(--radius-sm)' })}
+          {bar('18%')}
+        </div>
+        <div className="skeleton" style={{ height: '76px', borderRadius: 'var(--radius-lg)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {heading('38%')}
+            {bar('120px', 40)}
+          </div>
+          {bar('100%')}
+          {bar('92%')}
+          {bar('55%')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {heading('30%')}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[120, 72, 96].map((w) => <div key={w}>{bar(`${w}px`, 32)}</div>)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {heading('24%')}
+          <div className="skeleton" style={{ height: '80px', borderRadius: 'var(--radius-lg)' }} />
+        </div>
+      </div>
     </div>
-    <div className="ap-sheet">
-      <div>
-        <div className="skeleton skeleton-text" style={{ width: '45%', height: '32px', marginBottom: '10px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '30%', height: '14px' }} />
-      </div>
-      <div className="skeleton" style={{ height: '64px', borderRadius: 'var(--radius-lg)' }} />
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {[80, 96, 72].map((w) => (
-          <div key={w} className="skeleton" style={{ width: `${w}px`, height: '32px', borderRadius: 'var(--radius-full)' }} />
-        ))}
-      </div>
-      <div>
-        {[95, 88, 60].map((w) => (
-          <div key={w} className="skeleton skeleton-text" style={{ width: `${w}%`, height: '14px', marginBottom: '10px' }} />
-        ))}
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 // 11. Form Page Skeleton (AnimalForm, UserVerification)
 export const FormPageSkeleton = () => (

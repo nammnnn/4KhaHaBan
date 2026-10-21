@@ -21,6 +21,7 @@
 }
 
 .ap-layout {
+  width: 100%; /* the page wrapper is a flex container; don't shrink to content */
   max-width: 1080px;
   margin: 0 auto;
 }
