@@ -194,6 +194,9 @@ button.ui-chip[aria-pressed='true'] {
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   padding: var(--space-3) var(--space-6) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   box-shadow: var(--elev-floating);
+  max-height: 92dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .ui-dialog__handle {
   width: 40px;

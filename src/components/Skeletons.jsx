@@ -2,6 +2,7 @@ import React from 'react';
 import { PawPrint } from 'lucide-react';
 import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
+import '../pages/ServicePages.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -556,176 +557,54 @@ export const FoundationPendingSkeleton = () => (
 );
 
 // 13. Donation Page Skeleton (Donation)
+// Mirrors pages/Donation.jsx (DESIGN.md §7.23)
 export const DonationSkeleton = () => (
-  <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
-    {/* Top Header Card */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '20px 24px',
-      marginBottom: '20px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '14px'
-    }}>
-      <div className="skeleton" style={{ width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '240px', height: '22px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-      </div>
+  <div className="sp-page sp-page--wide" aria-hidden="true">
+    <div className="sp-head">
+      <div className="skeleton skeleton-text" style={{ width: '120px', height: '32px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '70%', maxWidth: '460px', height: '16px', marginTop: '10px' }} />
     </div>
-
-    {/* 2-Column Donation Cards Grid */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-      {/* Card 1 Skeleton */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        padding: '20px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-          <div className="skeleton" style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="skeleton" style={{ width: '70px', height: '18px', borderRadius: '6px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '140px', height: '20px' }} />
+    <div className="sp-card sp-foundation">
+      <div className="skeleton skeleton-text" style={{ width: '72px', height: '14px' }} />
+      <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
+    </div>
+    <div className="sp-two">
+      {[0, 1].map((col) => (
+        <div key={col} className={`sp-card ${col === 1 ? 'sp-hide-mobile' : ''}`}>
+          <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
+          <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
+          <div className="sp-tiers">
+            {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '12px' }} />)}
           </div>
+          <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
         </div>
-        <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px' }} />
-        <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '64px', borderRadius: '12px' }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ gridColumn: 'span 2', height: '44px', borderRadius: '10px' }} />
-        </div>
-        <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: '10px' }} />
-      </div>
-
-      {/* Card 2 Skeleton */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        padding: '20px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-          <div className="skeleton" style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="skeleton" style={{ width: '80px', height: '18px', borderRadius: '6px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '150px', height: '20px' }} />
-          </div>
-        </div>
-        <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
-        <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div className="skeleton skeleton-text" style={{ width: '120px', height: '14px' }} />
-                <div className="skeleton" style={{ width: '50px', height: '16px', borderRadius: '6px' }} />
-              </div>
-              <div className="skeleton" style={{ width: '100%', height: '8px', borderRadius: '4px' }} />
-            </div>
-          ))}
-        </div>
-        <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: 'auto' }} />
-      </div>
+      ))}
     </div>
   </div>
 );
 
-// 13.1 Incident Report Page Skeleton (IncidentReport)
+// Mirrors pages/IncidentReport.jsx (DESIGN.md §7.22)
 export const IncidentReportSkeleton = () => (
-  <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
-    {/* Top Header Card */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '20px 24px',
-      marginBottom: '16px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '14px'
-    }}>
-      <div className="skeleton" style={{ width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '220px', height: '22px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-      </div>
+  <div className="sp-page" aria-hidden="true">
+    <div className="sp-head">
+      <div className="skeleton skeleton-text" style={{ width: '75%', maxWidth: '420px', height: '32px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '90%', maxWidth: '520px', height: '16px', marginTop: '10px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '180px', height: '14px', marginTop: '14px' }} />
     </div>
-
-    {/* Tab Switcher & Live Stats Row (Left Tabs + Right Stats) */}
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: '12px',
-      marginBottom: '20px'
-    }}>
-      <div style={{
-        display: 'flex',
-        backgroundColor: '#F3F4F6',
-        padding: '4px',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '380px',
-        gap: '4px'
-      }}>
-        <div className="skeleton" style={{ flex: 1, height: '38px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ flex: 1, height: '38px', borderRadius: '8px' }} />
+    <div className="skeleton" style={{ height: '48px', maxWidth: '400px', borderRadius: '12px' }} />
+    <div className="sp-card">
+      <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
+      <div className="sp-options sp-options--3">
+        {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '12px' }} />)}
       </div>
-      <div className="skeleton" style={{ width: '210px', height: '36px', borderRadius: '12px' }} />
-    </div>
-
-    {/* Form Card Skeleton */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '24px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px'
-    }}>
-      {/* Stepper Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
+      <div className="sp-urgency">
+        {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />)}
       </div>
-      {/* Form Fields */}
-      <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
-        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
-        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
-      </div>
-      <div className="skeleton skeleton-text" style={{ width: '140px', height: '16px' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-      </div>
-      <div className="skeleton" style={{ height: '90px', borderRadius: '10px' }} />
-      <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: '10px' }} />
+      <div className="skeleton" style={{ height: '96px', borderRadius: '12px' }} />
     </div>
   </div>
 );
+
 
 // 14. User Profile Skeleton (UserProfile)
 export const UserProfileSkeleton = () => (

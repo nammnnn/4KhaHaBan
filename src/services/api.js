@@ -194,6 +194,8 @@ export const api = {
   },
 
   /**
+  // Placeholder list for demo / offline mode only. `demo: true` stops the donation page from
+  // building a PromptPay QR for these numbers, which were never verified with the foundations.
   getDefaultFoundations() {
     return [
       {
@@ -201,21 +203,24 @@ export const api = {
         full_name: 'มูลนิธิเพื่อสุนัขในซอย (Soi Dog Foundation)',
         phone: '076-681-029',
         address: '167/9 หมู่ 4 ต.ไม้ขาว อ.ถลาง จ.ภูเก็ต 83110',
-        promptpay_number: '076681029'
+        promptpay_number: '076681029',
+        demo: true
       },
       {
         id: 'f-voice',
         full_name: 'มูลนิธิเดอะวอยซ์ (The Voice Foundation)',
         phone: '085-110-0055',
         address: 'แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
-        promptpay_number: '0851100055'
+        promptpay_number: '0851100055',
+        demo: true
       },
       {
         id: 'f-home4animals',
         full_name: 'มูลนิธิบ้านสงเคราะห์สัตว์พิการ',
         phone: '02-584-4896',
         address: '15/1 หมู่ 1 ซอยพระมหาการุณย์ 25 ต.บ้านใหม่ อ.ปากเกร็ด จ.นนทบุรี 11120',
-        promptpay_number: '025844896'
+        promptpay_number: '025844896',
+        demo: true
       }
     ];
   },
