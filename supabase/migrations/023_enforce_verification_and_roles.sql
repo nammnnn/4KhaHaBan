@@ -324,6 +324,15 @@ CREATE TRIGGER trg_guard_match_update
 
 
 -- ------------------------------------------------------------------------------
+-- 6b. user_verifications: only the owner, admins, and an approved foundation
+--     for adopters who requested its animals can read ID card data.
+--     The old policy let any account with role 'foundation' (self-chosen at sign-up)
+--     read everyone's ID number, name and phone.
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "user_verifications_select" ON public.user_verifications;
+
+
+-- ------------------------------------------------------------------------------
 -- 7. Backfill profiles.is_verified from the verification rows
 --    Accounts verified only by an app shortcut, sign-up metadata or placeholder data
 --    (e.g. id_card_no '1xxxxxxxxxxxx') become unverified and must verify again in the app.
