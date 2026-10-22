@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Heart, X, RotateCcw, Info, Hand } from 'lucide-react';
 import { Button } from './ui';
 import { useI18n } from '../i18n';
+import { MOTION } from '../lib/motion';
 
 const SEEN_KEY = '4kh_feed_onboarding_seen';
 
@@ -58,13 +59,13 @@ export function FeedOnboarding({ open, onClose }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={MOTION.base}
         >
           <motion.div
             className="feed-onboarding__panel"
             initial={reduceMotion ? false : { y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+            transition={MOTION.slow}
           >
             {/* Swipe demo: a hand moving left and right */}
             <div className="feed-onboarding__demo" aria-hidden="true">

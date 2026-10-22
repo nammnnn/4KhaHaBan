@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { MOTION } from '../lib/motion';
 
 // รายการคำถามแบบประเมินความพร้อมก่อนรับเลี้ยง
 const ASSESSMENT_QUESTIONS = [
@@ -533,7 +534,7 @@ export default function UserVerification() {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.2 }}
+              transition={MOTION.base}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <div style={{
@@ -685,7 +686,7 @@ export default function UserVerification() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.2 }}
+              transition={MOTION.base}
             >
               {/* Title Header */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>

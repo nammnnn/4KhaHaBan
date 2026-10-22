@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
+import { MOTION } from '../lib/motion';
 
 function SupportChat() {
   const navigate = useNavigate();
@@ -265,9 +266,7 @@ function SupportChat() {
       <div className="chat-messages-area">
         {messages.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.7, marginTop: '40px' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', marginTop: '40px' }}
           >
             <div style={{ width: '80px', height: '80px', backgroundColor: 'var(--danger-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: 'var(--danger)' }}>
               <ShieldAlert size={40} />
@@ -287,7 +286,7 @@ function SupportChat() {
                 key={msg.id}
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={MOTION.base}
                 className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`}
               >
                 <div className="message-bubble" style={{ display: 'flex', flexDirection: 'column' }}>

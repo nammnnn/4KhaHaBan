@@ -305,9 +305,6 @@ function AnimalProfile() {
         {/* Details */}
         <motion.section
           className="ap-sheet"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
         >
           {/* 1. Who */}
           <header className="ap-header">

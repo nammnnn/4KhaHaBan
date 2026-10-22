@@ -6,6 +6,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
+import { MOTION } from '../lib/motion';
 
 const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
@@ -1116,7 +1117,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setShowUserModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1125,7 +1126,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '480px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -1278,7 +1279,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setShowReportModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1287,7 +1288,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -1334,7 +1335,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setShowBlockModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1343,7 +1344,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', textAlign: 'center' }}
             >
@@ -1366,7 +1367,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => !isSubmittingDecline && setShowDeclineModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1375,7 +1376,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -1474,7 +1475,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => !isSubmittingApprove && setShowApproveModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1483,7 +1484,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', textAlign: 'center' }}
             >
@@ -1540,7 +1541,7 @@ function FoundationChatRoom() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setShowHandoverModal(false)} 
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
           >
@@ -1549,7 +1550,7 @@ function FoundationChatRoom() {
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()} 
               style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 48px rgba(0,0,0,0.14)' }}
             >

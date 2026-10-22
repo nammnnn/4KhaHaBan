@@ -10,6 +10,7 @@ import { useI18n } from '../i18n';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
 import './ServicePages.css';
+import { MOTION } from '../lib/motion';
 
 // Donation — DESIGN.md §7.23
 
@@ -108,7 +109,7 @@ function ShippingTips({ t }) {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
+            transition={MOTION.fast}
           >
             <strong className="sp-tip__title">{t('donate.tips.title')}</strong>
             <ul className="sp-tip-list">
@@ -270,7 +271,7 @@ function Donation() {
 
   return (
     <div className="sp-page sp-page--wide">
-      <motion.header className="sp-head" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+      <motion.header className="sp-head">
         <h1 className="sp-head__title">{t('donate.title')}</h1>
         <p className="sp-head__sub">{t('donate.sub')}</p>
       </motion.header>

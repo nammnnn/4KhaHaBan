@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../i18n';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, FileText, CheckCircle2, ArrowRight, X, Lock } from 'lucide-react';
+import { MOTION } from '../lib/motion';
 
 export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={MOTION.base}
         onClick={onClose}
         style={{
           position: 'fixed',
@@ -48,7 +49,7 @@ export function VerificationPromptModal({ isOpen, onClose, fromPath = '/' }) {
           initial={{ opacity: 0, scale: 0.94, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 12 }}
-          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          transition={MOTION.base}
           onClick={(e) => e.stopPropagation()}
           style={{
             backgroundColor: '#FFFFFF',

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles, Building2, Star, Banknote, PiggyBank, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MOTION } from '../lib/motion';
 
 const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +43,7 @@ const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
+            transition={MOTION.fast}
             style={{
               position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px',
               backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
@@ -668,9 +669,6 @@ const AdminDashboard = () => {
         
         {/* Header Area with Live Pulse & Sync Action */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           className="admin-header-bar"
         >
           <div>
@@ -701,9 +699,6 @@ const AdminDashboard = () => {
 
         {/* KPI Stats Overview (Modern Cards) */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           className="admin-kpi-grid"
         >
           <div className="admin-kpi-card">
@@ -745,9 +740,6 @@ const AdminDashboard = () => {
         
         {/* Action Tabs: Horizontal Scrollable Segmented Bar on Mobile, Grid on Desktop */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.08 }}
           className="admin-tab-nav"
         >
           {[
@@ -2240,7 +2232,7 @@ const AdminDashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setConfirmModal({ isOpen: false, profile: null, newRole: null })}
             style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9998, padding: '20px' }}
           >
@@ -2248,7 +2240,7 @@ const AdminDashboard = () => {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -2272,7 +2264,7 @@ const AdminDashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setRejectModal({ isOpen: false, foundationId: null, reason: '' })}
             style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9998, padding: '20px' }}
           >
@@ -2280,7 +2272,7 @@ const AdminDashboard = () => {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -2313,7 +2305,7 @@ const AdminDashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, padding: '20px' }} 
             onClick={() => setReportProofImage(null)}
           >
@@ -2321,7 +2313,7 @@ const AdminDashboard = () => {
               initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.94 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }} 
               onClick={e => e.stopPropagation()}
             >
@@ -2341,7 +2333,7 @@ const AdminDashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setReportChatHistoryModal({ isOpen: false, messages: [], loading: false })}
             style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}
           >
@@ -2349,7 +2341,7 @@ const AdminDashboard = () => {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '600px', height: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
             >
@@ -2397,7 +2389,7 @@ const AdminDashboard = () => {
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={MOTION.base}
             style={{ position: 'fixed', bottom: '24px', right: '24px', backgroundColor: toast.type === 'error' ? 'var(--danger)' : '#059669', color: 'white', padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 9999 }}
           >
             {toast.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}

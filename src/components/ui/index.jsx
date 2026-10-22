@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import './ui.css';
+import { MOTION } from '../../lib/motion';
 
 export const Button = forwardRef(function Button({ variant = 'primary', size, block, loading, onDark, className, children, disabled, ...props }, ref) {
   return (
@@ -113,7 +114,7 @@ export function Dialog({ open, onClose, title, children, actions, className }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={MOTION.base}
           onPointerDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
           onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose?.(); }}
         >
@@ -127,7 +128,7 @@ export function Dialog({ open, onClose, title, children, actions, className }) {
             initial={reduce ? { opacity: 0 } : { y: 40, opacity: 0 }}
             animate={reduce ? { opacity: 1 } : { y: 0, opacity: 1 }}
             exit={reduce ? { opacity: 0 } : { y: 40, opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
-            transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+            transition={MOTION.slow}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ui-dialog__handle" aria-hidden="true" />
@@ -171,7 +172,7 @@ export function ToastProvider({ children }) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={MOTION.base}
               >
                 <Icon size={18} className={`ui-toast__icon ui-toast__icon--${t.tone}`} aria-hidden="true" />
                 <span className="ui-toast__msg">{t.message}</span>

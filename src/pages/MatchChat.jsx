@@ -239,9 +239,6 @@ function MatchChat() {
       {/* List panel */}
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
         <motion.header
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           className="mc-header"
         >
           <h1 className="mc-header__title">{t('chat.title')}</h1>
@@ -260,9 +257,6 @@ function MatchChat() {
         </motion.header>
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           className="mc-scroll"
         >
           {!hasAny ? (

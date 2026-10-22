@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import './FilterModal.css';
 import { useI18n } from '../i18n';
 import { FILTERABLE_TAG_IDS, tagById } from '../lib/tags';
+import { MOTION } from '../lib/motion';
 
 export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocation, onSetLocation, tagCounts }) {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
+          transition={MOTION.base}
           onClick={onClose}
         >
           <motion.div 
@@ -51,7 +52,7 @@ export function FilterModal({ isOpen, onClose, onApply, currentFilters, hasLocat
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            transition={MOTION.base}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="filter-modal-header">

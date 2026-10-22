@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, MapPin, ArrowUpRight } from 'lucide-react';
 import { formatGender, formatType, formatSize, splitStory, displayNames } from '../lib/animal';
 import { useI18n, localizeAge, localizeDistance } from '../i18n';
+import { MOTION } from '../lib/motion';
+import { FeedPanelSkeleton } from './Skeletons';
 
-export function FeedDetailPanel({ animal }) {
+export function FeedDetailPanel({ animal, loading = false }) {
   const { t, lang: appLang } = useI18n();
   // Story language starts from the app language; kept while browsing, like a reading preference
   const [lang, setLang] = useState(appLang);
@@ -29,7 +31,7 @@ export function FeedDetailPanel({ animal }) {
     return () => ro?.disconnect();
   }, [animal?.id, lang, checkOverflow]);
 
-  if (!animal) return <aside className="feed-panel" aria-hidden="true" />;
+  if (!animal) return <aside className="feed-panel" aria-hidden="true">{loading && <FeedPanelSkeleton />}</aside>;
 
   const { primary: name, secondary: alias } = displayNames(animal.name, appLang);
   const story = splitStory(animal.story || '');
@@ -44,7 +46,9 @@ export function FeedDetailPanel({ animal }) {
 
   return (
     <aside className="feed-panel" aria-label={t('animal.detailsOf', { name })}>
-      <AnimatePresence mode="wait">
+      {/* initial={false}: the first animal appears at once (no fade after the skeleton);
+          later swipes still cross-fade, since they respond to the user */}
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={animal.id}
           ref={innerRef}
@@ -53,7 +57,7 @@ export function FeedDetailPanel({ animal }) {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+          transition={MOTION.base}
         >
           <header className="feed-panel__head">
             <div>

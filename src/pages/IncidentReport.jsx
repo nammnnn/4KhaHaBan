@@ -292,9 +292,6 @@ function IncidentReport() {
     <div className="sp-page sp-page--wide">
       <motion.header
         className="sp-head"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
       >
         <h1 className="sp-head__title">{t('report.title')}</h1>
         <p className="sp-head__sub">{t('report.sub')}</p>
@@ -333,9 +330,6 @@ function IncidentReport() {
           className="sp-form"
           onSubmit={handleSubmit}
           noValidate
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
         >
           {/* What happened (+ photo) */}
           <section className="sp-card sp-card--tight">
@@ -512,7 +506,7 @@ function IncidentReport() {
       )}
 
       {activeTab === 'history' && (
-        <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+        <motion.section>
           {loadingReports ? (
             <div className="sp-list">
               {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 112, borderRadius: 16 }} />)}

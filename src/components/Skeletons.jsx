@@ -29,6 +29,32 @@ export const FeedCardSkeleton = () => (
   </div>
 );
 
+// Wide-screen detail panel beside the feed deck — same elements as FeedDetailPanel with the text hidden
+export const FeedPanelSkeleton = () => {
+  const sk = (text) => <span className="skeleton sp-sk-text">{text}</span>;
+  return (
+    <div className="feed-panel__inner" aria-hidden="true">
+      <header className="feed-panel__head">
+        <div><h2 className="feed-panel__name">{sk('ชื่อน้อง')}</h2></div>
+        <span className="feed-panel__more">{sk('ดูประวัติเต็ม')}</span>
+      </header>
+      <dl className="ap-facts feed-panel__facts">
+        {['ประเภท', 'เพศ', 'อายุ', 'ขนาด'].map((label) => (
+          <div key={label} className="ap-fact"><dt>{sk(label)}</dt><dd>{sk('ไม่ระบุ')}</dd></div>
+        ))}
+      </dl>
+      <section className="feed-panel__section">
+        <div className="ap-section__head"><h3 className="feed-panel__title">{sk('เรื่องราว')}</h3></div>
+        <p className="feed-panel__story">{sk('น้องเป็นแมวอารมณ์ดี ขี้อ้อน ชอบให้เกาคาง อยู่กับคนได้ง่าย กินง่ายอยู่ง่าย เหมาะกับครอบครัวที่อยากได้เพื่อนตัวเล็ก ๆ')}</p>
+      </section>
+      <section className="feed-panel__section">
+        <h3 className="feed-panel__title">{sk('ผู้ดูแล')}</h3>
+        <p className="feed-panel__shelter">{sk('มูลนิธิช่วยเหลือสัตว์')}</p>
+      </section>
+    </div>
+  );
+};
+
 // 1.1 Full Feed Page Skeleton (Feed Page Suspense Fallback)
 export const FeedPageSkeleton = () => (
   <div className="feed-container">
@@ -51,6 +77,8 @@ export const FeedPageSkeleton = () => (
       <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px' }} />
       <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
     </div>
+
+    <aside className="feed-panel" aria-hidden="true"><FeedPanelSkeleton /></aside>
   </div>
 );
 

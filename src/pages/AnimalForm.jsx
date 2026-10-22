@@ -382,9 +382,6 @@ const AnimalForm = () => {
         
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}
         >
           <button
@@ -462,9 +459,6 @@ const AnimalForm = () => {
         )}
 
         <motion.form
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.08 }}
           onSubmit={handleSubmit}
           style={{
             backgroundColor: '#FFFFFF',

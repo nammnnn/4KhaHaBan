@@ -31,6 +31,7 @@ import { useAuth } from '../context/AuthContext';
 import { FoundationIncidentsSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
+import { MOTION } from '../lib/motion';
 
 export default function FoundationIncidents() {
   const navigate = useNavigate();
@@ -249,9 +250,6 @@ export default function FoundationIncidents() {
 
         {/* Title Card */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',
@@ -329,9 +327,6 @@ export default function FoundationIncidents() {
 
         {/* Filter Pills - Exactly 5 tabs matching AdminDashboard, strictly single-line nowrap */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           style={{
             display: 'flex',
             gap: '6px',
@@ -398,9 +393,6 @@ export default function FoundationIncidents() {
           <FoundationIncidentsSkeleton />
         ) : filtered.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
             style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '60px 20px', textAlign: 'center' }}
           >
             <AlertTriangle size={36} color="#9CA3AF" style={{ margin: '0 auto 12px' }} />
@@ -410,9 +402,6 @@ export default function FoundationIncidents() {
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
             style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
           >
             {filtered.map(inc => {
@@ -976,7 +965,7 @@ export default function FoundationIncidents() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={MOTION.base}
             onClick={() => setPreviewImage(null)}
             style={{
               position: 'fixed',
@@ -994,7 +983,7 @@ export default function FoundationIncidents() {
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              transition={{ duration: 0.22 }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}
             >
@@ -1037,7 +1026,7 @@ export default function FoundationIncidents() {
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
+            transition={MOTION.base}
             style={{
               position: 'fixed',
               bottom: '24px',

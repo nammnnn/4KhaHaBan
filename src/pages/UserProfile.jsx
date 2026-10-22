@@ -19,6 +19,7 @@ import { Badge, Button, Dialog, Field, useToast } from '../components/ui';
 import { ProfileSection, InfoRow, AdoptionRequests, FaqList } from '../components/profile/ProfileSections';
 import { useI18n, LanguageSwitch } from '../i18n';
 import '../components/profile/ProfileSections.css';
+import { MOTION } from '../lib/motion';
 
 export default function UserProfile() {
   const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile } = useAuth();
@@ -650,9 +651,6 @@ export default function UserProfile() {
         {/* Header */}
         <motion.header
           className="pf-header"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
         >
           <div className="pf-avatar">
             <div className="pf-avatar__img">
@@ -820,7 +818,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setIsFoundationStatusModalOpen(false)}
             style={{
               position: 'fixed',
@@ -839,7 +837,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: '#FFFFFF',
@@ -1085,7 +1083,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setViewDocModalOpen(false)}
             style={{
               position: 'fixed',
@@ -1104,7 +1102,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',
@@ -1281,7 +1279,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setIsLocationModalOpen(false)}
             style={{
               position: 'fixed',
@@ -1300,7 +1298,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',

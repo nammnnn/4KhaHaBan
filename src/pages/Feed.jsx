@@ -20,6 +20,7 @@ import {
 import { LocationSheet } from '../components/LocationSheet';
 import { FeedDetailPanel } from '../components/FeedDetailPanel';
 import { FeedOnboarding, hasSeenFeedOnboarding, markFeedOnboardingSeen } from '../components/FeedOnboarding';
+import { MOTION } from '../lib/motion';
 
 // Distance is only shown when we have the user's real location — never a guessed one.
 const withDistance = (animal, coords) => {
@@ -597,7 +598,7 @@ function Feed() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={MOTION.base}
           >
             <div className="match-content">
               <motion.div
@@ -641,7 +642,7 @@ function Feed() {
       />
 
       {/* Wide screens: details of the top card beside the deck */}
-      <FeedDetailPanel animal={!loading ? cards[0] : null} />
+      <FeedDetailPanel animal={!loading ? cards[0] : null} loading={loading} />
 
       <FeedOnboarding open={showOnboarding && !isLocSheetOpen && !isFilterOpen} onClose={closeOnboarding} />
     </div>

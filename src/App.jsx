@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Loader, AlertCircle } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
@@ -204,7 +204,26 @@ const RoleEnforcer = ({ children }) => {
   return children;
 };
 
+// Fetch the main tabs' code once the app is idle, so the first tap on a tab opens it
+// straight away instead of flashing its loading skeleton. Skipped on data-saver connections.
+function preloadMainTabs() {
+  if (navigator.connection?.saveData) return;
+  const load = () => {
+    import('./pages/Feed');
+    import('./pages/MatchChat');
+    import('./pages/ChatRoom');
+    import('./pages/IncidentReport');
+    import('./pages/Donation');
+    import('./pages/UserProfile');
+    import('./pages/AnimalProfile');
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(load, { timeout: 4000 });
+  else setTimeout(load, 2000);
+}
+
 function App() {
+  useEffect(() => { preloadMainTabs(); }, []);
+
   return (
     <LanguageProvider>
     <AuthProvider>

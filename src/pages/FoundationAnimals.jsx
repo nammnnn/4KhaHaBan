@@ -89,9 +89,6 @@ const FoundationAnimals = () => {
         
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -152,9 +149,6 @@ const FoundationAnimals = () => {
 
         {/* Filters */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}
         >
           {/* Search */}
@@ -232,9 +226,6 @@ const FoundationAnimals = () => {
           <FoundationAnimalsSkeleton />
         ) : filteredAnimals.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
             style={{
               textAlign: 'center',
               padding: '56px 20px',
@@ -264,9 +255,6 @@ const FoundationAnimals = () => {
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
             style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
             {filteredAnimals.map(animal => (
