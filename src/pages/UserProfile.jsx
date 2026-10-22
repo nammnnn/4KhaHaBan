@@ -217,7 +217,7 @@ export default function UserProfile() {
     const nameErr = editFullName.trim() ? '' : t('pf.edit.nameRequired');
     const phoneErr = !phoneDigits
       ? t('pf.edit.phoneRequired')
-      : (phoneDigits.length < 9 || phoneDigits.length > 10) ? t('pf.edit.phoneInvalid') : '';
+      : !/^0\d{8,9}$/.test(phoneDigits) ? t('pf.edit.phoneInvalid') : '';
     setNameError(nameErr);
     setPhoneError(phoneErr);
     if (nameErr || phoneErr) {

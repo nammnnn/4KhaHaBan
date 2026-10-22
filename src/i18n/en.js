@@ -236,7 +236,7 @@ export default {
   'pf.delete.done': 'Your account has been deleted',
   'pf.delete.error': "Couldn't delete your account. Try again or chat with our team.",
   'pf.delete.adminError': "Admin accounts can't delete themselves. Ask another admin.",
-  'pf.edit.phoneInvalid': "Phone number must be 9–10 digits",
+  'pf.edit.phoneInvalid': "Phone number must start with 0 and have 9–10 digits",
   'pf.edit.saveFailed': "Couldn't save. Please try again.",
   'pf.edit.emailLocked': "Used to sign in, can't be changed",
   'pf.edit.phoneRequired': "Please add a phone number. Foundations use it to contact you about adoptions",

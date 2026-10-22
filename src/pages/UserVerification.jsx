@@ -179,8 +179,8 @@ export default function UserVerification() {
       setErrorMsg('เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
       return;
     }
-    if (rawPhone.length < 9 || rawPhone.length > 10) {
-      setErrorMsg('เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก');
+    if (!/^0\d{8,9}$/.test(rawPhone)) {
+      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
       return;
     }
 
@@ -207,9 +207,9 @@ export default function UserVerification() {
       setErrorMsg(rawId.length !== 13 ? 'เลขประจำตัวประชาชนต้องมี 13 หลัก' : 'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
       return;
     }
-    if (rawPhone.length < 9 || rawPhone.length > 10) {
+    if (!/^0\d{8,9}$/.test(rawPhone)) {
       setStep(1);
-      setErrorMsg('เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก');
+      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
       return;
     }
 
