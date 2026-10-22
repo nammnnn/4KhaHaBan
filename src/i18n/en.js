@@ -239,6 +239,7 @@ export default {
   'pf.edit.phoneInvalid': "Phone number must be 9–10 digits",
   'pf.edit.saveFailed': "Couldn't save. Please try again.",
   'pf.edit.emailLocked': "Used to sign in, can't be changed",
+  'pf.edit.phoneRequired': "Please add a phone number. Foundations use it to contact you about adoptions",
   'pf.language': 'Language',
   'pf.help': 'Help',
   'pf.chatTeam': 'Chat with our team',

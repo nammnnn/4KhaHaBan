@@ -92,11 +92,13 @@
 .ui-input[aria-invalid='true'] { border-color: var(--danger); }
 .ui-field__error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-1);
   font-size: var(--text-label);
+  line-height: 1.5;
   color: var(--danger-strong);
 }
+.ui-field__error svg { flex-shrink: 0; margin-top: 0.15em; }
 
 /* ---------- Badge (status) ---------- */
 .ui-badge {

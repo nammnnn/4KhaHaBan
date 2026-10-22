@@ -34,6 +34,7 @@ export default function UserProfile() {
   // Settings Modal states
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [phoneError, setPhoneError] = useState('');
+  const [nameError, setNameError] = useState('');
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -211,13 +212,16 @@ export default function UserProfile() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    if (!editFullName.trim()) {
-      setSaveErrorMsg(t('pf.edit.nameRequired'));
-      return;
-    }
+    // Both are required: foundations call adopters on this number
     const phoneDigits = editPhone.replace(/\D/g, '');
-    if (phoneDigits && (phoneDigits.length < 9 || phoneDigits.length > 10)) {
-      setPhoneError(t('pf.edit.phoneInvalid'));
+    const nameErr = editFullName.trim() ? '' : t('pf.edit.nameRequired');
+    const phoneErr = !phoneDigits
+      ? t('pf.edit.phoneRequired')
+      : (phoneDigits.length < 9 || phoneDigits.length > 10) ? t('pf.edit.phoneInvalid') : '';
+    setNameError(nameErr);
+    setPhoneError(phoneErr);
+    if (nameErr || phoneErr) {
+      document.getElementById(nameErr ? 'pf-name' : 'pf-phone')?.focus();
       return;
     }
 
@@ -228,7 +232,7 @@ export default function UserProfile() {
     try {
       const result = await updateProfile({
         full_name: editFullName.trim(),
-        phone: phoneDigits ? formatPhoneNumber(phoneDigits) : ''
+        phone: formatPhoneNumber(phoneDigits)
       });
 
       if (result.error) throw result.error;
@@ -671,6 +675,7 @@ export default function UserProfile() {
     setEditPhone(formatPhoneNumber(savedPhone));
     setSaveErrorMsg('');
     setPhoneError('');
+    setNameError('');
     setIsEditingInfo(true);
   };
 
@@ -740,9 +745,12 @@ export default function UserProfile() {
                     id="pf-name"
                     label={t('pf.edit.fullName')}
                     value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
+                    onChange={(e) => { setEditFullName(e.target.value); setNameError(''); }}
                     placeholder={t('pf.edit.fullNamePh')}
                     autoComplete="name"
+                    required
+                    aria-required="true"
+                    error={nameError}
                     autoFocus
                     enterKeyHint="next"
                   />
@@ -757,6 +765,8 @@ export default function UserProfile() {
                     placeholder={t('pf.edit.phonePh')}
                     autoComplete="tel"
                     enterKeyHint="done"
+                    required
+                    aria-required="true"
                     error={phoneError}
                   />
                   <div className="pf-inline-form__static">

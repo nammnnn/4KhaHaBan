@@ -239,6 +239,7 @@ export default {
   'pf.edit.phoneInvalid': "เบอร์โทรต้องมี 9–10 หลัก",
   'pf.edit.saveFailed': "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง",
   'pf.edit.emailLocked': "อีเมลใช้เข้าสู่ระบบ เปลี่ยนไม่ได้",
+  'pf.edit.phoneRequired': "กรุณากรอกเบอร์โทร มูลนิธิใช้ติดต่อคุณเรื่องการรับเลี้ยง",
   'pf.language': 'ภาษา',
   'pf.help': 'ช่วยเหลือ',
   'pf.chatTeam': 'แชทกับทีมงาน',
