@@ -518,3 +518,33 @@
 .login-form-card { position: relative; }
 .login-lang { position: absolute; top: 16px; right: 16px; }
 @media (max-width: 767px) { .login-lang { top: 12px; right: 12px; } }
+
+/* Resend the confirmation email */
+.login-resend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: -6px 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface-sunken, #F5F5F4);
+  font-size: 0.85rem;
+  color: var(--ink-600, #57534E);
+}
+.login-resend__text { flex: 1 1 200px; line-height: 1.5; }
+.login-resend__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-300, #D6D3D1);
+  background: var(--surface, #fff);
+  font-weight: 600;
+  color: var(--primary-strong, #B45309);
+  cursor: pointer;
+}
+.login-resend__btn:disabled { opacity: 0.6; cursor: default; }

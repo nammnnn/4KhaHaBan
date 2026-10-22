@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -12,7 +12,7 @@ import { useI18n, LanguageSwitch } from '../i18n';
 import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
 
 const Login = () => {
-  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, loading: authLoading } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, loading: authLoading } = useAuth();
 
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
@@ -28,6 +28,31 @@ const Login = () => {
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  // Email waiting for its confirmation link (after sign-up, or a login refused for that reason)
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resendState, setResendState] = useState('idle'); // idle | sending | sent | error
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const id = setTimeout(() => setResendCooldown((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  const handleResend = async () => {
+    if (!pendingEmail || resendCooldown > 0) return;
+    setResendState('sending');
+    const { error } = await resendConfirmation(pendingEmail);
+    if (error) {
+      console.error('Resend confirmation failed:', error.message);
+      setResendState('error');
+      // Supabase rate-limits resends; let them try again a bit later
+      setResendCooldown(60);
+      return;
+    }
+    setResendState('sent');
+    setResendCooldown(60);
+  };
 
   // ถ้ากำลังโหลดข้อมูล auth อยู่ ให้แสดง Skeleton
   if (authLoading) {
@@ -81,7 +106,13 @@ const Login = () => {
       if (error) throw error;
     } catch (error) {
       console.error('Error logging in:', error.message);
-      setErrorMsg(t('login.err.invalid'));
+      if (error?.code === 'email_not_confirmed' || /not confirmed/i.test(error?.message || '')) {
+        setPendingEmail(email.trim());
+        setResendState('idle');
+        setErrorMsg(t('login.err.unconfirmed'));
+      } else {
+        setErrorMsg(t('login.err.invalid'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +145,9 @@ const Login = () => {
     try {
       const { error } = await registerWithEmail(email, password, metadata);
       if (error) throw error;
-      setSuccessMsg(t('login.checkEmail'));
+      setPendingEmail(email.trim());
+      setResendState('idle');
+      setSuccessMsg(t('login.checkEmailTo', { email: email.trim() }));
       // เคลียร์ฟอร์ม
       setEmail('');
       setPassword('');
@@ -244,6 +277,26 @@ const Login = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Didn't get the confirmation email? */}
+          {pendingEmail && (errorMsg || successMsg) && (
+            <div className="login-resend">
+              <span className="login-resend__text">
+                {resendState === 'sent' ? t('login.resend.sent', { email: pendingEmail })
+                  : resendState === 'error' ? t('login.resend.error')
+                  : t('login.resend.hint')}
+              </span>
+              <button
+                type="button"
+                className="login-resend__btn"
+                onClick={handleResend}
+                disabled={resendState === 'sending' || resendCooldown > 0}
+              >
+                {resendState === 'sending' ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Mail size={14} aria-hidden="true" />}
+                {resendCooldown > 0 ? t('login.resend.wait', { s: resendCooldown }) : t('login.resend.cta')}
+              </button>
+            </div>
+          )}
 
           {/* Google Auth Button */}
           <button

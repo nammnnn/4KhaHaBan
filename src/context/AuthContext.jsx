@@ -410,9 +410,31 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
       options: {
-        data: metadata
+        data: metadata,
+        emailRedirectTo: window.location.origin
       }
     });
+  };
+
+  // Send the sign-up confirmation link again (for accounts that never clicked it)
+  const resendConfirmation = async (email) => {
+    if (!supabase) return { error: new Error('Supabase not initialized') };
+    return await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: window.location.origin }
+    });
+  };
+
+  // Email/password accounts only: Supabase emails a link and switches the address once it's confirmed
+  const changeEmail = async (newEmail) => {
+    if (!supabase) return { error: new Error('Supabase not initialized') };
+    const result = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo: `${window.location.origin}/profile` }
+    );
+    if (result.data?.user) setUser(result.data.user);
+    return result;
   };
 
   const logout = async () => {
@@ -496,6 +518,8 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogle,
     loginWithEmail,
     registerWithEmail,
+    resendConfirmation,
+    changeEmail,
     logout,
     refreshProfile,
     verifyUser,

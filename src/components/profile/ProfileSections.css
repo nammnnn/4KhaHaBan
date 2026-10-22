@@ -336,6 +336,7 @@
   .pf-side .pf-row { flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; padding: var(--space-3) 0; }
   .pf-side .pf-row__label { min-width: 0; }
   .pf-side .pf-row__value { text-align: left; width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .pf-side .pf-row--email .pf-row__value { align-items: flex-start; }
 
   .pf-side > *,
   .pf-main > * { order: 0; }
@@ -348,6 +349,17 @@
 .pf-inline-form__note { font-size: var(--text-caption, 0.8125rem); color: var(--ink-500); }
 .pf-inline-form__actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
 .pf-inline-form__actions .ui-btn { min-width: 96px; }
+
+/* Email row: address + how it's verified */
+.pf-row--email .pf-row__value { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.pf-email__addr { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.pf-email__meta { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-label); color: var(--ink-500); white-space: normal; }
+.pf-email__meta--ok { color: var(--success); }
+.pf-email__meta--pending { color: var(--primary-deep); }
+
+.pf-inline-form__link { align-self: flex-start; margin-top: var(--space-1); min-height: 32px; font-size: var(--text-label); font-weight: 600; color: var(--primary-strong); cursor: pointer; }
+.pf-email-change { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.pf-email-change__actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
 /* Edit sheet */
 .pf-edit-form { display: flex; flex-direction: column; gap: var(--space-4); }

@@ -21,8 +21,20 @@ import { useI18n, LanguageSwitch } from '../i18n';
 import '../components/profile/ProfileSections.css';
 import { MOTION } from '../lib/motion';
 
+// Small Google "G" so "Linked to Google" reads at a glance
+function GoogleMark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+    </svg>
+  );
+}
+
 export default function UserProfile() {
-  const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile } = useAuth();
+  const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile, changeEmail } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useI18n();
@@ -35,6 +47,11 @@ export default function UserProfile() {
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [nameError, setNameError] = useState('');
+  // Change email (email/password accounts only)
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newEmailError, setNewEmailError] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -709,6 +726,28 @@ export default function UserProfile() {
     });
   };
 
+  // How this account signs in decides whether the email can be changed here
+  const isGoogleAccount = (user?.app_metadata?.providers || [user?.app_metadata?.provider]).includes('google');
+  const pendingEmail = user?.new_email || '';
+
+  const handleSendEmailChange = async () => {
+    const next = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { setNewEmailError(t('pf.email.invalid')); return; }
+    if (next === (user?.email || '').toLowerCase()) { setNewEmailError(t('pf.email.same')); return; }
+    setIsSendingEmail(true);
+    setNewEmailError('');
+    const { error } = await changeEmail(next);
+    setIsSendingEmail(false);
+    if (error) {
+      console.error('Change email failed:', error.message);
+      setNewEmailError(/already|registered|exists/i.test(error.message || '') ? t('pf.email.taken') : t('pf.email.failed'));
+      return;
+    }
+    setIsChangingEmail(false);
+    setNewEmail('');
+    toast(t('pf.email.sent', { email: next }), { tone: 'success', duration: 6000 });
+  };
+
   // Profile phone, falling back to the one given at sign-up / verification
   const savedPhone = profile?.phone || user?.user_metadata?.phone || '';
   const settingsOpen = () => {
@@ -717,6 +756,9 @@ export default function UserProfile() {
     setSaveErrorMsg('');
     setPhoneError('');
     setNameError('');
+    setIsChangingEmail(false);
+    setNewEmail('');
+    setNewEmailError('');
     setIsEditingInfo(true);
   };
 
@@ -812,8 +854,36 @@ export default function UserProfile() {
                   <div className="pf-inline-form__static">
                     <span className="pf-row__label">{t('pf.email')}</span>
                     <span className="pf-inline-form__email">{displayEmail}</span>
-                    <span className="pf-inline-form__note">{t('pf.edit.emailLocked')}</span>
+                    {isGoogleAccount ? (
+                      <span className="pf-inline-form__note">{t('pf.email.googleLocked')}</span>
+                    ) : !isChangingEmail ? (
+                      <button type="button" className="pf-inline-form__link" onClick={() => { setIsChangingEmail(true); setNewEmailError(''); }}>
+                        {t('pf.email.change')}
+                      </button>
+                    ) : null}
                   </div>
+                  {!isGoogleAccount && isChangingEmail && (
+                    <div className="pf-email-change">
+                      <Field
+                        id="pf-new-email"
+                        label={t('pf.email.new')}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder={t('pf.email.newPh')}
+                        value={newEmail}
+                        onChange={(e) => { setNewEmail(e.target.value); setNewEmailError(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendEmailChange(); } }}
+                        error={newEmailError}
+                        autoFocus
+                      />
+                      <p className="pf-inline-form__note">{t('pf.email.howItWorks')}</p>
+                      <div className="pf-email-change__actions">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setIsChangingEmail(false); setNewEmail(''); setNewEmailError(''); }} disabled={isSendingEmail}>{t('pf.email.keep')}</Button>
+                        <Button type="button" variant="secondary" size="sm" loading={isSendingEmail} onClick={handleSendEmailChange}>{t('pf.email.send')}</Button>
+                      </div>
+                    </div>
+                  )}
                   <div className="pf-inline-form__actions">
                     <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingInfo(false)} disabled={isSavingProfile}>{t('common.cancel')}</Button>
                     <Button type="submit" variant="primary" size="sm" loading={isSavingProfile}>{t('common.save')}</Button>
@@ -822,7 +892,19 @@ export default function UserProfile() {
               ) : (
                 <>
                   <InfoRow label={t('pf.phone')} value={savedPhone ? formatPhoneNumber(savedPhone) : t('pf.notSet')} tone={savedPhone ? undefined : 'muted'} />
-                  <InfoRow label={t('pf.email')} value={displayEmail} />
+                  <div className="pf-row pf-row--email">
+                    <span className="pf-row__label">{t('pf.email')}</span>
+                    <span className="pf-row__value">
+                      <span className="pf-email__addr">{displayEmail}</span>
+                      {pendingEmail ? (
+                        <span className="pf-email__meta pf-email__meta--pending">{t('pf.email.pending', { email: pendingEmail })}</span>
+                      ) : isGoogleAccount ? (
+                        <span className="pf-email__meta"><GoogleMark /> {t('pf.email.google')}</span>
+                      ) : user?.email_confirmed_at ? (
+                        <span className="pf-email__meta pf-email__meta--ok"><CheckCircle size={14} aria-hidden="true" /> {t('pf.email.verified')}</span>
+                      ) : null}
+                    </span>
+                  </div>
                 </>
               )}
             </ProfileSection>
