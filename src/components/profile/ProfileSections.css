@@ -6,8 +6,19 @@
   padding: var(--space-6) var(--space-4) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-6);
 }
+
+/* Mobile: the two column wrappers dissolve and their pieces stack in this order */
+.pf-side,
+.pf-main { display: contents; }
+.pf-header { order: 0; }
+.pf-verify { order: 1; }
+.pf-requests { order: 2; }
+.pf-info { order: 3; }
+.pf-more { order: 4; }
+.pf-logout--main { order: 5; }
+.pf-logout--side { display: none; }
 
 /* Header */
 .pf-header {
@@ -123,6 +134,7 @@
 }
 
 .pf-row + .pf-row,
+.pf-row + .pf-faq,
 .pf-req-list li + li .pf-req,
 .pf-faq__item + .pf-faq__item { box-shadow: inset 0 1px 0 var(--line-200); }
 
@@ -242,6 +254,60 @@
 @media (min-width: 768px) {
   .pf-page { padding-top: var(--space-10); }
   .pf-avatar__img { width: 96px; height: 96px; }
+}
+
+/* Desktop: identity card on the left (stays in view), everything else on the right */
+@media (min-width: 1024px) {
+  .pf-page {
+    max-width: 1040px;
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-8);
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+  }
+
+  .pf-side {
+    position: sticky;
+    top: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--elev-raised);
+  }
+
+  .pf-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    min-width: 0;
+  }
+
+  .pf-header {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-3);
+  }
+  .pf-header__text { width: 100%; }
+  .pf-header__name { white-space: normal; overflow-wrap: anywhere; }
+  .pf-header__badges { justify-content: center; }
+
+  /* Inside the card the info list sits flat, separated by a hairline */
+  .pf-side .pf-section__head { padding: 0; margin-bottom: var(--space-1); }
+  .pf-side .pf-section__title { font-size: var(--text-label); color: var(--ink-600); }
+  .pf-side .pf-section__body { border-radius: 0; box-shadow: none; background: none; overflow: visible; }
+  .pf-side .pf-row { flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; padding: var(--space-3) 0; }
+  .pf-side .pf-row__label { min-width: 0; }
+  .pf-side .pf-row__value { text-align: left; width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+  .pf-side > *,
+  .pf-main > * { order: 0; }
+  .pf-logout--side { display: inline-flex; margin-top: auto; }
+  .pf-logout--main { display: none; }
 }
 
 /* Edit sheet */

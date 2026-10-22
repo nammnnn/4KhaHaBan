@@ -647,127 +647,133 @@ export default function UserProfile() {
           onChange={handleAvatarSelect}
         />
 
-        {/* Header */}
-        <motion.header
-          className="pf-header"
-        >
-          <div className="pf-avatar">
-            <div className="pf-avatar__img">
-              {isUploadingAvatar ? (
-                <Loader className="spin" size={28} />
-              ) : avatarUrl && !imgError ? (
-                <img src={avatarUrl} alt="" onError={() => setImgError(true)} />
-              ) : (
-                initial
-              )}
+        {/* Left column on desktop (identity card); on mobile its pieces flow into the page in order */}
+        <aside className="pf-side">
+          <motion.header className="pf-header">
+            <div className="pf-avatar">
+              <div className="pf-avatar__img">
+                {isUploadingAvatar ? (
+                  <Loader className="spin" size={28} />
+                ) : avatarUrl && !imgError ? (
+                  <img src={avatarUrl} alt="" onError={() => setImgError(true)} />
+                ) : (
+                  initial
+                )}
+              </div>
+              <button
+                type="button"
+                className="pf-avatar__edit"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                aria-label={t('pf.changePhoto')}
+                title={t('pf.changePhoto')}
+              >
+                <Camera size={18} />
+              </button>
             </div>
-            <button
-              type="button"
-              className="pf-avatar__edit"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              aria-label={t('pf.changePhoto')}
-              title={t('pf.changePhoto')}
+            <div className="pf-header__text">
+              <h1 className="pf-header__name">{displayName}</h1>
+              <div className="pf-header__badges">
+                {role === 'user' ? (
+                  isVerified
+                    ? <Badge tone="success" icon={ShieldCheck}>{t('pf.verified')}</Badge>
+                    : <Badge tone="pending" icon={Shield}>{t('pf.notVerified')}</Badge>
+                ) : (
+                  <Badge tone="neutral" icon={role === 'foundation' ? Building2 : User}>{getRoleDisplayName(role)}</Badge>
+                )}
+              </div>
+            </div>
+          </motion.header>
+
+          <div className="pf-info">
+            <ProfileSection
+              title={t('pf.myInfo')}
+              action={<button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
             >
-              <Camera size={18} />
-            </button>
+              <InfoRow label={t('pf.phone')} value={profile?.phone ? formatPhoneNumber(profile.phone) : t('pf.notSet')} tone={profile?.phone ? undefined : 'muted'} />
+              <InfoRow label={t('pf.email')} value={displayEmail} />
+            </ProfileSection>
           </div>
-          <div className="pf-header__text">
-            <h1 className="pf-header__name">{displayName}</h1>
-            <div className="pf-header__badges">
-              {role === 'user' ? (
-                isVerified
-                  ? <Badge tone="success" icon={ShieldCheck}>{t('pf.verified')}</Badge>
-                  : <Badge tone="pending" icon={Shield}>{t('pf.notVerified')}</Badge>
-              ) : (
-                <Badge tone="neutral" icon={role === 'foundation' ? Building2 : User}>{getRoleDisplayName(role)}</Badge>
-              )}
+
+          <Button variant="secondary" className="pf-logout pf-logout--side" onClick={handleLogout}>
+            <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
+          </Button>
+        </aside>
+
+        <div className="pf-main">
+          {/* Not verified yet: the one thing blocking adoption requests */}
+          {role === 'user' && !isVerified && (
+            <div className="pf-verify">
+              <p className="pf-verify__title">{t('pf.verifyCard.title')}</p>
+              <p className="pf-verify__text">{t('pf.verifyCard.text')}</p>
+              <Button variant="primary" onClick={() => navigate('/verify-user')}>
+                <ShieldCheck size={20} aria-hidden="true" /> {t('pf.verifyCard.cta')}
+              </Button>
             </div>
-          </div>
-        </motion.header>
-
-        {/* Not verified yet: the one thing blocking adoption requests */}
-        {role === 'user' && !isVerified && (
-          <div className="pf-verify">
-            <p className="pf-verify__title">{t('pf.verifyCard.title')}</p>
-            <p className="pf-verify__text">{t('pf.verifyCard.text')}</p>
-            <Button variant="primary" onClick={() => navigate('/verify-user')}>
-              <ShieldCheck size={20} aria-hidden="true" /> {t('pf.verifyCard.cta')}
-            </Button>
-          </div>
-        )}
-
-        {role === 'user' && (
-          <ProfileSection
-            title={t('pf.requests')}
-            action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
-          >
-            <AdoptionRequests matches={matches} />
-          </ProfileSection>
-        )}
-
-        {role === 'foundation' && foundationMenu.length > 0 && (
-          <ProfileSection title={t('pf.myFoundation')}>
-            {foundationMenu.map((item) => (
-              <InfoRow
-                key={item.key}
-                label={item.label}
-                value={item.badge ? item.desc : ''}
-                tone={item.badge && foundationStatus === 'approved' ? 'success' : item.badge ? 'muted' : undefined}
-                onClick={item.onClick}
-              />
-            ))}
-          </ProfileSection>
-        )}
-
-        <ProfileSection
-          title={t('pf.myInfo')}
-          action={<button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
-        >
-          <InfoRow label={t('pf.name')} value={profile?.full_name || user?.user_metadata?.full_name || '—'} />
-          <InfoRow label={t('pf.phone')} value={profile?.phone ? formatPhoneNumber(profile.phone) : t('pf.notSet')} tone={profile?.phone ? undefined : 'muted'} />
-          <InfoRow label={t('pf.email')} value={displayEmail} />
-          {role === 'user' && (
-            <InfoRow
-              label={t('pf.verification')}
-              value={isVerified ? t('pf.done') : t('pf.notYetVerified')}
-              tone={isVerified ? 'success' : 'muted'}
-              to="/verify-user"
-            />
           )}
-        </ProfileSection>
 
-        {role === 'user' && (
-          <ProfileSection title={t('pf.search')}>
-            <InfoRow
-              icon={MapPin}
-              label={t('pf.area')}
-              value={savedArea?.label ? t('pf.areaNear', { area: savedArea.label }) : t('pf.areaGps')}
-              to="/?sheet=location"
-            />
-            <InfoRow icon={Search} label={t('pf.filters')} value={prefsSummary} to="/?sheet=filters" />
-          </ProfileSection>
-        )}
+          {role === 'user' && (
+            <div className="pf-requests">
+              <ProfileSection
+                title={t('pf.requests')}
+                action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
+              >
+                <AdoptionRequests matches={matches} />
+              </ProfileSection>
+            </div>
+          )}
 
-        {/* Language (DESIGN.md §8.1) */}
-        <ProfileSection title={t('pf.settings')}>
-          <div className="pf-row">
-            <Languages size={20} className="pf-row__icon" aria-hidden="true" />
-            <span className="pf-row__label">{t('pf.language')}</span>
-            <span className="pf-row__value"><LanguageSwitch /></span>
+          {role === 'foundation' && foundationMenu.length > 0 && (
+            <div className="pf-requests">
+              <ProfileSection title={t('pf.myFoundation')}>
+                {foundationMenu.map((item) => (
+                  <InfoRow
+                    key={item.key}
+                    label={item.label}
+                    value={item.badge ? item.desc : ''}
+                    tone={item.badge && foundationStatus === 'approved' ? 'success' : item.badge ? 'muted' : undefined}
+                    onClick={item.onClick}
+                  />
+                ))}
+              </ProfileSection>
+            </div>
+          )}
+
+          {role === 'user' && (
+            <div className="pf-more">
+              <ProfileSection title={t('pf.search')}>
+                <InfoRow
+                  icon={MapPin}
+                  label={t('pf.area')}
+                  value={savedArea?.label ? t('pf.areaNear', { area: savedArea.label }) : t('pf.areaGps')}
+                  to="/?sheet=location"
+                />
+                <InfoRow icon={Search} label={t('pf.filters')} value={prefsSummary} to="/?sheet=filters" />
+              </ProfileSection>
+            </div>
+          )}
+
+          {/* Settings + help in one group (DESIGN.md §8.1) */}
+          <div className="pf-more">
+            <ProfileSection title={role === 'super_admin' ? t('pf.settings') : t('pf.settingsHelp')}>
+              <div className="pf-row">
+                <Languages size={20} className="pf-row__icon" aria-hidden="true" />
+                <span className="pf-row__label">{t('pf.language')}</span>
+                <span className="pf-row__value"><LanguageSwitch /></span>
+              </div>
+              {role !== 'super_admin' && (
+                <>
+                  <InfoRow icon={MessageSquare} label={t('pf.chatTeam')} value="" to="/support-chat" />
+                  <FaqList />
+                </>
+              )}
+            </ProfileSection>
           </div>
-        </ProfileSection>
 
-        {role !== 'super_admin' && (
-          <ProfileSection title={t('pf.help')}>
-            <FaqList />
-            <InfoRow icon={MessageSquare} label={t('pf.chatTeam')} value="" to="/support-chat" />
-          </ProfileSection>
-        )}
-
-        <Button variant="secondary" className="pf-logout" onClick={handleLogout}>
-          <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
-        </Button>
+          <Button variant="secondary" className="pf-logout pf-logout--main" onClick={handleLogout}>
+            <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
+          </Button>
+        </div>
       </div>
 
       {/* Edit "ข้อมูลของฉัน" — DESIGN.md §7.10 bottom sheet */}

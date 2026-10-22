@@ -213,6 +213,7 @@ export default {
   'pf.filters.all': 'All',
   'pf.filters.anyDistance': 'Any distance',
   'pf.settings': 'Settings',
+  'pf.settingsHelp': 'Settings & help',
   'pf.language': 'Language',
   'pf.help': 'Help',
   'pf.chatTeam': 'Chat with our team',

@@ -213,6 +213,7 @@ export default {
   'pf.filters.all': 'ทั้งหมด',
   'pf.filters.anyDistance': 'ทุกระยะ',
   'pf.settings': 'การตั้งค่า',
+  'pf.settingsHelp': 'การตั้งค่าและช่วยเหลือ',
   'pf.language': 'ภาษา',
   'pf.help': 'ช่วยเหลือ',
   'pf.chatTeam': 'แชทกับทีมงาน',
