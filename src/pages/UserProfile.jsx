@@ -241,7 +241,8 @@ export default function UserProfile() {
       toast(t('pf.edit.saved'), { tone: 'success' });
     } catch (err) {
       console.error('Error updating settings:', err);
-      setSaveErrorMsg(t('pf.edit.saveFailed'));
+      if (err?.code === '23514') setPhoneError(t('pf.edit.phoneInvalid'));
+      else setSaveErrorMsg(t('pf.edit.saveFailed'));
     } finally {
       setIsSavingProfile(false);
     }

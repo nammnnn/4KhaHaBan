@@ -441,11 +441,16 @@ export const AuthProvider = ({ children }) => {
           .maybeSingle();
 
         if (error) {
+          // The database refused it (e.g. 23514 phone_required, migration 025): report it, don't pretend it saved
+          if (error.code === '23514') return { error };
           console.warn('[Auth] profiles upsert warning:', error);
           // Fallback to update if upsert has an issue
           const cleanUpdates = { ...updates };
           delete cleanUpdates.updated_at;
-          await supabase.from('profiles').update(cleanUpdates).eq('id', user.id);
+          const { data: updated, error: updateError } = await supabase
+            .from('profiles').update(cleanUpdates).eq('id', user.id).select().maybeSingle();
+          if (updateError) return { error: updateError };
+          if (updated) setProfile(updated);
         } else if (data) {
           setProfile(data);
         }
