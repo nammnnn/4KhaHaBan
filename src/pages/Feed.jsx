@@ -381,7 +381,12 @@ function Feed() {
     const newMatch = await addMatch(animal.id, user?.id);
     setPendingMatch(null);
 
-    if (newMatch) {
+    if (newMatch?.notVerified) {
+      // The database didn't accept the request: put the card back and ask them to verify
+      setCards((prev) => [makeCard(animal), ...prev]);
+      if (!poolRef.current.some((a) => a.id === animal.id)) poolRef.current.push(animal);
+      setShowVerificationPrompt(true);
+    } else if (newMatch) {
       setShowMatch({ match: newMatch, animal });
     } else {
       toast(t('common.retryError'), { tone: 'error' });

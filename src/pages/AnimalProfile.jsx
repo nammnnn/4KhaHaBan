@@ -148,7 +148,9 @@ function AnimalProfile() {
     setIsSubmitting(true);
     try {
       const match = await addMatch(id, user.id);
-      if (match) {
+      if (match?.notVerified) {
+        setShowVerificationPrompt(true);
+      } else if (match) {
         toast(t('ap.sent'), { tone: 'success' });
         navigate('/matches');
       } else {

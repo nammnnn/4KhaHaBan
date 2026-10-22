@@ -9,6 +9,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FormPageSkeleton } from '../components/Skeletons';
 import { MOTION } from '../lib/motion';
 
+// Thai national ID check digit — same rule the database enforces (migration 023)
+function isValidThaiId(digits) {
+  if (!/^\d{13}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i += 1) sum += Number(digits[i]) * (13 - i);
+  return (11 - (sum % 11)) % 10 === Number(digits[12]);
+}
+
 // รายการคำถามแบบประเมินความพร้อมก่อนรับเลี้ยง
 const ASSESSMENT_QUESTIONS = [
   {
@@ -167,6 +175,10 @@ export default function UserVerification() {
       setErrorMsg('เลขประจำตัวประชาชนต้องมี 13 หลัก');
       return;
     }
+    if (!isValidThaiId(rawId)) {
+      setErrorMsg('เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
+      return;
+    }
     if (rawPhone.length < 9 || rawPhone.length > 10) {
       setErrorMsg('เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก');
       return;
@@ -190,9 +202,9 @@ export default function UserVerification() {
       setErrorMsg('กรุณากรอกชื่อ - นามสกุล');
       return;
     }
-    if (rawId.length !== 13) {
+    if (rawId.length !== 13 || !isValidThaiId(rawId)) {
       setStep(1);
-      setErrorMsg('เลขประจำตัวประชาชนต้องมี 13 หลัก');
+      setErrorMsg(rawId.length !== 13 ? 'เลขประจำตัวประชาชนต้องมี 13 หลัก' : 'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
       return;
     }
     if (rawPhone.length < 9 || rawPhone.length > 10) {

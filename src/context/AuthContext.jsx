@@ -252,90 +252,67 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   // verifyUser — ยืนยันตัวตนสำหรับผู้ใช้ทั่วไป พร้อมบันทึกแบบประเมิน
+  // Saves the verification to the database FIRST; the app only shows "verified" once the
+  // database accepted it (migration 023 checks the ID number, name and phone server-side).
   const verifyUser = async (verificationData) => {
     if (!user) return { error: new Error('User not logged in') };
-    
-    try {
-      const payload = {
-        id: user.id,
-        full_name: verificationData.full_name,
-        id_card_no: verificationData.id_card_no,
-        phone: verificationData.phone,
-        assessment: verificationData.assessment || {},
-        status: 'verified',
-        created_at: new Date().toISOString()
-      };
+    if (!supabase) return { error: new Error('ยังเชื่อมต่อระบบไม่ได้ กรุณาลองใหม่อีกครั้ง') };
 
-      // 1. บันทึกสถานะทันทีลงใน Supabase Auth user_metadata
-      // จุดนี้สำคัญที่สุด: บันทึกตรงเข้า Supabase Auth Cloud ทันที ข้อมูลจะผูกติดกับบัญชีผู้ใช้ถาวร แม้ออกจากระบบหรือเปลี่ยนเบราว์เซอร์
-      if (supabase) {
-        try {
-          await supabase.auth.updateUser({
-            data: {
-              is_verified: true,
-              user_verification_status: 'verified',
-              user_verification_data: payload,
-              full_name: verificationData.full_name,
-              phone: verificationData.phone
-            }
-          });
-        } catch (metaErr) {
-          console.warn('[Auth] Could not update user_metadata in Supabase Auth:', metaErr);
-        }
+    const payload = {
+      id: user.id,
+      full_name: verificationData.full_name,
+      id_card_no: verificationData.id_card_no,
+      phone: verificationData.phone,
+      assessment: verificationData.assessment || {},
+      status: 'verified',
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      // 1. The record that actually counts (needs a profiles row for the foreign key)
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        full_name: verificationData.full_name,
+        phone: verificationData.phone,
+        role: role || 'user',
+        last_seen: new Date().toISOString()
+      });
+      const { error: verifError } = await supabase.from('user_verifications').upsert(payload);
+      if (verifError) {
+        console.warn('[Auth] verifyUser user_verifications upsert failed:', verifError);
+        const invalid = verifError.code === '23514' || /invalid_verification_data/.test(verifError.message || '');
+        return {
+          error: new Error(invalid
+            ? 'ข้อมูลไม่ผ่านการตรวจสอบ กรุณาตรวจเลขบัตรประชาชน ชื่อ และเบอร์โทรอีกครั้ง'
+            : 'บันทึกการยืนยันตัวตนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+        };
       }
 
-      // 2. อัปเดต React State & LocalStorage ทันที (ทั้งตาม user.id และ email)
+      // 2. Saved — reflect it in the app (metadata and the local cache are conveniences only)
       setUserVerificationStatus('verified');
       try {
         localStorage.setItem(`user_verification_status_${user.id}`, 'verified');
         localStorage.setItem(`user_verification_data_${user.id}`, JSON.stringify(payload));
-        if (user.email) {
-          localStorage.setItem(`user_verification_status_${user.email}`, 'verified');
-          localStorage.setItem(`user_verification_data_${user.email}`, JSON.stringify(payload));
-        }
       } catch (e) {}
-
-      // 3. สร้าง/อัปเดต Profile ในตาราง profiles เพื่อให้ Foreign Key ในตารางอื่นๆ ใช้งานได้
-      if (supabase) {
-        try {
-          await supabase.from('profiles').upsert({
-            id: user.id,
-            email: user.email,
-            full_name: verificationData.full_name,
-            phone: verificationData.phone,
-            role: role || 'user',
-            is_verified: true,
-            last_seen: new Date().toISOString()
-          });
-        } catch (profErr) {
-          console.warn('[Auth] verifyUser profiles upsert warning:', profErr);
-        }
-      }
-
-      // 4. บันทึกลงตาราง user_verifications ใน Supabase
-      if (supabase) {
-        try {
-          const { error: verifError } = await supabase.from('user_verifications').upsert(payload);
-          if (verifError) {
-            console.warn('[Auth] verifyUser user_verifications upsert warning:', verifError);
-          }
-        } catch (tableErr) {
-          console.warn('[Auth] verifyUser user_verifications error:', tableErr);
-        }
-      }
-
-      // 5. ซิงค์ชื่อและเบอร์โทรศัพท์ในโปรไฟล์
-      try {
-        await updateProfile({
+      supabase.auth.updateUser({
+        data: {
+          is_verified: true,
+          user_verification_status: 'verified',
           full_name: verificationData.full_name,
           phone: verificationData.phone
-        });
+        }
+      }).catch((metaErr) => console.warn('[Auth] Could not update user_metadata:', metaErr));
+
+      // 3. Keep the profile's name and phone in sync (is_verified there is set by the database)
+      try {
+        await updateProfile({ full_name: verificationData.full_name, phone: verificationData.phone });
       } catch (e) {}
 
       return { success: true };
     } catch (err) {
       console.error('[Auth] verifyUser error:', err);
-      return { error: err };
+      return { error: new Error('บันทึกการยืนยันตัวตนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') };
     }
   };
 

@@ -429,7 +429,10 @@ export const api = {
     const { data, error } = await supabase.from('matches').insert(newMatch).select().single();
     if (error || !data) {
       console.error('Supabase match insert failed:', error?.message);
-      throw new Error(error?.message || 'Match insert failed');
+      const err = new Error(error?.message || 'Match insert failed');
+      // 42501 = row-level security: the database says this account isn't verified (migration 023)
+      if (error?.code === '42501') err.code = 'NOT_VERIFIED';
+      throw err;
     }
 
     // Automatically send comprehensive Adoption Application and Assessment into the chat
