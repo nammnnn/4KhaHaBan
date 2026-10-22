@@ -91,6 +91,12 @@ export function EmptyState({ icon: Icon, title, text, action }) {
 }
 
 // Bottom sheet on mobile, centered modal on desktop. Replaces window.confirm().
+// framer-motion hands opacity fades to the browser's compositor (WAAPI). When that animation ends there is
+// one frame where the element falls back to its starting opacity (0) before the final value is written,
+// which shows up on real GPUs as the backdrop "blinking". Passing onUpdate keeps the fade on the main
+// thread, so the value is written every frame and never falls back.
+const KEEP_FADE_ON_MAIN_THREAD = () => {};
+
 export function Dialog({ open, onClose, title, children, actions, className }) {
   const reduce = useReducedMotion();
   const panelRef = useRef(null);
@@ -98,13 +104,18 @@ export function Dialog({ open, onClose, title, children, actions, className }) {
   // inside the panel (e.g. a map) and releasing outside it would close the dialog.
   const downOnBackdrop = useRef(false);
 
+  // Latest onClose without re-running the effect (callers pass a new arrow every render)
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    if (!open) return undefined;
+    const onKey = (e) => e.key === 'Escape' && onCloseRef.current?.();
     window.addEventListener('keydown', onKey);
-    panelRef.current?.focus();
+    // Focus once when it opens (not on every re-render), without scrolling the page behind
+    panelRef.current?.focus({ preventScroll: true });
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -115,6 +126,7 @@ export function Dialog({ open, onClose, title, children, actions, className }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={MOTION.base}
+          onUpdate={KEEP_FADE_ON_MAIN_THREAD}
           onPointerDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
           onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose?.(); }}
         >
@@ -129,6 +141,7 @@ export function Dialog({ open, onClose, title, children, actions, className }) {
             animate={reduce ? { opacity: 1 } : { y: 0, opacity: 1 }}
             exit={reduce ? { opacity: 0 } : { y: 40, opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
             transition={MOTION.slow}
+            onUpdate={KEEP_FADE_ON_MAIN_THREAD}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ui-dialog__handle" aria-hidden="true" />
