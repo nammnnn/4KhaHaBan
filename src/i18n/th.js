@@ -262,6 +262,7 @@ export default {
   'pf.email.taken': "อีเมลนี้มีบัญชีอื่นใช้อยู่แล้ว",
   'pf.email.failed': "ส่งลิงก์ไม่สำเร็จ ลองใหม่อีกครั้งในอีกสักครู่",
   'pf.email.keep': "ใช้อีเมลเดิม",
+  'pf.email.askTeam': "ต้องการเปลี่ยนอีเมล?",
   'pf.language': 'ภาษา',
   'pf.help': 'ช่วยเหลือ',
   'pf.chatTeam': 'แชทกับทีมงาน',

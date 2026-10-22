@@ -21,6 +21,11 @@ import { useI18n, LanguageSwitch } from '../i18n';
 import '../components/profile/ProfileSections.css';
 import { MOTION } from '../lib/motion';
 
+// Turn on once Supabase can email users (custom SMTP in Authentication → Emails, and "Confirm email" on):
+// set VITE_EMAIL_CONFIRMATION=true in Vercel. Until then email accounts aren't really confirmed
+// (Supabase auto-confirms them) and change-email links can't be delivered, so both are hidden.
+const EMAIL_CHANGE_ENABLED = import.meta.env.VITE_EMAIL_CONFIRMATION === 'true';
+
 // Small Google "G" so "Linked to Google" reads at a glance
 function GoogleMark() {
   return (
@@ -856,13 +861,17 @@ export default function UserProfile() {
                     <span className="pf-inline-form__email">{displayEmail}</span>
                     {isGoogleAccount ? (
                       <span className="pf-inline-form__note">{t('pf.email.googleLocked')}</span>
+                    ) : !EMAIL_CHANGE_ENABLED ? (
+                      <span className="pf-inline-form__note">
+                        {t('pf.email.askTeam')} <Link to="/support-chat" className="pf-inline-form__inline-link">{t('pf.chatTeam')}</Link>
+                      </span>
                     ) : !isChangingEmail ? (
                       <button type="button" className="pf-inline-form__link" onClick={() => { setIsChangingEmail(true); setNewEmailError(''); }}>
                         {t('pf.email.change')}
                       </button>
                     ) : null}
                   </div>
-                  {!isGoogleAccount && isChangingEmail && (
+                  {!isGoogleAccount && EMAIL_CHANGE_ENABLED && isChangingEmail && (
                     <div className="pf-email-change">
                       <Field
                         id="pf-new-email"
@@ -900,7 +909,7 @@ export default function UserProfile() {
                         <span className="pf-email__meta pf-email__meta--pending">{t('pf.email.pending', { email: pendingEmail })}</span>
                       ) : isGoogleAccount ? (
                         <span className="pf-email__meta"><GoogleMark /> {t('pf.email.google')}</span>
-                      ) : user?.email_confirmed_at ? (
+                      ) : EMAIL_CHANGE_ENABLED && user?.email_confirmed_at ? (
                         <span className="pf-email__meta pf-email__meta--ok"><CheckCircle size={14} aria-hidden="true" /> {t('pf.email.verified')}</span>
                       ) : null}
                     </span>

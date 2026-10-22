@@ -262,6 +262,7 @@ export default {
   'pf.email.taken': "Another account already uses this email",
   'pf.email.failed': "Couldn't send the link. Try again in a moment.",
   'pf.email.keep': "Keep current",
+  'pf.email.askTeam': "Need a different email?",
   'pf.language': 'Language',
   'pf.help': 'Help',
   'pf.chatTeam': 'Chat with our team',
