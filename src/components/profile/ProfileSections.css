@@ -331,6 +331,8 @@
   .pf-side .pf-section__head { padding: 0; margin-bottom: var(--space-1); }
   .pf-side .pf-section__title { font-size: var(--text-label); color: var(--ink-600); }
   .pf-side .pf-section__body { border-radius: 0; box-shadow: none; background: none; overflow: visible; }
+  .pf-side .pf-inline-form { padding: var(--space-2) 0 0; }
+  .pf-side .pf-inline-form__actions .ui-btn { flex: 1; min-width: 0; }
   .pf-side .pf-row { flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; padding: var(--space-3) 0; }
   .pf-side .pf-row__label { min-width: 0; }
   .pf-side .pf-row__value { text-align: left; width: 100%; white-space: normal; overflow-wrap: anywhere; }
@@ -338,6 +340,14 @@
   .pf-side > *,
   .pf-main > * { order: 0; }
 }
+
+/* Edit my info in place */
+.pf-inline-form { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); }
+.pf-inline-form__static { display: flex; flex-direction: column; gap: 2px; }
+.pf-inline-form__email { font-size: var(--text-body); color: var(--ink-900); overflow-wrap: anywhere; }
+.pf-inline-form__note { font-size: var(--text-caption, 0.8125rem); color: var(--ink-500); }
+.pf-inline-form__actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+.pf-inline-form__actions .ui-btn { min-width: 96px; }
 
 /* Edit sheet */
 .pf-edit-form { display: flex; flex-direction: column; gap: var(--space-4); }

@@ -32,11 +32,11 @@ export default function UserProfile() {
   const [imgError, setImgError] = useState(false);
   
   // Settings Modal states
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
 
   // Foundation Location Modal states
@@ -116,12 +116,6 @@ export default function UserProfile() {
     }
   };
 
-  useEffect(() => {
-    if (profile) {
-      setEditFullName(profile.full_name || user?.user_metadata?.full_name || '');
-      setEditPhone(profile.phone ? formatPhoneNumber(profile.phone) : '');
-    }
-  }, [profile, user]);
 
   // Help + privacy sheets, and the two-step account deletion
   const [isFaqOpen, setIsFaqOpen] = useState(false);
@@ -221,27 +215,29 @@ export default function UserProfile() {
       setSaveErrorMsg(t('pf.edit.nameRequired'));
       return;
     }
+    const phoneDigits = editPhone.replace(/\D/g, '');
+    if (phoneDigits && (phoneDigits.length < 9 || phoneDigits.length > 10)) {
+      setPhoneError(t('pf.edit.phoneInvalid'));
+      return;
+    }
 
     setIsSavingProfile(true);
     setSaveErrorMsg('');
-    setSaveSuccessMsg('');
+    setPhoneError('');
 
     try {
       const result = await updateProfile({
         full_name: editFullName.trim(),
-        phone: editPhone.trim()
+        phone: phoneDigits ? formatPhoneNumber(phoneDigits) : ''
       });
 
       if (result.error) throw result.error;
 
-      setSaveSuccessMsg(t('pf.edit.saved'));
-      setTimeout(() => {
-        setIsSettingsOpen(false);
-        setSaveSuccessMsg('');
-      }, 1200);
+      setIsEditingInfo(false);
+      toast(t('pf.edit.saved'), { tone: 'success' });
     } catch (err) {
       console.error('Error updating settings:', err);
-      setSaveErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      setSaveErrorMsg(t('pf.edit.saveFailed'));
     } finally {
       setIsSavingProfile(false);
     }
@@ -306,7 +302,7 @@ export default function UserProfile() {
       fetchFoundationLocation();
       setIsLocationModalOpen(true);
     } else if (modalParam === 'settings') {
-      setIsSettingsOpen(true);
+      settingsOpen();
     }
   }, [role, user, searchParams]);
 
@@ -597,11 +593,7 @@ export default function UserProfile() {
     {
       key: 'settings', label: 'การตั้งค่าบัญชี', desc: '',
       icon: <Settings size={24} />, show: true, 
-      onClick: () => {
-        setSaveErrorMsg('');
-        setSaveSuccessMsg('');
-        setIsSettingsOpen(true);
-      },
+      onClick: () => settingsOpen(),
     },
     {
       key: 'foundation-location', label: 'ข้อมูลศูนย์พักพิง, ที่อยู่จัดส่ง และพร้อมเพย์', desc: 'แก้ไขที่อยู่จัดส่งพัสดุ, เบอร์ติดต่อ, เบอร์พร้อมเพย์ และพิกัด GPS',
@@ -672,10 +664,14 @@ export default function UserProfile() {
   })();
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));
+  // Profile phone, falling back to the one given at sign-up / verification
+  const savedPhone = profile?.phone || user?.user_metadata?.phone || '';
   const settingsOpen = () => {
+    setEditFullName(profile?.full_name || user?.user_metadata?.full_name || '');
+    setEditPhone(formatPhoneNumber(savedPhone));
     setSaveErrorMsg('');
-    setSaveSuccessMsg('');
-    setIsSettingsOpen(true);
+    setPhoneError('');
+    setIsEditingInfo(true);
   };
 
   return (
@@ -730,13 +726,57 @@ export default function UserProfile() {
           <div className="pf-info">
             <ProfileSection
               title={t('pf.myInfo')}
-              action={<button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
+              action={!isEditingInfo && <button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
             >
-              <InfoRow label={t('pf.phone')} value={profile?.phone ? formatPhoneNumber(profile.phone) : t('pf.notSet')} tone={profile?.phone ? undefined : 'muted'} />
-              <InfoRow label={t('pf.email')} value={displayEmail} />
+              {isEditingInfo ? (
+                // Edit in place: no pop-up, the fields sit where the values were
+                <form onSubmit={handleSaveSettings} className="pf-inline-form" noValidate>
+                  {saveErrorMsg && (
+                    <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
+                      <AlertCircle size={18} aria-hidden="true" /> {saveErrorMsg}
+                    </p>
+                  )}
+                  <Field
+                    id="pf-name"
+                    label={t('pf.edit.fullName')}
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    placeholder={t('pf.edit.fullNamePh')}
+                    autoComplete="name"
+                    autoFocus
+                    enterKeyHint="next"
+                  />
+                  <Field
+                    id="pf-phone"
+                    label={t('pf.edit.phone')}
+                    type="tel"
+                    inputMode="tel"
+                    value={editPhone}
+                    onChange={(e) => { setEditPhone(e.target.value.replace(/[^\d-]/g, '').slice(0, 12)); setPhoneError(''); }}
+                    onBlur={() => setEditPhone((v) => formatPhoneNumber(v))}
+                    placeholder={t('pf.edit.phonePh')}
+                    autoComplete="tel"
+                    enterKeyHint="done"
+                    error={phoneError}
+                  />
+                  <div className="pf-inline-form__static">
+                    <span className="pf-row__label">{t('pf.email')}</span>
+                    <span className="pf-inline-form__email">{displayEmail}</span>
+                    <span className="pf-inline-form__note">{t('pf.edit.emailLocked')}</span>
+                  </div>
+                  <div className="pf-inline-form__actions">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingInfo(false)} disabled={isSavingProfile}>{t('common.cancel')}</Button>
+                    <Button type="submit" variant="primary" size="sm" loading={isSavingProfile}>{t('common.save')}</Button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <InfoRow label={t('pf.phone')} value={savedPhone ? formatPhoneNumber(savedPhone) : t('pf.notSet')} tone={savedPhone ? undefined : 'muted'} />
+                  <InfoRow label={t('pf.email')} value={displayEmail} />
+                </>
+              )}
             </ProfileSection>
           </div>
-
         </aside>
 
         <div className="pf-main">
@@ -816,45 +856,6 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {/* Edit "ข้อมูลของฉัน" — DESIGN.md §7.10 bottom sheet */}
-      <Dialog open={isSettingsOpen} onClose={() => !isSavingProfile && setIsSettingsOpen(false)} title={t('pf.edit.title')}>
-        <form onSubmit={handleSaveSettings} className="pf-edit-form">
-          {saveSuccessMsg && (
-            <p className="pf-edit-form__msg pf-edit-form__msg--success" role="status">
-              <CheckCircle size={18} aria-hidden="true" /> {saveSuccessMsg}
-            </p>
-          )}
-          {saveErrorMsg && (
-            <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
-              <AlertCircle size={18} aria-hidden="true" /> {saveErrorMsg}
-            </p>
-          )}
-          <Field
-            id="pf-name"
-            label={t('pf.edit.fullName')}
-            value={editFullName}
-            onChange={(e) => setEditFullName(e.target.value)}
-            placeholder={t('pf.edit.fullNamePh')}
-            autoComplete="name"
-            required
-          />
-          <Field
-            id="pf-phone"
-            label={t('pf.edit.phone')}
-            type="tel"
-            inputMode="tel"
-            value={editPhone}
-            onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
-            placeholder={t('pf.edit.phonePh')}
-            autoComplete="tel"
-          />
-          <Field id="pf-email" label={t('pf.edit.email')} type="email" value={displayEmail} disabled readOnly />
-          <div className="ui-dialog__actions">
-            <Button type="button" variant="secondary" onClick={() => setIsSettingsOpen(false)} disabled={isSavingProfile}>{t('common.cancel')}</Button>
-            <Button type="submit" variant="primary" loading={isSavingProfile}>{t('common.save')}</Button>
-          </div>
-        </form>
-      </Dialog>
 
       {/* Help: questions people ask most */}
       <Dialog open={isFaqOpen} onClose={() => setIsFaqOpen(false)} title={t('pf.faq')} className="pf-sheet">
