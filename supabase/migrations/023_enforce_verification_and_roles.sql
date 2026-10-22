@@ -15,6 +15,7 @@
 -- Trusted contexts are unchanged: when auth.uid() IS NULL (SQL editor, service role,
 -- auth triggers) or the caller is a super_admin, the guards below step aside.
 --
+-- Applied to the HaBan project on 2026-10-22.
 -- Safe to run more than once. Read the "BEFORE YOU RUN" query at the bottom first.
 -- ==============================================================================
 
@@ -330,6 +331,15 @@ CREATE TRIGGER trg_guard_match_update
 --     read everyone's ID number, name and phone.
 -- ------------------------------------------------------------------------------
 DROP POLICY IF EXISTS "user_verifications_select" ON public.user_verifications;
+
+
+-- ------------------------------------------------------------------------------
+-- 6c. Trigger functions are only for triggers: not callable through the API (/rest/v1/rpc)
+-- ------------------------------------------------------------------------------
+REVOKE EXECUTE ON FUNCTION public.guard_profile_privileges(), public.guard_user_verification(),
+  public.sync_profile_verified(), public.guard_foundation_status(), public.guard_match_update()
+  FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.current_user_is_verified() FROM PUBLIC, anon;
 
 
 -- ------------------------------------------------------------------------------
