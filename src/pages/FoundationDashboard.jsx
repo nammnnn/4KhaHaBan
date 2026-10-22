@@ -189,9 +189,6 @@ const FoundationDashboard = () => {
         {/* Emergency Alert Banner (ถ้ามีเคสฉุกเฉินรอช่วยเหลือ) */}
         {stats.pendingIncidents > 0 && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
             style={{ marginBottom: '20px' }}
           >
             <Link
@@ -249,9 +246,6 @@ const FoundationDashboard = () => {
 
         {/* Overview Metrics Cards (4 Actionable Stat Cards) */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           style={{ marginBottom: '24px' }}
         >
           <div style={{
@@ -434,9 +428,6 @@ const FoundationDashboard = () => {
         }}>
           {/* Card 1: Wishlist Needs (ของใช้จำเป็นที่เปิดรับบริจาค) */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
@@ -524,9 +515,6 @@ const FoundationDashboard = () => {
 
           {/* Card 2: Operations & Shelter Info (สถานะกู้ภัยและข้อมูลศูนย์) */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.15 }}
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
@@ -669,9 +657,6 @@ const FoundationDashboard = () => {
 
         {/* Adoption Tips / Best Practices Card */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.2 }}
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',

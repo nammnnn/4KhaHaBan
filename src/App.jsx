@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Loader, AlertCircle } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navigation } from './components/Navigation';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
+import { ToastProvider } from './components/ui';
+import { LanguageProvider } from './i18n';
 
 // Error Boundary to prevent blank white screens
 class ErrorBoundary extends React.Component {
@@ -113,7 +115,7 @@ const PageLoader = () => {
   }
   if (path.startsWith('/animal/')) {
     return (
-      <div className="page-container" style={{ padding: '16px' }}>
+      <div className="animal-profile-page">
         <AnimalProfileSkeleton />
       </div>
     );
@@ -202,10 +204,31 @@ const RoleEnforcer = ({ children }) => {
   return children;
 };
 
+// Fetch the main tabs' code once the app is idle, so the first tap on a tab opens it
+// straight away instead of flashing its loading skeleton. Skipped on data-saver connections.
+function preloadMainTabs() {
+  if (navigator.connection?.saveData) return;
+  const load = () => {
+    import('./pages/Feed');
+    import('./pages/MatchChat');
+    import('./pages/ChatRoom');
+    import('./pages/IncidentReport');
+    import('./pages/Donation');
+    import('./pages/UserProfile');
+    import('./pages/AnimalProfile');
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(load, { timeout: 4000 });
+  else setTimeout(load, 2000);
+}
+
 function App() {
+  useEffect(() => { preloadMainTabs(); }, []);
+
   return (
+    <LanguageProvider>
     <AuthProvider>
       <AppProvider>
+      <ToastProvider>
         <BrowserRouter>
           <div className="app-container">
             <RoleEnforcer>
@@ -263,8 +286,10 @@ function App() {
             </RoleEnforcer>
           </div>
         </BrowserRouter>
+      </ToastProvider>
       </AppProvider>
     </AuthProvider>
+    </LanguageProvider>
   );
 }
 

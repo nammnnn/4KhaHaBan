@@ -7,6 +7,15 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { MOTION } from '../lib/motion';
+
+// Thai national ID check digit — same rule the database enforces (migration 023)
+function isValidThaiId(digits) {
+  if (!/^\d{13}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i += 1) sum += Number(digits[i]) * (13 - i);
+  return (11 - (sum % 11)) % 10 === Number(digits[12]);
+}
 
 // รายการคำถามแบบประเมินความพร้อมก่อนรับเลี้ยง
 const ASSESSMENT_QUESTIONS = [
@@ -166,8 +175,12 @@ export default function UserVerification() {
       setErrorMsg('เลขประจำตัวประชาชนต้องมี 13 หลัก');
       return;
     }
-    if (rawPhone.length < 9 || rawPhone.length > 10) {
-      setErrorMsg('เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก');
+    if (!isValidThaiId(rawId)) {
+      setErrorMsg('เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
+      return;
+    }
+    if (!/^0\d{8,9}$/.test(rawPhone)) {
+      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
       return;
     }
 
@@ -189,14 +202,14 @@ export default function UserVerification() {
       setErrorMsg('กรุณากรอกชื่อ - นามสกุล');
       return;
     }
-    if (rawId.length !== 13) {
+    if (rawId.length !== 13 || !isValidThaiId(rawId)) {
       setStep(1);
-      setErrorMsg('เลขประจำตัวประชาชนต้องมี 13 หลัก');
+      setErrorMsg(rawId.length !== 13 ? 'เลขประจำตัวประชาชนต้องมี 13 หลัก' : 'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
       return;
     }
-    if (rawPhone.length < 9 || rawPhone.length > 10) {
+    if (!/^0\d{8,9}$/.test(rawPhone)) {
       setStep(1);
-      setErrorMsg('เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก');
+      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
       return;
     }
 
@@ -233,7 +246,6 @@ export default function UserVerification() {
 
   const isUserVerified = 
     userVerificationStatus === 'verified' ||
-    (user?.email && user.email.toLowerCase().trim() === 'songkaen2547@gmail.com') ||
     user?.user_metadata?.is_verified === true ||
     user?.user_metadata?.user_verification_status === 'verified' ||
     profile?.is_verified === true;
@@ -533,7 +545,7 @@ export default function UserVerification() {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.2 }}
+              transition={MOTION.base}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <div style={{
@@ -685,7 +697,7 @@ export default function UserVerification() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.2 }}
+              transition={MOTION.base}
             >
               {/* Title Header */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>

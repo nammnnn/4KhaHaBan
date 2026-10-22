@@ -1,124 +1,85 @@
 import React from 'react';
+import { PawWalk } from './motion/PawMotion';
 import '../pages/Login.css';
+import '../pages/AnimalProfileBento.css';
+import '../pages/ServicePages.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
  * Shimmer placeholders that strictly match current UI designs and layouts.
  */
 
-// 1. Swipe Card Deck Skeleton (Feed)
+// 1. Swipe Card Deck Skeleton (Feed) — same layout as SwipeCard (DESIGN.md §7.12)
 export const FeedCardSkeleton = () => (
-  <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-    {/* Second card background in stack */}
-    <div
-      className="swipe-card"
-      style={{
-        backgroundColor: '#E2E8F0',
-        borderRadius: '22px',
-        border: '1px solid rgba(0,0,0,0.06)',
-        transform: 'scale(0.96) translateY(0)',
-        opacity: 0.5,
-        zIndex: 1,
-        pointerEvents: 'none'
-      }}
-    />
-
-    {/* Front card skeleton */}
-    <div
-      className="swipe-card"
-      style={{
-        backgroundColor: '#1E293B',
-        borderRadius: '22px',
-        overflow: 'hidden',
-        border: '1px solid rgba(0,0,0,0.08)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
-        zIndex: 2,
-        pointerEvents: 'none'
-      }}
-    >
-      <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-        {/* Full image shimmer */}
-        <div className="skeleton" style={{ width: '100%', height: '100%', borderRadius: 0, opacity: 0.25 }} />
-
-        {/* Top-left chip */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '14px',
-            left: '14px',
-            backgroundColor: 'rgba(255,255,255,0.94)',
-            padding: '4px 10px',
-            borderRadius: '20px',
-            border: '1px solid #E5E7EB',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <div className="skeleton skeleton-circle" style={{ width: '10px', height: '10px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '56px', height: '12px' }} />
-        </div>
-
-        {/* Bottom overlay info skeleton */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '16px 16px 14px',
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 50%, transparent 100%)'
-          }}
-        >
-          {/* Name and age */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '120px', height: '22px', backgroundColor: 'rgba(255,255,255,0.25)' }} />
-            <div className="skeleton skeleton-text" style={{ width: '40px', height: '16px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-          </div>
-
-          {/* Shelter */}
-          <div className="skeleton skeleton-text" style={{ width: '160px', height: '14px', marginBottom: '10px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-
-          {/* Tags */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-            <div className="skeleton" style={{ width: '64px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-            <div className="skeleton" style={{ width: '74px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-            <div className="skeleton" style={{ width: '56px', height: '20px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
-          </div>
-
-          {/* Bio line */}
-          <div className="skeleton skeleton-text" style={{ width: '85%', height: '12px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
-        </div>
+  <div className="swipe-card feed-skel" aria-hidden="true">
+    <div className="feed-skel__photo">
+      {/* Little paws walking across while the deck loads (DESIGN.md §6.1) */}
+      <PawWalk steps={4} size={26} />
+    </div>
+    <div className="feed-skel__info">
+      <span className="feed-skel__bar feed-skel__bar--name" />
+      <span className="feed-skel__bar" style={{ width: '24%' }} />
+      <span className="feed-skel__bar" style={{ width: '46%', marginTop: '6px' }} />
+      <span className="feed-skel__bar" style={{ width: '62%' }} />
+      <div className="feed-skel__chips">
+        {[72, 96, 64].map((w) => (
+          <span key={w} className="feed-skel__bar feed-skel__bar--chip" style={{ width: `${w}px` }} />
+        ))}
       </div>
     </div>
   </div>
 );
 
+// Wide-screen detail panel beside the feed deck — same elements as FeedDetailPanel with the text hidden
+export const FeedPanelSkeleton = () => {
+  const sk = (text) => <span className="skeleton sp-sk-text">{text}</span>;
+  return (
+    <div className="feed-panel__inner" aria-hidden="true">
+      <header className="feed-panel__head">
+        <div><h2 className="feed-panel__name">{sk('ชื่อน้อง')}</h2></div>
+        <span className="feed-panel__more">{sk('ดูประวัติเต็ม')}</span>
+      </header>
+      <dl className="ap-facts feed-panel__facts">
+        {['ประเภท', 'เพศ', 'อายุ', 'ขนาด'].map((label) => (
+          <div key={label} className="ap-fact"><dt>{sk(label)}</dt><dd>{sk('ไม่ระบุ')}</dd></div>
+        ))}
+      </dl>
+      <section className="feed-panel__section">
+        <div className="ap-section__head"><h3 className="feed-panel__title">{sk('เรื่องราว')}</h3></div>
+        <p className="feed-panel__story">{sk('น้องเป็นแมวอารมณ์ดี ขี้อ้อน ชอบให้เกาคาง อยู่กับคนได้ง่าย กินง่ายอยู่ง่าย เหมาะกับครอบครัวที่อยากได้เพื่อนตัวเล็ก ๆ')}</p>
+      </section>
+      <section className="feed-panel__section">
+        <h3 className="feed-panel__title">{sk('ผู้ดูแล')}</h3>
+        <p className="feed-panel__shelter">{sk('มูลนิธิช่วยเหลือสัตว์')}</p>
+      </section>
+    </div>
+  );
+};
+
 // 1.1 Full Feed Page Skeleton (Feed Page Suspense Fallback)
 export const FeedPageSkeleton = () => (
-  <div className="feed-container" style={{ backgroundColor: '#FAF8F5', height: '100%', maxHeight: '100%', overflow: 'hidden' }}>
-    {/* Top Bar */}
+  <div className="feed-container">
     <div className="feed-header">
-      <h1 className="logo-text" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>
-        4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
+      <h1 className="logo-text">
+        4 ขา<span className="logo-text__accent">หาบ้าน</span>
       </h1>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px' }} />
-        <div className="skeleton" style={{ width: '72px', height: '36px', borderRadius: '20px' }} />
+      <div className="feed-header__actions">
+        <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
+        <div className="skeleton" style={{ width: '104px', height: '44px', borderRadius: 'var(--radius-full)' }} />
       </div>
     </div>
 
-    {/* Card Stack */}
     <div className="card-stack-container">
       <FeedCardSkeleton />
     </div>
 
-    {/* Swiper Actions */}
-    <div className="swiper-actions">
-      <div className="skeleton skeleton-circle" style={{ width: '44px', height: '44px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '58px', height: '58px' }} />
+    <div className="swiper-actions" aria-hidden="true">
+      <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px' }} />
+      <div className="skeleton skeleton-circle" style={{ width: '64px', height: '64px' }} />
     </div>
+
+    <aside className="feed-panel" aria-hidden="true"><FeedPanelSkeleton /></aside>
   </div>
 );
 
@@ -126,12 +87,20 @@ export const FeedPageSkeleton = () => (
 export const ChatListSkeleton = () => {
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const isChatRoomRoute = path.includes('/chat/');
+  // Adopter chat list has no tabs or count pill (DESIGN.md §7.21); the foundation list still does
+  const simple = !path.startsWith('/foundation');
 
   return (
     <div className="page-container match-page matches-split-view">
       {/* Left Panel: Matches List (hidden on mobile when chat room is active) */}
       <div className={`matches-list-panel ${isChatRoomRoute ? 'hidden-on-mobile' : ''}`}>
         {/* Header */}
+        {simple ? (
+          <div style={{ padding: '24px 20px 12px' }}>
+            <div className="skeleton skeleton-text" style={{ width: '72px', height: '28px' }} />
+            <div className="skeleton skeleton-text" style={{ width: '96px', height: '14px', marginTop: '20px' }} />
+          </div>
+        ) : (
         <div className="list-header" style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="skeleton skeleton-text" style={{ width: '100px', height: '24px' }} />
@@ -151,23 +120,25 @@ export const ChatListSkeleton = () => {
           </div>
         </div>
 
+        )}
+
         {/* Matches List */}
         <div className="matches-list" style={{ padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'hidden' }}>
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
-              className="match-item"
+              className={simple ? undefined : 'match-item'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 14px',
+                padding: simple ? '12px 8px' : '12px 14px',
                 borderRadius: '16px',
-                border: '1px solid #F3F4F6',
-                backgroundColor: '#FFFFFF'
+                border: simple ? 'none' : '1px solid #F3F4F6',
+                backgroundColor: simple ? 'transparent' : '#FFFFFF'
               }}
             >
-              <div className="skeleton skeleton-circle" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
+              <div className="skeleton skeleton-circle" style={{ width: simple ? '52px' : '48px', height: simple ? '52px' : '48px', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 25}px`, height: '16px' }} />
@@ -532,32 +503,50 @@ export const FoundationNeedsSkeleton = () => (
 );
 
 // 10. Animal Profile Skeleton (AnimalProfile)
-export const AnimalProfileSkeleton = () => (
-  <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 16px 100px' }}>
-    {/* Large Image Carousel Box */}
-    <div className="skeleton" style={{ width: '100%', aspectRatio: '4/3', borderRadius: '20px', marginBottom: '20px' }} />
-    {/* Name and Basic Info */}
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-      <div className="skeleton skeleton-text" style={{ width: '45%', height: '28px' }} />
-      <div className="skeleton" style={{ width: '70px', height: '26px', borderRadius: '12px' }} />
+// Mirrors AnimalProfile: photo (+ adopt button on desktop) | name, facts, story, tags, caretaker
+export const AnimalProfileSkeleton = () => {
+  const bar = (w, h = 14, extra = {}) => (
+    <div className="skeleton" style={{ width: w, height: `${h}px`, borderRadius: 'var(--radius-full)', ...extra }} />
+  );
+  const heading = (w) => bar(w, 20, { borderRadius: 'var(--radius-sm)' });
+  return (
+    <div className="ap-layout" aria-hidden="true">
+      <div className="ap-media">
+        <div className="ap-hero"><div className="skeleton ap-photo-skeleton" /></div>
+        <div className="ap-cta-inline">
+          <div className="skeleton" style={{ height: '48px', borderRadius: 'var(--radius-md)' }} />
+          {bar('70%', 12, { margin: '0 auto' })}
+        </div>
+      </div>
+      <div className="ap-sheet">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {bar('40%', 36, { borderRadius: 'var(--radius-sm)' })}
+          {bar('18%')}
+        </div>
+        <div className="skeleton" style={{ height: '76px', borderRadius: 'var(--radius-lg)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {heading('38%')}
+            {bar('120px', 40)}
+          </div>
+          {bar('100%')}
+          {bar('92%')}
+          {bar('55%')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {heading('30%')}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[120, 72, 96].map((w) => <div key={w}>{bar(`${w}px`, 32)}</div>)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {heading('24%')}
+          <div className="skeleton" style={{ height: '80px', borderRadius: 'var(--radius-lg)' }} />
+        </div>
+      </div>
     </div>
-    {/* Tag badges */}
-    <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-      <div className="skeleton" style={{ width: '80px', height: '28px', borderRadius: '14px' }} />
-      <div className="skeleton" style={{ width: '95px', height: '28px', borderRadius: '14px' }} />
-      <div className="skeleton" style={{ width: '75px', height: '28px', borderRadius: '14px' }} />
-    </div>
-    {/* Story Card */}
-    <div className="skeleton-card" style={{ marginBottom: '24px' }}>
-      <div className="skeleton skeleton-text" style={{ width: '30%', height: '18px', marginBottom: '12px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '95%', height: '14px', marginBottom: '8px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px', marginBottom: '8px' }} />
-      <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-    </div>
-    {/* Bottom Button */}
-    <div className="skeleton" style={{ width: '100%', height: '48px', borderRadius: '14px' }} />
-  </div>
-);
+  );
+};
 
 // 11. Form Page Skeleton (AnimalForm, UserVerification)
 export const FormPageSkeleton = () => (
@@ -597,176 +586,112 @@ export const FoundationPendingSkeleton = () => (
 );
 
 // 13. Donation Page Skeleton (Donation)
+// Same elements as NeedsList with hidden placeholder text, so it is exactly the same size
+export function NeedsSkeleton() {
+  const bar = (text) => <span className="skeleton sp-sk-text">{text}</span>;
+  return (
+    <>
+      <ul className="sp-needs" aria-hidden="true">
+        {['อาหารเม็ดสำหรับสุนัข', 'อาหารเปียกและนมลูกแมวอ่อน', 'แผ่นรองซับขนาดใหญ่'].map((name) => (
+          <li key={name}>
+            <span>
+              <strong>{bar(name)}</strong>
+              <small>{bar('รายละเอียดสั้น ๆ ของสิ่งที่ต้องการ')}</small>
+            </span>
+            <span className="ui-badge skeleton sp-sk-text">ต้องการด่วน</span>
+          </li>
+        ))}
+      </ul>
+      <span className="sp-more" aria-hidden="true">{bar('ดูทั้งหมด (0)')}</span>
+    </>
+  );
+}
+
+
+// Mirrors pages/Donation.jsx (DESIGN.md §7.23)
 export const DonationSkeleton = () => (
-  <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
-    {/* Top Header Card */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '20px 24px',
-      marginBottom: '20px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '14px'
-    }}>
-      <div className="skeleton" style={{ width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '240px', height: '22px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-      </div>
+  <div className="sp-page sp-page--wide" aria-hidden="true">
+    {/* Header and picker use the real elements with hidden text, so nothing below shifts */}
+    <div className="sp-head">
+      <h1 className="sp-head__title"><span className="skeleton sp-sk-text">บริจาค</span></h1>
+      <p className="sp-head__sub"><span className="skeleton sp-sk-text">ช่วยค่าอาหาร ยา และการรักษาน้องในมูลนิธิ ด้วยเงินหรือสิ่งของ</span></p>
     </div>
-
-    {/* 2-Column Donation Cards Grid */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-      {/* Card 1 Skeleton */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        padding: '20px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-          <div className="skeleton" style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="skeleton" style={{ width: '70px', height: '18px', borderRadius: '6px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '140px', height: '20px' }} />
-          </div>
-        </div>
-        <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px' }} />
-        <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '64px', borderRadius: '12px' }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '54px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ gridColumn: 'span 2', height: '44px', borderRadius: '10px' }} />
-        </div>
-        <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: '10px' }} />
-      </div>
-
-      {/* Card 2 Skeleton */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E5E7EB',
-        padding: '20px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-          <div className="skeleton" style={{ width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="skeleton" style={{ width: '80px', height: '18px', borderRadius: '6px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '150px', height: '20px' }} />
-          </div>
-        </div>
+    <div className="sp-card sp-picked">
+      <span className="sp-avatar skeleton" />
+      <span className="sp-picked__body">
+        <small><span className="skeleton sp-sk-text">บริจาคให้</span></small>
+        <strong><span className="skeleton sp-sk-text">มูลนิธิช่วยเหลือสัตว์</span></strong>
+        <span className="sp-picked__meta"><span className="skeleton sp-sk-text">ขอนแก่น</span></span>
+      </span>
+    </div>
+    <div className="sp-two">
+      {/* Money: same blocks as the real card */}
+      <div className="sp-card">
+        <div className="skeleton skeleton-text" style={{ width: '140px', height: '22px' }} />
         <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
-        <div className="skeleton" style={{ height: '42px', borderRadius: '10px' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div className="skeleton skeleton-text" style={{ width: '120px', height: '14px' }} />
-                <div className="skeleton" style={{ width: '50px', height: '16px', borderRadius: '6px' }} />
-              </div>
-              <div className="skeleton" style={{ width: '100%', height: '8px', borderRadius: '4px' }} />
-            </div>
-          ))}
+        <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
+        <div className="sp-tiers">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: '76px', borderRadius: '12px' }} />)}
+          <div className="skeleton" style={{ gridColumn: '1 / -1', height: '52px', borderRadius: '12px' }} />
         </div>
-        <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: 'auto' }} />
+        <div className="skeleton" style={{ height: '46px', borderRadius: '12px' }} />
+        <div className="sp-card__foot">
+          <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px' }} />
+          <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
+        </div>
+      </div>
+      {/* Supplies: real elements with hidden text, so it is the same height as the loaded card */}
+      <div className="sp-card sp-hide-mobile">
+        <div className="sp-card__head">
+          <h2 className="sp-card__title"><span className="skeleton sp-sk-text">ส่งของ</span></h2>
+          <span className="sp-tip__btn skeleton sp-sk-text">วิธีส่ง</span>
+        </div>
+        <p className="sp-card__hint"><span className="skeleton sp-sk-text">สั่งออนไลน์หรือส่งพัสดุถึงมูลนิธิได้โดยตรง</span></p>
+        <h3 className="sp-label"><span className="skeleton sp-sk-text">ของที่ต้องการตอนนี้</span></h3>
+        <div className="sp-needs-area"><NeedsSkeleton /></div>
+        <div className="sp-address">
+          <div className="sp-address__head">
+            <h3 className="sp-label"><span className="skeleton sp-sk-text">ที่อยู่จัดส่ง</span></h3>
+            <span className="ui-btn ui-btn--ghost ui-btn--sm" style={{ visibility: 'hidden' }}>คัดลอก</span>
+          </div>
+          <address>
+            <strong><span className="skeleton sp-sk-text">มูลนิธิช่วยเหลือสัตว์</span></strong>
+            <span className="sp-address__text"><span className="skeleton sp-sk-text">123 หมู่ 4 ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น</span></span>
+            <span className="sp-address__tel"><span className="skeleton sp-sk-text">โทร. 000-000-0000</span></span>
+          </address>
+        </div>
       </div>
     </div>
   </div>
 );
 
-// 13.1 Incident Report Page Skeleton (IncidentReport)
+// Mirrors pages/IncidentReport.jsx (DESIGN.md §7.22)
 export const IncidentReportSkeleton = () => (
-  <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px 16px 100px', width: '100%', boxSizing: 'border-box' }}>
-    {/* Top Header Card */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '20px 24px',
-      marginBottom: '16px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '14px'
-    }}>
-      <div className="skeleton" style={{ width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '220px', height: '22px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px' }} />
-      </div>
+  <div className="sp-page sp-page--wide" aria-hidden="true">
+    <div className="sp-head">
+      <div className="skeleton skeleton-text" style={{ width: '75%', maxWidth: '420px', height: '32px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '90%', maxWidth: '520px', height: '16px', marginTop: '10px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '180px', height: '14px', marginTop: '14px' }} />
     </div>
-
-    {/* Tab Switcher & Live Stats Row (Left Tabs + Right Stats) */}
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: '12px',
-      marginBottom: '20px'
-    }}>
-      <div style={{
-        display: 'flex',
-        backgroundColor: '#F3F4F6',
-        padding: '4px',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '380px',
-        gap: '4px'
-      }}>
-        <div className="skeleton" style={{ flex: 1, height: '38px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ flex: 1, height: '38px', borderRadius: '8px' }} />
+    <div className="skeleton" style={{ height: '48px', maxWidth: '400px', borderRadius: '12px' }} />
+    <div className="sp-form">
+      <div className="sp-card sp-card--tight">
+        <div className="skeleton skeleton-text" style={{ width: '120px', height: '20px' }} />
+        <div className="sp-chips">{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '12px' }} />)}</div>
+        <div className="sp-chips">{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '12px' }} />)}</div>
+        <div className="skeleton" style={{ height: '96px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ height: '70px', borderRadius: '12px' }} />
       </div>
-      <div className="skeleton" style={{ width: '210px', height: '36px', borderRadius: '12px' }} />
-    </div>
-
-    {/* Form Card Skeleton */}
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1px solid #E5E7EB',
-      padding: '24px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px'
-    }}>
-      {/* Stepper Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
-        <div className="skeleton" style={{ width: '30%', height: '32px', borderRadius: '8px' }} />
-      </div>
-      {/* Form Fields */}
-      <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+      <div className="sp-card sp-card--tight sp-hide-mobile">
+        <div className="skeleton skeleton-text" style={{ width: '100px', height: '20px' }} />
+        <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
         <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
-        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
-        <div className="skeleton" style={{ height: '60px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ height: '48px', borderRadius: '12px' }} />
       </div>
-      <div className="skeleton skeleton-text" style={{ width: '140px', height: '16px' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-        <div className="skeleton" style={{ height: '50px', borderRadius: '10px' }} />
-      </div>
-      <div className="skeleton" style={{ height: '90px', borderRadius: '10px' }} />
-      <div className="skeleton" style={{ height: '46px', borderRadius: '10px', marginTop: '10px' }} />
     </div>
   </div>
 );
+
 
 // 14. User Profile Skeleton (UserProfile)
 export const UserProfileSkeleton = () => (
@@ -849,7 +774,6 @@ export const LoginSkeleton = () => (
       <div className="login-form-card">
         {/* Mobile Topbar Skeleton */}
         <div className="login-mobile-topbar">
-          <div className="skeleton" style={{ width: '76px', height: '32px', borderRadius: '8px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="skeleton" style={{ width: '26px', height: '26px', borderRadius: '6px' }} />
             <div className="skeleton skeleton-text" style={{ width: '70px', height: '16px' }} />

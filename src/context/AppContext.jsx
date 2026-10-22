@@ -66,6 +66,8 @@ export const AppProvider = ({ children }) => {
       return newMatch;
     } catch (error) {
       console.error("Failed to submit match", error);
+      // Callers show the verification prompt instead of a generic "try again"
+      if (error?.code === 'NOT_VERIFIED') return { notVerified: true };
       return null;
     }
   }, []);

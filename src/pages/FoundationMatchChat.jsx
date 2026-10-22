@@ -232,9 +232,6 @@ function FoundationMatchChat() {
       {/* List Panel */}
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           className="list-header"
           style={{ padding: '20px 20px 0' }}
         >
@@ -488,9 +485,6 @@ function FoundationMatchChat() {
         </motion.div>
         
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           className="matches-list"
           style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}
         >

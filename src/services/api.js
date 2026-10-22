@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { compressImage } from '../lib/image';
 import { mockAnimals } from '../mockData';
 
 // In-memory caches for ultra-fast instant lookups (0ms latency on repeated accesses)
@@ -194,6 +195,8 @@ export const api = {
   },
 
   /**
+  // Placeholder list for demo / offline mode only. `demo: true` stops the donation page from
+  // building a PromptPay QR for these numbers, which were never verified with the foundations.
   getDefaultFoundations() {
     return [
       {
@@ -201,21 +204,24 @@ export const api = {
         full_name: 'มูลนิธิเพื่อสุนัขในซอย (Soi Dog Foundation)',
         phone: '076-681-029',
         address: '167/9 หมู่ 4 ต.ไม้ขาว อ.ถลาง จ.ภูเก็ต 83110',
-        promptpay_number: '076681029'
+        promptpay_number: '076681029',
+        demo: true
       },
       {
         id: 'f-voice',
         full_name: 'มูลนิธิเดอะวอยซ์ (The Voice Foundation)',
         phone: '085-110-0055',
         address: 'แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
-        promptpay_number: '0851100055'
+        promptpay_number: '0851100055',
+        demo: true
       },
       {
         id: 'f-home4animals',
         full_name: 'มูลนิธิบ้านสงเคราะห์สัตว์พิการ',
         phone: '02-584-4896',
         address: '15/1 หมู่ 1 ซอยพระมหาการุณย์ 25 ต.บ้านใหม่ อ.ปากเกร็ด จ.นนทบุรี 11120',
-        promptpay_number: '025844896'
+        promptpay_number: '025844896',
+        demo: true
       }
     ];
   },
@@ -423,7 +429,10 @@ export const api = {
     const { data, error } = await supabase.from('matches').insert(newMatch).select().single();
     if (error || !data) {
       console.error('Supabase match insert failed:', error?.message);
-      throw new Error(error?.message || 'Match insert failed');
+      const err = new Error(error?.message || 'Match insert failed');
+      // 42501 = row-level security: the database says this account isn't verified (migration 023)
+      if (error?.code === '42501') err.code = 'NOT_VERIFIED';
+      throw err;
     }
 
     // Automatically send comprehensive Adoption Application and Assessment into the chat
@@ -885,56 +894,55 @@ export const api = {
   /**
    * Submit an incident report for stray/injured animals
    */
+  // Throws on any failure so the reporter is never told "sent" when nothing was saved.
+  // A photo that fails to upload throws INCIDENT_PHOTO_FAILED, so the page can offer to retry
+  // or send without it — the report is not saved silently without its photo.
   async submitIncidentReport(reportData, imageFile = null) {
-    let imageUrl = null;
-    if (imageFile && supabase) {
-      try {
-        const fileExt = imageFile.name ? imageFile.name.split('.').pop() : 'jpg';
-        const fileName = `incident_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('chat_images')
-          .upload(fileName, imageFile);
-          
-        if (!uploadErr) {
-          const { data } = supabase.storage.from('chat_images').getPublicUrl(fileName);
-          imageUrl = data?.publicUrl || null;
-        }
-      } catch (err) {
-        console.error('Failed to upload incident image:', err);
-      }
-    }
-
     if (!supabase) throw new Error('Supabase not connected');
 
-    try {
-      const payload = {
-        user_id: reportData.userId || null,
-        animal_type: reportData.animalType || 'dog',
-        symptoms: reportData.symptoms,
-        location_text: reportData.locationText,
-        latitude: reportData.latitude || null,
-        longitude: reportData.longitude || null,
-        reporter_name: reportData.reporterName || null,
-        reporter_phone: reportData.reporterPhone || null,
-        image_url: imageUrl,
-        status: 'pending'
-      };
-
-      const { data, error } = await supabase
-        .from('incident_reports')
-        .insert([payload])
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('Incident insert warning (table might be newly created):', error.message);
-        return { success: true, fallback: true };
+    let imageUrl = null;
+    if (imageFile) {
+      const file = await compressImage(imageFile);
+      const fileExt = file.type === 'image/jpeg' ? 'jpg' : (file.name?.split('.').pop() || 'jpg');
+      const fileName = `incident_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      let uploadErr = null;
+      try {
+        ({ error: uploadErr } = await supabase.storage
+          .from('chat_images')
+          .upload(fileName, file, { contentType: file.type || 'image/jpeg' }));
+      } catch (e) {
+        uploadErr = e; // network failure throws instead of returning an error
       }
-      return { success: true, data };
-    } catch (err) {
-      console.error('Failed to submit incident report to Supabase:', err);
-      return { success: true, fallback: true };
+      if (uploadErr) {
+        console.error('Failed to upload incident image:', uploadErr);
+        const err = new Error('INCIDENT_PHOTO_FAILED');
+        err.code = 'INCIDENT_PHOTO_FAILED';
+        throw err;
+      }
+      imageUrl = supabase.storage.from('chat_images').getPublicUrl(fileName).data?.publicUrl || null;
     }
+
+    const payload = {
+      user_id: reportData.userId || null,
+      animal_type: reportData.animalType || 'dog',
+      symptoms: reportData.symptoms,
+      location_text: reportData.locationText,
+      latitude: reportData.latitude || null,
+      longitude: reportData.longitude || null,
+      reporter_name: reportData.reporterName || null,
+      reporter_phone: reportData.reporterPhone || null,
+      image_url: imageUrl,
+      status: 'pending'
+    };
+
+    // No .select() after insert: reading the row back can be blocked by row-level security
+    // even when the insert worked, which would make a saved report look like a failure.
+    const { error } = await supabase.from('incident_reports').insert([payload]);
+    if (error) {
+      console.error('Failed to save incident report:', error);
+      throw error;
+    }
+    return { success: true };
   },
 
   /**

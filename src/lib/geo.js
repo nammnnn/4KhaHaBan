@@ -117,6 +117,41 @@ export function getUserCoordinates(fallbackToDefault = true, timeoutMs = 2000) {
 }
 
 /**
+ * สถานะสิทธิ์ตำแหน่งของเบราว์เซอร์: 'granted' | 'prompt' | 'denied' | 'unknown'
+ * 'unknown' = เบราว์เซอร์ไม่รองรับ Permissions API (เช่น Safari รุ่นเก่า) — ให้ลองขอพิกัดตามปกติ
+ */
+export async function getLocationPermission() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return 'denied';
+  try {
+    const status = await navigator.permissions?.query({ name: 'geolocation' });
+    return status?.state || 'unknown';
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+/**
+ * เรียก callback เมื่อผู้ใช้เปลี่ยนสิทธิ์ตำแหน่ง (เช่น เพิ่งกดอนุญาตในการตั้งค่า)
+ * @returns {() => void} ฟังก์ชันยกเลิกการติดตาม
+ */
+export function onLocationPermissionChange(callback) {
+  let status = null;
+  let cancelled = false;
+  const handler = () => callback(status.state);
+  navigator.permissions?.query({ name: 'geolocation' })
+    .then((s) => {
+      if (cancelled) return;
+      status = s;
+      status.addEventListener('change', handler);
+    })
+    .catch(() => {});
+  return () => {
+    cancelled = true;
+    status?.removeEventListener('change', handler);
+  };
+}
+
+/**
  * ขอพิกัด GPS แบบเจาะจงเมื่อผู้ใช้กดปุ่ม (User-initiated Gesture)
  * เบราว์เซอร์บนมือถือจะยอมแสดงหน้าต่างขอสิทธิ์พิกัดเมื่อถูกเรียกจากการแตะของผู้ใช้
  */
@@ -325,12 +360,14 @@ export async function searchCoordinatesFromAddress(addressQuery) {
  * @param {number|string} longitude 
  * @returns {Promise<{ formattedAddress: string, displayName: string, details: object } | null>}
  */
-export async function getAddressFromCoordinates(latitude, longitude) {
+// `place: false` leaves out the nearest building/amenity name: next to a rough pin it reads like
+// the wrong place (e.g. a shop the reporter has never seen).
+export async function getAddressFromCoordinates(latitude, longitude, { place = true } = {}) {
   const lat = parseFloat(latitude);
   const lon = parseFloat(longitude);
   if (isNaN(lat) || isNaN(lon)) return null;
 
-  const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  const key = `${lat.toFixed(5)},${lon.toFixed(5)},${place ? 1 : 0}`;
   if (reverseGeocodeCache.has(key)) {
     return reverseGeocodeCache.get(key);
   }
@@ -349,14 +386,15 @@ export async function getAddressFromCoordinates(latitude, longitude) {
 
     // ชื่อสถานที่สำคัญ / อาคาร / มหาวิทยาลัย (ถ้ามี)
     const placeName = addr.amenity || addr.building || addr.university || addr.college || addr.school || addr.hospital || addr.office;
-    if (placeName) {
+    if (placeName && place) {
       parts.push(placeName);
     }
 
     // ถนน
     if (addr.road) {
       const cleanRoad = addr.road.replace(/^(ถนน|ถ\.)\s*/, '');
-      parts.push(`ถ.${cleanRoad}`);
+      // Lanes already say what they are ("ซอยอุทัยรุ่งโรจน์") — don't turn them into "ถ.ซอย…"
+      parts.push(/^(ซอย|ซ\.|ตรอก|แยก)/.test(cleanRoad) ? cleanRoad : `ถ.${cleanRoad}`);
     }
     
     // ตำบล / แขวง
@@ -407,3 +445,84 @@ export async function getAddressFromCoordinates(latitude, longitude) {
   }
 }
 
+
+/**
+ * ชื่อพื้นที่แบบสั้นสำหรับแสดงบน UI เช่น "อ.เมืองขอนแก่น" หรือ "เขตบางรัก"
+ * @returns {Promise<string|null>}
+ */
+export async function getAreaLabel(latitude, longitude) {
+  const res = await getAddressFromCoordinates(latitude, longitude);
+  if (!res) return null;
+  const a = res.details || {};
+  const isBkk = [a.state, a.province, a.city].includes('กรุงเทพมหานคร');
+  // OpenStreetMap fills these inconsistently in Thailand (city_district is often a ตำบล),
+  // so prefer a value that is clearly an อำเภอ/เขต and never label a ตำบล/แขวง as one.
+  const candidates = [a.county, a.district, a.city_district, a.municipality].filter(Boolean);
+  const isSubdistrict = (v) => /^(ตำบล|ต\.|แขวง)/.test(v.trim());
+  const dist = candidates.find((v) => /^(อำเภอ|อ\.|เขต)/.test(v.trim()))
+    || candidates.find((v) => !isSubdistrict(v) && !/^(เทศบาล)/.test(v.trim()));
+  if (dist) {
+    const d = cleanThaiPrefix(dist, 'district');
+    if (d) return isBkk ? `เขต${d}` : `อ.${d}`;
+  }
+  const prov = a.state || a.province || a.city;
+  if (prov) return isBkk ? 'กรุงเทพฯ' : `จ.${cleanThaiPrefix(prov, 'province')}`;
+  return res.displayName?.split(',')[0]?.trim() || null;
+}
+
+// ---- พื้นที่ที่ผู้ใช้เลือกเอง (เก็บในเครื่องผู้ใช้เท่านั้น ไม่ส่งขึ้นเซิร์ฟเวอร์) ----
+const SAVED_LOCATION_KEY = '4kh_manual_location';
+
+export function loadSavedLocation() {
+  try {
+    const raw = localStorage.getItem(SAVED_LOCATION_KEY);
+    if (!raw) return null;
+    const loc = JSON.parse(raw);
+    if (typeof loc?.latitude !== 'number' || typeof loc?.longitude !== 'number') return null;
+    return { ...loc, isFallback: false };
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveLocation(loc) {
+  try {
+    localStorage.setItem(SAVED_LOCATION_KEY, JSON.stringify({
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      label: loc.label || null,
+    }));
+  } catch (e) {
+    // storage blocked (private mode) — the choice just won't persist
+  }
+}
+
+export function clearSavedLocation() {
+  try {
+    localStorage.removeItem(SAVED_LOCATION_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+
+/**
+ * ตรวจว่าเปิดจากเบราว์เซอร์ในแอป (LINE, Facebook, Instagram) ซึ่งมักขอตำแหน่งไม่ได้
+ * @returns {'LINE'|'Facebook'|'Instagram'|null}
+ */
+export function detectInAppBrowser() {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent || '';
+  if (/\bLine\//i.test(ua)) return 'LINE';
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook';
+  if (/Instagram/i.test(ua)) return 'Instagram';
+  return null;
+}
+
+/** 'ios' | 'android' | 'other' — ใช้เลือกคำแนะนำวิธีเปิดสิทธิ์ตำแหน่ง */
+export function detectPlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  return 'other';
+}

@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   PawPrint, Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield, CheckCircle2, ChevronLeft
+  X, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
 import './Login.css';
+import { useI18n, LanguageSwitch } from '../i18n';
+import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
 
 const Login = () => {
-  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, loading: authLoading } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, loading: authLoading } = useAuth();
 
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
   const [role, setRole] = useState('user'); // 'user' or 'foundation'
 
@@ -25,6 +28,31 @@ const Login = () => {
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  // Email waiting for its confirmation link (after sign-up, or a login refused for that reason)
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resendState, setResendState] = useState('idle'); // idle | sending | sent | error
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const id = setTimeout(() => setResendCooldown((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  const handleResend = async () => {
+    if (!pendingEmail || resendCooldown > 0) return;
+    setResendState('sending');
+    const { error } = await resendConfirmation(pendingEmail);
+    if (error) {
+      console.error('Resend confirmation failed:', error.message);
+      setResendState('error');
+      // Supabase rate-limits resends; let them try again a bit later
+      setResendCooldown(60);
+      return;
+    }
+    setResendState('sent');
+    setResendCooldown(60);
+  };
 
   // ถ้ากำลังโหลดข้อมูล auth อยู่ ให้แสดง Skeleton
   if (authLoading) {
@@ -58,7 +86,7 @@ const Login = () => {
       if (error) throw error;
     } catch (error) {
       console.error('Error logging in:', error.message);
-      setErrorMsg(`เกิดข้อผิดพลาด: ${error.message}`);
+      setErrorMsg(t('login.err.generic', { message: error.message }));
     } finally {
       setIsSubmitting(false);
     }
@@ -67,7 +95,7 @@ const Login = () => {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMsg('กรุณากรอกอีเมลและรหัสผ่าน');
+      setErrorMsg(t('login.err.missing'));
       return;
     }
 
@@ -78,7 +106,13 @@ const Login = () => {
       if (error) throw error;
     } catch (error) {
       console.error('Error logging in:', error.message);
-      setErrorMsg('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      if (error?.code === 'email_not_confirmed' || /not confirmed/i.test(error?.message || '')) {
+        setPendingEmail(email.trim());
+        setResendState('idle');
+        setErrorMsg(t('login.err.unconfirmed'));
+      } else {
+        setErrorMsg(t('login.err.invalid'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -90,12 +124,12 @@ const Login = () => {
     setSuccessMsg('');
 
     if (!email || !password || !fullName) {
-      setErrorMsg('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+      setErrorMsg(t('login.err.required'));
       return;
     }
 
     if (role === 'foundation' && !phone) {
-      setErrorMsg('มูลนิธิจำเป็นต้องระบุเบอร์โทรศัพท์');
+      setErrorMsg(t('login.err.foundationPhone'));
       return;
     }
 
@@ -109,9 +143,14 @@ const Login = () => {
     };
 
     try {
-      const { error } = await registerWithEmail(email, password, metadata);
+      const { data, error } = await registerWithEmail(email, password, metadata);
       if (error) throw error;
-      setSuccessMsg('กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน');
+      // With "Confirm email" off in Supabase the account is signed in right away (data.session);
+      // only ask them to check their inbox when a confirmation link was actually sent.
+      if (data?.session) return;
+      setPendingEmail(email.trim());
+      setResendState('idle');
+      setSuccessMsg(t('login.checkEmailTo', { email: email.trim() }));
       // เคลียร์ฟอร์ม
       setEmail('');
       setPassword('');
@@ -120,7 +159,7 @@ const Login = () => {
       setRegistrationNumber('');
     } catch (error) {
       console.error('Error registering:', error.message);
-      setErrorMsg(`เกิดข้อผิดพลาดในการลงทะเบียน: ${error.message}`);
+      setErrorMsg(t('login.err.signup', { message: error.message }));
     } finally {
       setIsSubmitting(false);
     }
@@ -131,90 +170,49 @@ const Login = () => {
 
       {/* Left Panel - Brand Showcase (Desktop) */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
         className="login-desktop-showcase"
       >
-        <div className="login-showcase-inner">
-          
-          {/* Logo Badge */}
-          <Link to="/" className="login-brand-badge" title="กลับหน้าแรก">
-            <div className="login-brand-icon-box">
-              <PawPrint size={16} strokeWidth={2.4} />
-            </div>
-            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111827' }}>
-              4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
-            </span>
-          </Link>
-
-          <h1 className="login-showcase-title">
-            ค้นหาเพื่อนสี่ขา <br />
-            และมอบบ้านที่อบอุ่น
-          </h1>
-
-          <p className="login-showcase-desc">
-            แพลตฟอร์มจับคู่และรับเลี้ยงสุนัข แมวจรจัด ที่เชื่อมโยงผู้รับเลี้ยงใจดีกับศูนย์พักพิงและมูลนิธิที่ผ่านการตรวจสอบทั่วไทย
-          </p>
-
-          {/* Feature Highlights */}
-          <div className="login-showcase-features">
-            {[
-              { title: 'ปัดการ์ดค้นหาที่ใช่', desc: 'เลือกลักษณะ สายพันธุ์ และขนาดที่เข้ากับไลฟ์สไตล์คุณ' },
-              { title: 'มูลนิธิผ่านการยืนยันตัวตน', desc: 'มีเอกสารนิติบุคคลและความโปร่งใสทุกเคส' },
-              { title: 'พูดคุยและนัดหมายผ่านแชท', desc: 'สอบถามข้อมูลตรงกับผู้ดูแลก่อนตัดสินใจรับเลี้ยง' }
-            ].map((f, i) => (
-              <div key={i} className="login-feature-item">
-                <div className="login-feature-icon">
-                  <CheckCircle2 size={16} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>{f.title}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '2px' }}>{f.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
+        <LoginShowcase />
       </motion.div>
 
       {/* Right Panel - Auth Form */}
       <div className="login-form-panel">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           className="login-form-card"
         >
 
           {/* Mobile Topbar */}
           <div className="login-mobile-topbar">
-            <Link to="/" className="login-mobile-back-btn">
-              <ChevronLeft size={16} />
-              <span>หน้าแรก</span>
-            </Link>
-
             <div className="login-mobile-brand">
               <div className="login-mobile-brand-icon">
                 <PawPrint size={15} strokeWidth={2.4} />
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
-                4 ขา<span style={{ color: '#D97706' }}>หาบ้าน</span>
+                {t('app.name.prefix')}<span style={{ color: '#D97706' }}>{t('app.name.accent')}</span>
               </span>
             </div>
           </div>
+
+          {/* Mobile: a few real faces instead of the desktop card stack */}
+          <div className="login-mobile-faces">
+            <div className="login-mobile-faces__row" aria-hidden="true">
+              {MOBILE_FACES.map((src) => <img key={src} src={src} alt="" />)}
+            </div>
+            <span>{t('login.waiting')}</span>
+          </div>
+
+          <LanguageSwitch className="login-lang" />
 
 
           {/* Form Header */}
           <div className="login-header-group">
             <h2 className="login-header-title">
-              {activeTab === 'login' ? 'ยินดีต้อนรับกลับมา' : 'สร้างบัญชีผู้ใช้ใหม่'}
+              {activeTab === 'login' ? t('login.welcome') : t('login.createAccount')}
             </h2>
             <p className="login-header-subtitle">
               {activeTab === 'login'
-                ? 'เข้าสู่ระบบเพื่อค้นหาและติดต่อรับเลี้ยงสัตว์'
-                : 'เริ่มต้นเป็นส่วนหนึ่งในการมอบบ้านที่อบอุ่น'}
+                ? t('login.welcomeSub')
+                : t('login.createSub')}
             </p>
           </div>
 
@@ -244,7 +242,7 @@ const Login = () => {
                   type="button"
                   onClick={() => setErrorMsg('')}
                   style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: 0 }}
-                  title="ปิด"
+                  title={t('common.close')}
                 >
                   <X size={16} />
                 </button>
@@ -275,13 +273,33 @@ const Login = () => {
                   type="button"
                   onClick={() => setSuccessMsg('')}
                   style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0 }}
-                  title="ปิด"
+                  title={t('common.close')}
                 >
                   <X size={16} />
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Didn't get the confirmation email? */}
+          {pendingEmail && (errorMsg || successMsg) && (
+            <div className="login-resend">
+              <span className="login-resend__text">
+                {resendState === 'sent' ? t('login.resend.sent', { email: pendingEmail })
+                  : resendState === 'error' ? t('login.resend.error')
+                  : t('login.resend.hint')}
+              </span>
+              <button
+                type="button"
+                className="login-resend__btn"
+                onClick={handleResend}
+                disabled={resendState === 'sending' || resendCooldown > 0}
+              >
+                {resendState === 'sending' ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Mail size={14} aria-hidden="true" />}
+                {resendCooldown > 0 ? t('login.resend.wait', { s: resendCooldown }) : t('login.resend.cta')}
+              </button>
+            </div>
+          )}
 
           {/* Google Auth Button */}
           <button
@@ -295,13 +313,13 @@ const Login = () => {
               alt="Google"
               style={{ width: '18px', height: '18px' }}
             />
-            <span>{activeTab === 'login' ? 'เข้าสู่ระบบด้วย Google' : 'สมัครสมาชิกด้วย Google'}</span>
+            <span>{activeTab === 'login' ? t('login.google') : t('login.googleSignup')}</span>
           </button>
 
           {/* Divider */}
           <div className="login-divider">
             <div className="login-divider-line" />
-            <span className="login-divider-text">หรือใช้อีเมล</span>
+            <span className="login-divider-text">{t('login.orEmail')}</span>
             <div className="login-divider-line" />
           </div>
 
@@ -309,7 +327,7 @@ const Login = () => {
           {activeTab === 'register' && (
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-                ประเภทบัญชีของคุณ
+                {t('login.accountType')}
               </label>
               <div className="login-role-selector">
                 <button
@@ -318,7 +336,7 @@ const Login = () => {
                   onClick={() => setRole('user')}
                 >
                   <User size={15} />
-                  <span>ผู้รับเลี้ยงทั่วไป</span>
+                  <span>{t('login.adopter')}</span>
                 </button>
                 <button
                   type="button"
@@ -326,7 +344,7 @@ const Login = () => {
                   onClick={() => setRole('foundation')}
                 >
                   <Shield size={15} />
-                  <span>ตัวแทนมูลนิธิ</span>
+                  <span>{t('login.foundationRep')}</span>
                 </button>
               </div>
             </div>
@@ -336,7 +354,7 @@ const Login = () => {
           {activeTab === 'login' ? (
             <form onSubmit={handleEmailLogin} className="login-field-group">
               <div className="login-input-wrapper">
-                <label className="login-input-label">อีเมล</label>
+                <label className="login-input-label">{t('login.email')}</label>
                 <input
                   type="email"
                   className="login-input-control"
@@ -349,11 +367,11 @@ const Login = () => {
               </div>
 
               <div className="login-input-wrapper">
-                <label className="login-input-label">รหัสผ่าน</label>
+                <label className="login-input-label">{t('login.password')}</label>
                 <input
                   type="password"
                   className="login-input-control"
-                  placeholder="กรอกรหัสผ่านของคุณ"
+                  placeholder={t('login.passwordPh')}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -369,22 +387,22 @@ const Login = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="spin" size={18} />
-                    <span>กำลังเข้าสู่ระบบ...</span>
+                    <span>{t('login.signingIn')}</span>
                   </>
-                ) : 'เข้าสู่ระบบ'}
+                ) : t('login.signIn')}
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="login-field-group">
               <div className="login-input-wrapper">
                 <label className="login-input-label">
-                  <span>{role === 'user' ? 'ชื่อ - นามสกุล' : 'ชื่อมูลนิธิ / ศูนย์พักพิง'}</span>
+                  <span>{role === 'user' ? t('login.fullName') : t('login.foundationName')}</span>
                   <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="login-input-control"
-                  placeholder={role === 'user' ? 'เช่น สมชาย ใจดี' : 'เช่น มูลนิธิบ้านเพื่อหมาแมว'}
+                  placeholder={role === 'user' ? t('login.fullNamePh') : t('login.foundationNamePh')}
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   required
@@ -393,7 +411,7 @@ const Login = () => {
 
               <div className="login-input-wrapper">
                 <label className="login-input-label">
-                  <span>อีเมลสำหรับใช้งาน</span>
+                  <span>{t('login.signupEmail')}</span>
                   <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
@@ -409,13 +427,13 @@ const Login = () => {
 
               <div className="login-input-wrapper">
                 <label className="login-input-label">
-                  <span>กำหนดรหัสผ่าน</span>
+                  <span>{t('login.newPassword')}</span>
                   <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <input
                   type="password"
                   className="login-input-control"
-                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  placeholder={t('login.newPasswordPh')}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -428,13 +446,13 @@ const Login = () => {
                 <>
                   <div className="login-input-wrapper">
                     <label className="login-input-label">
-                      <span>เบอร์โทรศัพท์ติดต่อ</span>
+                      <span>{t('login.phone')}</span>
                       <span style={{ color: '#DC2626' }}>*</span>
                     </label>
                     <input
                       type="tel"
                       className="login-input-control"
-                      placeholder="เช่น 081-234-5678"
+                      placeholder={t('login.phonePh')}
                       value={phone}
                       onChange={e => setPhone(formatPhoneNumber(e.target.value))}
                       required
@@ -443,13 +461,13 @@ const Login = () => {
 
                   <div className="login-input-wrapper">
                     <label className="login-input-label">
-                      <span>เลขทะเบียนมูลนิธิ / องค์กร</span>
-                      <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>(ถ้ามี)</span>
+                      <span>{t('login.regNo')}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>{t('login.optional')}</span>
                     </label>
                     <input
                       type="text"
                       className="login-input-control"
-                      placeholder="เช่น 01055xxxxxxxx"
+                      placeholder={t('login.regNoPh')}
                       value={registrationNumber}
                       onChange={e => setRegistrationNumber(e.target.value)}
                     />
@@ -472,7 +490,7 @@ const Login = () => {
                   onChange={(e) => setAgreed(e.target.checked)}
                   style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#059669' }}
                 />
-                <span>ฉันยอมรับ <strong style={{ color: '#111827' }}>ข้อกำหนดการใช้งาน</strong> และ <strong style={{ color: '#111827' }}>นโยบายความเป็นส่วนตัว</strong></span>
+                <span>{t('login.acceptPrefix')} <strong style={{ color: '#111827' }}>{t('login.terms')}</strong> {t('login.and')} <strong style={{ color: '#111827' }}>{t('login.privacy')}</strong></span>
               </label>
 
               <button
@@ -483,9 +501,9 @@ const Login = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="spin" size={18} />
-                    <span>กำลังสมัครสมาชิก...</span>
+                    <span>{t('login.signingUp')}</span>
                   </>
-                ) : 'สมัครสมาชิก'}
+                ) : t('login.signUp')}
               </button>
             </form>
           )}
@@ -494,7 +512,7 @@ const Login = () => {
           <div className="login-footer-switcher">
             {activeTab === 'login' ? (
               <p style={{ margin: 0 }}>
-                ยังไม่มีบัญชีใช่ไหม?
+                {t('login.noAccount')}
                 <button
                   type="button"
                   className="login-footer-link"
@@ -505,12 +523,12 @@ const Login = () => {
                     setSuccessMsg('');
                   }}
                 >
-                  สมัครสมาชิกที่นี่
+                  {t('login.signUpHere')}
                 </button>
               </p>
             ) : (
               <p style={{ margin: 0 }}>
-                มีบัญชีอยู่แล้ว?
+                {t('login.haveAccount')}
                 <button
                   type="button"
                   className="login-footer-link"
@@ -520,7 +538,7 @@ const Login = () => {
                     setSuccessMsg('');
                   }}
                 >
-                  เข้าสู่ระบบที่นี่
+                  {t('login.signInHere')}
                 </button>
               </p>
             )}

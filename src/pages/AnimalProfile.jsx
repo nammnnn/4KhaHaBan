@@ -1,77 +1,142 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  MapPin, 
-  Heart, 
-  CheckCircle2, 
-  Sparkles, 
-  FileText, 
-  Share2, 
-  Check, 
-  Loader, 
-  Navigation, 
-  ExternalLink, 
-  Building2, 
-  Camera, 
-  MessageCircle 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Share2,
+  Navigation,
+  Building2,
+  MessageCircle,
+  PawPrint,
+  MapPin,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { AnimalProfileSkeleton } from '../components/Skeletons';
-import { calculateDistance, formatDistance, getUserCoordinates } from '../lib/geo';
+import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermission } from '../lib/geo';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
+import { displayNames } from '../lib/animal';
+import { displayTags } from '../lib/tags';
+import { useI18n, localizeAge, localizeDistance } from '../i18n';
+import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
+import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
 
 import './AnimalProfileBento.css';
+
+function swapExtension(src) {
+  if (/\.jpeg(\?|$)/.test(src)) return src.replace(/\.jpeg(\?|$)/, '.jpg$1');
+  if (/\.jpg(\?|$)/.test(src)) return src.replace(/\.jpg(\?|$)/, '.jpeg$1');
+  return null;
+}
+
+// Photo with loading skeleton, one .jpg/.jpeg retry, then a paw placeholder (DESIGN.md §5).
+function ProfilePhoto({ src, alt, name, className }) {
+  const { t } = useI18n();
+  const [current, setCurrent] = useState(src);
+  const [state, setState] = useState(src ? 'loading' : 'error');
+  const [triedSwap, setTriedSwap] = useState(false);
+
+  useEffect(() => {
+    setCurrent(src);
+    setState(src ? 'loading' : 'error');
+    setTriedSwap(false);
+  }, [src]);
+
+  if (state === 'error') {
+    return (
+      <div className={`ap-photo-fallback ${className || ''}`}>
+        <PawPrint size={48} aria-hidden="true" />
+        {name && <span>{t('animal.noPhoto', { name })}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {state === 'loading' && <div className="skeleton ap-photo-skeleton" />}
+      <img
+        src={current}
+        alt={alt}
+        className={className}
+        style={{ opacity: state === 'loaded' ? 1 : 0 }}
+        onLoad={() => setState('loaded')}
+        onError={() => {
+          const swapped = !triedSwap && current ? swapExtension(current) : null;
+          if (swapped) {
+            setTriedSwap(true);
+            setCurrent(swapped);
+          } else {
+            setState('error');
+          }
+        }}
+      />
+    </>
+  );
+}
 
 function AnimalProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
+  const { t, lang } = useI18n();
   const { matches, addMatch } = useAppContext();
   const { user, userVerificationStatus } = useAuth();
-  
+
   const [animal, setAnimal] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isMatchSubmitting, setIsMatchSubmitting] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  // Story language follows the app language; the ไทย | English switch can still override it
+  const [storyLang, setStoryLang] = useState(lang);
+  useEffect(() => setStoryLang(lang), [lang]);
 
-  // ตรวจสอบว่าผู้ใช้เคย Match หรือส่งคำขอรับเลี้ยงสัตว์ตัวนี้ไว้แล้วหรือไม่
-  const existingMatch = matches?.find(m => m.animalId === id || m.animal_id === id);
+  const existingMatch = matches?.find((m) => m.animalId === id || m.animal_id === id);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchAnimal = async () => {
+      let data;
       try {
-        const data = await api.getAnimalById(id);
-        const coords = await getUserCoordinates(true);
-        let distFormatted = data.distance;
-        if (data.latitude && data.longitude && coords) {
-          const distKm = calculateDistance(coords.latitude, coords.longitude, data.latitude, data.longitude);
-          distFormatted = formatDistance(distKm);
-        }
-        setAnimal({ ...data, distance: distFormatted });
+        data = await api.getAnimalById(id);
+        // Show the page right away; distance is filled in only from the user's real location
+        if (!cancelled) setAnimal({ ...data, distance: '' });
       } catch (err) {
-        setError('ไม่พบข้อมูลสัตว์ที่คุณกำลังค้นหา');
+        if (!cancelled) setNotFound(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+      if (!data?.latitude || !data?.longitude) return;
+      if ((await getLocationPermission()) !== 'granted') return;
+      const coords = await getUserCoordinates(false, 5000);
+      if (cancelled || !coords) return;
+      const distance = formatDistance(calculateDistance(coords.latitude, coords.longitude, data.latitude, data.longitude));
+      setAnimal((prev) => (prev ? { ...prev, distance } : prev));
     };
-    
     fetchAnimal();
+    return () => { cancelled = true; };
   }, [id]);
 
-  const isVerifiedUser = 
+  const isVerifiedUser =
     userVerificationStatus === 'verified' ||
-    (user?.email && user.email.toLowerCase().trim() === 'songkaen2547@gmail.com') ||
     user?.user_metadata?.is_verified === true ||
     user?.user_metadata?.user_verification_status === 'verified';
 
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
+  };
+
   const handleAdopt = async () => {
+    if (existingMatch) {
+      navigate(existingMatch.id ? `/chat/${existingMatch.id}` : '/matches');
+      return;
+    }
     if (!user) {
       navigate('/login');
       return;
@@ -80,374 +145,249 @@ function AnimalProfile() {
       setShowVerificationPrompt(true);
       return;
     }
+    setIsSubmitting(true);
     try {
-      setIsMatchSubmitting(true);
-      await addMatch(id, user.id);
-      navigate('/matches');
+      const match = await addMatch(id, user.id);
+      if (match?.notVerified) {
+        setShowVerificationPrompt(true);
+      } else if (match) {
+        toast(t('ap.sent'), { tone: 'success' });
+        navigate('/matches');
+      } else {
+        toast(t('common.retryError'), { tone: 'error' });
+      }
     } catch (err) {
       console.error('Failed to submit adoption match:', err);
+      toast(t('common.retryError'), { tone: 'error' });
     } finally {
-      setIsMatchSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleShare = async () => {
+    const shareName = animal ? displayNames(animal.name, lang).primary : '';
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${animal?.name || 'น้องสัตว์'} กำลังหาบ้าน - 4 ขาหาบ้าน`,
-          text: `มารับเลี้ยง ${animal?.name || 'น้อง'} ที่กำลังหาบ้านอบอุ่นกันเถอะ`,
+          title: t('ap.shareTitle', { name: shareName }),
+          text: t('ap.shareText', { name: shareName }),
           url: window.location.href,
         });
         return;
       } catch (err) {
-        // ผู้ใช้กดยกเลิก share sheet
+        if (err?.name === 'AbortError') return; // user closed the share sheet
       }
     }
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      toast(t('ap.linkCopied'), { tone: 'success' });
     } catch (e) {
-      // Fallback
+      toast(t('ap.copyFailed'), { tone: 'error' });
     }
-  };
-
-  const formatGender = (gender) => {
-    if (!gender) return 'ไม่ระบุ';
-    const g = String(gender).toLowerCase();
-    if (g === 'female' || g === 'เพศเมีย' || g === 'เมีย') return 'เพศเมีย';
-    if (g === 'male' || g === 'เพศผู้' || g === 'ผู้') return 'เพศผู้';
-    return gender;
-  };
-
-  const formatType = (type) => {
-    if (!type) return 'สัตว์เลี้ยง';
-    const t = String(type).toLowerCase();
-    if (t === 'dog' || t === 'สุนัข' || t === 'หมา') return 'สุนัข';
-    if (t === 'cat' || t === 'แมว') return 'แมว';
-    return type;
-  };
-
-  const formatSize = (size) => {
-    if (!size) return 'ขนาดกลาง';
-    const s = String(size).toLowerCase();
-    if (s === 'small' || s === 'เล็ก') return 'ขนาดเล็ก';
-    if (s === 'large' || s === 'ใหญ่') return 'ขนาดใหญ่';
-    return 'ขนาดกลาง';
   };
 
   if (loading) {
     return (
-      <div className="page-container" style={{ padding: '16px' }}>
+      <div className="animal-profile-page">
         <AnimalProfileSkeleton />
       </div>
     );
   }
 
-  if (error || !animal) {
+  if (notFound || !animal) {
     return (
-      <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-medium, #374151)', fontSize: '1.1rem', marginBottom: '16px' }}>
-          {error || 'เกิดข้อผิดพลาดในการโหลดข้อมูล'}
-        </p>
-        <button className="btn btn-secondary" onClick={() => navigate('/')}>
-          กลับสู่หน้าหลัก
-        </button>
+      <div className="animal-profile-page ap-not-found">
+        <EmptyState
+          icon={PawPrint}
+          title={t('ap.notFoundTitle')}
+          text={t('ap.notFoundText')}
+          action={<Button variant="secondary" onClick={() => navigate('/')}>{t('ap.otherAnimals')}</Button>}
+        />
       </div>
     );
   }
 
-  const images = animal.images && Array.isArray(animal.images) && animal.images.length > 0
+  const { primary: name, secondary: alias } = displayNames(animal.name, lang);
+  const age = localizeAge(animal.age, lang);
+  const distance = localizeDistance(animal.distance, lang);
+  const images = Array.isArray(animal.images) && animal.images.length > 0
     ? animal.images
-    : [animal.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1'];
+    : animal.image_url ? [animal.image_url] : [];
+  const story = splitStory(animal.story || '');
+  const typeLabel = formatType(animal.type, t);
+  const facts = [
+    { label: t('animal.type'), value: typeLabel },
+    { label: t('animal.gender'), value: formatGender(animal.gender, t) },
+    { label: t('animal.age'), value: age || t('common.notSpecified') },
+    { label: t('animal.size'), value: formatSize(animal.size, t) },
+  ];
+  // Breed is only worth a chip when the foundation actually filled it in
+  const tags = displayTags([animal.breed, ...(animal.tags || [])], lang);
+  const hasEnglish = Boolean(story.en);
+  const storyText = storyLang === 'en' && hasEnglish ? story.en : story.th;
+  const adoptHint = existingMatch
+    ? t('ap.hintExisting')
+    : t('ap.hintNew');
+  const showPrev = () => setPhotoIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+  const showNext = () => setPhotoIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
-  const renderShelterCard = (isDesktop = false) => (
-    <div className={`animal-shelter-card ${isDesktop ? 'desktop-only' : 'mobile-only'}`}>
-      <div className="shelter-card-header">
-        <div className="shelter-info-text">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: 'var(--primary, #D97706)', fontSize: '0.82rem', fontWeight: 600 }}>
-            <Building2 size={16} /> ศูนย์พักพิงที่ดูแล
-          </div>
-          <h3>{animal.shelter || 'ศูนย์พักพิงสัตว์ 4 ขาหาบ้าน'}</h3>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-            <MapPin size={14} color="var(--primary, #D97706)" />
-            {animal.distance ? `ห่างจากคุณประมาณ ${animal.distance}` : 'อยู่ในพื้นที่บริการ'}
-          </p>
-        </div>
-      </div>
-
-      {animal.latitude && animal.longitude && (
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${animal.latitude},${animal.longitude}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-open-maps"
-        >
-          <Navigation size={15} /> นำทางด้วย Google Maps
-          <ExternalLink size={13} style={{ marginLeft: 'auto' }} />
-        </a>
-      )}
-    </div>
-  );
-
-  const renderAdoptButton = () => (
-    <button 
-      type="button" 
-      className="btn-adopt-primary" 
-      onClick={existingMatch ? () => navigate(existingMatch.id ? `/chat/${existingMatch.id}` : '/matches') : handleAdopt}
-      disabled={isMatchSubmitting}
-    >
-      {isMatchSubmitting ? (
-        <><Loader className="spin" size={20} /> กำลังส่งคำขอรับเลี้ยง...</>
-      ) : existingMatch ? (
-        <><MessageCircle size={20} /> คุณจับคู่แล้ว • เปิดห้องแชท</>
-      ) : (
-        <><Heart size={20} fill="#FFFFFF" /> สนใจรับเลี้ยง ส่งคำขอทันที</>
-      )}
-    </button>
-  );
+  const adoptLabel = existingMatch ? t('ap.openChat') : t('ap.adopt', { name });
+  const adoptIcon = existingMatch
+    ? <MessageCircle size={20} aria-hidden="true" />
+    : <Heart size={20} fill="currentColor" strokeWidth={0} aria-hidden="true" />;
 
   return (
     <div className="animal-profile-page">
-      {/* Top Navbar */}
-      <header className="animal-profile-navbar">
-        <div className="animal-profile-navbar-inner">
-          <button 
-            type="button" 
-            className="animal-nav-back-btn" 
-            onClick={() => navigate(-1)}
-            title="ย้อนกลับ"
-          >
-            <ChevronLeft size={20} />
-            <span>ย้อนกลับ</span>
-          </button>
+      <div className="ap-layout">
+        {/* Photo */}
+        <section className="ap-media" aria-label={t('ap.photosOf', { name })}>
+          <div className="ap-hero">
+            <ProfilePhoto
+              key={images[photoIndex] || 'none'}
+              src={images[photoIndex]}
+              alt={`${age ? t('animal.photoAlt', { name, type: typeLabel, age }) : `${name} ${typeLabel}`}, ${t('ap.photoN', { n: photoIndex + 1 })}`}
+              name={name}
+              className="ap-hero__img"
+            />
 
-          <div className="animal-nav-actions">
-            <button 
-              type="button" 
-              className="animal-nav-icon-btn"
-              onClick={handleShare}
-              title="แชร์โปรไฟล์นี้"
-            >
-              {copied ? <Check size={18} color="var(--success, #059669)" /> : <Share2 size={18} />}
-            </button>
-          </div>
-        </div>
-        {copied && (
-          <div className="share-toast">
-            <Check size={14} /> คัดลอกลิงก์โปรไฟล์เรียบร้อยแล้ว
-          </div>
-        )}
-      </header>
-
-      {/* Main Container */}
-      <main className="animal-profile-main">
-        <div className="animal-profile-grid">
-          
-          {/* Left Column: Visual Gallery & Shelter Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="animal-profile-col-media"
-          >
-            <div className="animal-gallery-showcase">
-              <img 
-                src={images[activeImageIndex]} 
-                alt={animal.name} 
-                className="animal-gallery-main-img" 
-                onError={(e) => {
-                  const currentSrc = e.currentTarget.src || '';
-                  if (currentSrc.endsWith('.jpeg')) {
-                    e.currentTarget.src = currentSrc.replace(/\.jpeg$/, '.jpg');
-                    return;
-                  }
-                  if (currentSrc.endsWith('.jpg')) {
-                    e.currentTarget.src = currentSrc.replace(/\.jpg$/, '.jpeg');
-                    return;
-                  }
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = animal?.type === 'cat'
-                    ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800'
-                    : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800';
-                }}
-              />
-
-              {/* Status Badge */}
-              <div className="animal-status-badge">
-                <span className="status-dot"></span>
-                กำลังหาบ้าน
-              </div>
-
-              {/* Image Carousel Navigation */}
-              {images.length > 1 && (
-                <>
-                  <button 
-                    type="button" 
-                    className="gallery-nav-arrow left"
-                    onClick={() => setActiveImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))}
-                    aria-label="รูปก่อนหน้า"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button 
-                    type="button" 
-                    className="gallery-nav-arrow right"
-                    onClick={() => setActiveImageIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))}
-                    aria-label="รูปถัดไป"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                  <div className="gallery-counter-badge">
-                    <Camera size={13} /> {activeImageIndex + 1} / {images.length}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Thumbnails Row */}
             {images.length > 1 && (
-              <div className="animal-thumbnails-row">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`animal-thumbnail-btn ${activeImageIndex === idx ? 'active' : ''}`}
-                    onClick={() => setActiveImageIndex(idx)}
-                    title={`ดูรูปที่ ${idx + 1}`}
-                  >
-                    <img src={img} alt={`${animal.name} รูปที่ ${idx + 1}`} />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Shelter Card on Desktop */}
-            {renderShelterCard(true)}
-          </motion.div>
-
-          {/* Right Column: Information, Story & Adoption Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.05 }}
-            className="animal-profile-col-info"
-          >
-            {/* Header: Name, Age, Distance */}
-            <div className="animal-info-header">
-              <div className="animal-title-row">
-                <h1 className="animal-name">{animal.name}</h1>
-                <span className="animal-age-tag">• {animal.age}</span>
-              </div>
-
-              <div className="animal-location-row">
-                <MapPin size={16} color="var(--primary, #D97706)" />
-                <span className="shelter-name">{animal.shelter || 'ศูนย์พักพิงสัตว์'}</span>
-                {animal.distance && (
-                  <span className="distance-badge">{animal.distance}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Specs Grid */}
-            <div className="animal-specs-grid">
-              <div className="spec-item">
-                <span className="spec-label">เพศ</span>
-                <span className="spec-value">{formatGender(animal.gender)}</span>
-              </div>
-              <div className="spec-item">
-                <span className="spec-label">ประเภท</span>
-                <span className="spec-value">{formatType(animal.type)}</span>
-              </div>
-              <div className="spec-item">
-                <span className="spec-label">ขนาดตัว</span>
-                <span className="spec-value">{formatSize(animal.size)}</span>
-              </div>
-              <div className="spec-item">
-                <span className="spec-label">สายพันธุ์</span>
-                <span className="spec-value">{animal.breed || 'พันธุ์ทาง / ผสม'}</span>
-              </div>
-            </div>
-
-            {/* Personality & Health Tags */}
-            {animal.tags && animal.tags.length > 0 && (
-              <div className="animal-section-card">
-                <h2 className="section-title">
-                  <Sparkles size={18} color="var(--primary, #D97706)" /> ลักษณะนิสัยและสุขภาพ
-                </h2>
-                <div className="animal-tags-list">
-                  {animal.tags.map(tag => (
-                    <span key={tag} className="animal-pill-tag">
-                      <CheckCircle2 size={15} /> {tag}
-                    </span>
+              <>
+                <div className="ap-hero__progress" aria-hidden="true">
+                  {images.map((_, i) => (
+                    <span key={i} className={i === photoIndex ? 'is-active' : ''} />
                   ))}
                 </div>
-              </div>
+                <button className="ap-hero__zone ap-hero__zone--prev" onClick={showPrev} aria-label={t('ap.prevPhoto')} />
+                <button className="ap-hero__zone ap-hero__zone--next" onClick={showNext} aria-label={t('ap.nextPhoto')} />
+                <button className="ap-hero__arrow ap-hero__arrow--prev" onClick={showPrev} aria-label={t('ap.prevPhoto')}>
+                  <ChevronLeft size={22} />
+                </button>
+                <button className="ap-hero__arrow ap-hero__arrow--next" onClick={showNext} aria-label={t('ap.nextPhoto')}>
+                  <ChevronRight size={22} />
+                </button>
+              </>
             )}
 
-            {/* Story / Backstory */}
-            <div className="animal-section-card">
-              <h2 className="section-title">
-                <FileText size={18} color="var(--primary, #D97706)" /> เรื่องราวของ {animal.name}
-              </h2>
-              <div className="animal-story-content">
-                {animal.story && animal.story.includes('English:') ? (
-                  <div className="animal-story-bilingual">
-                    {(() => {
-                      const parts = animal.story.split('English:');
-                      const thText = (parts[0] || '').replace(/^ไทย:\s*/, '').trim();
-                      const enText = (parts[1] || '').trim();
-                      return (
-                        <>
-                          <div style={{ marginBottom: '14px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.76rem', fontWeight: 600, color: '#92400E', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', marginBottom: '6px' }}>
-                              ภาษาไทย
-                            </span>
-                            <p style={{ margin: '4px 0 0', whiteSpace: 'pre-line' }}>{thText}</p>
-                          </div>
-                          <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '12px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.76rem', fontWeight: 600, color: '#374151', backgroundColor: '#F3F4F6', padding: '2px 8px', borderRadius: '6px', marginBottom: '6px' }}>
-                              English
-                            </span>
-                            <p style={{ margin: '4px 0 0', whiteSpace: 'pre-line' }}>{enText}</p>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  <p>{animal.story || `ยังไม่มีข้อมูลเรื่องราวเพิ่มเติมสำหรับ ${animal.name}`}</p>
-                )}
-              </div>
+            <div className="ap-hero__bar">
+              <IconButton label={t('common.back')} onClick={goBack}>
+                <ChevronLeft size={22} />
+              </IconButton>
+              <IconButton label={t('ap.share', { name })} onClick={handleShare}>
+                <Share2 size={20} />
+              </IconButton>
             </div>
+          </div>
 
-            {/* Shelter Card on Mobile */}
-            {renderShelterCard(false)}
+          {images.length > 1 && (
+            <div className="ap-thumbs">
+              {images.map((img, i) => (
+                <button
+                  key={img}
+                  className={`ap-thumb${i === photoIndex ? ' is-active' : ''}`}
+                  onClick={() => setPhotoIndex(i)}
+                  aria-label={t('ap.viewPhotoN', { n: i + 1 })}
+                  aria-pressed={i === photoIndex}
+                >
+                  <img src={img} alt="" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
 
-            {/* Desktop Embedded CTA Box (Never overlaps or floats awkwardly!) */}
-            <div className="animal-desktop-cta-box">
-              <div className="cta-box-header">
-                <h3>สนใจรับเลี้ยง {animal.name} หรือไม่?</h3>
-                <p>
-                  {existingMatch 
-                    ? 'คุณได้จับคู่กับน้องแล้ว สามารถเปิดห้องแชทเพื่อพูดคุยและส่งแบบฟอร์มรับเลี้ยงได้ตลอดเวลา' 
-                    : 'เมื่อกดสนใจรับเลี้ยง ระบบจะส่งคำขอและเปิดห้องแชทให้คุณพูดคุยกับศูนย์พักพิงสัตว์โดยตรง'}
+          {/* Desktop: the adopt action stays under the photo while reading */}
+          <div className="ap-cta-inline">
+            <Button variant="primary" block loading={isSubmitting} onClick={handleAdopt}>
+              {!isSubmitting && adoptIcon} {isSubmitting ? t('ap.sending') : adoptLabel}
+            </Button>
+            <p className="ap-cta-inline__text">{adoptHint}</p>
+          </div>
+        </section>
+
+        {/* Details */}
+        <motion.section
+          className="ap-sheet"
+        >
+          {/* 1. Who */}
+          <header className="ap-header">
+            <h1 className="ap-name">{name}</h1>
+            {alias && <p className="ap-alias">{alias}</p>}
+          </header>
+
+          {/* 2. Basics at a glance */}
+          <dl className="ap-facts">
+            {facts.map((f) => (
+              <div key={f.label} className="ap-fact">
+                <dt>{f.label}</dt>
+                <dd>{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* 3. Story — Thai first, English on request */}
+          <section className="ap-section">
+            <div className="ap-section__head">
+              <h2 className="ap-section__title">{t('animal.storyOf', { name })}</h2>
+              {hasEnglish && (
+                <div className="ap-lang" role="group" aria-label="ภาษา / Language">
+                  <button type="button" lang="th" aria-pressed={storyLang === 'th'} onClick={() => setStoryLang('th')}>ไทย</button>
+                  <button type="button" lang="en" aria-pressed={storyLang === 'en'} onClick={() => setStoryLang('en')}>English</button>
+                </div>
+              )}
+            </div>
+            <p className="ap-story" lang={storyLang === 'en' && hasEnglish ? 'en' : 'th'}>
+              {storyText || t('animal.noStory', { name })}
+            </p>
+          </section>
+
+          {/* 4. Personality */}
+          {tags.length > 0 && (
+            <section className="ap-section">
+              <h2 className="ap-section__title">{t('animal.personality')}</h2>
+              <div className="ap-tags">
+                {tags.map((tag) => (
+                  <Chip key={tag.key} className={tag.group === 'health' ? 'ui-chip--health' : undefined}>
+                    {tag.group === 'health' && <CheckCircle2 size={14} aria-hidden="true" />}
+                    {tag.label}
+                  </Chip>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 5. Where */}
+          <section className="ap-section">
+            <h2 className="ap-section__title">{t('animal.caretaker')}</h2>
+            <div className="ap-shelter">
+              <span className="ap-shelter__icon" aria-hidden="true"><Building2 size={22} /></span>
+              <div className="ap-shelter__text">
+                <p className="ap-shelter__name">{animal.shelter || t('common.shelter')}</p>
+                <p className="ap-shelter__sub">
+                  {distance ? <><MapPin size={14} aria-hidden="true" /> {t('animal.distanceFromYou', { distance })}</> : t('animal.inServiceArea')}
                 </p>
               </div>
-              {renderAdoptButton()}
+              {animal.latitude && animal.longitude && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${animal.latitude},${animal.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ui-btn ui-btn--secondary ui-btn--sm"
+                >
+                  <Navigation size={16} aria-hidden="true" /> {t('animal.directions')}
+                </a>
+              )}
             </div>
-
-          </motion.div>
-        </div>
-      </main>
-
-      {/* Mobile Fixed Bottom Dock */}
-      <div className="animal-mobile-bottom-dock">
-        {renderAdoptButton()}
+          </section>
+        </motion.section>
       </div>
 
-      {/* Verification Prompt Modal */}
+      {/* Mobile sticky CTA (DESIGN.md §7.5) */}
+      <div className="ap-cta-dock">
+        <p className="ap-cta-dock__hint">{adoptHint}</p>
+        <Button variant="primary" block loading={isSubmitting} onClick={handleAdopt}>
+          {!isSubmitting && adoptIcon} {isSubmitting ? t('ap.sending') : adoptLabel}
+        </Button>
+      </div>
+
       <VerificationPromptModal
         isOpen={showVerificationPrompt}
         onClose={() => setShowVerificationPrompt(false)}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
@@ -8,23 +8,58 @@ import {
   Heart, Settings, MessageCircle, Shield,
   Award, Sparkles, Mail, Camera, PawPrint, ClipboardList, Users, FileWarning,
   Building2, PiggyBank, ShieldCheck, MessageSquare, Briefcase, X, Loader, CheckCircle, Phone, MapPin, Search, ExternalLink,
-  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye
+  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye, Languages, HelpCircle, Lock, Trash2
 } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
+import { useAppContext } from '../context/AppContext';
+import { api } from '../services/api';
+import { loadSavedLocation } from '../lib/geo';
+import { Badge, Button, Dialog, Field, useToast } from '../components/ui';
+import { ProfileSection, InfoRow, AdoptionRequests, FaqList } from '../components/profile/ProfileSections';
+import { useI18n, LanguageSwitch } from '../i18n';
+import '../components/profile/ProfileSections.css';
+import { MOTION } from '../lib/motion';
+
+// Turn on once Supabase can email users (custom SMTP in Authentication → Emails, and "Confirm email" on):
+// set VITE_EMAIL_CONFIRMATION=true in Vercel. Until then email accounts aren't really confirmed
+// (Supabase auto-confirms them) and change-email links can't be delivered, so both are hidden.
+const EMAIL_CHANGE_ENABLED = import.meta.env.VITE_EMAIL_CONFIRMATION === 'true';
+
+// Small Google "G" so "Linked to Google" reads at a glance
+function GoogleMark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+    </svg>
+  );
+}
 
 export default function UserProfile() {
-  const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile } = useAuth();
+  const { user, profile, role, foundationStatus, userVerificationStatus, logout, updateProfile, changeEmail } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const { t } = useI18n();
+  const { matches } = useAppContext();
   const [searchParams] = useSearchParams();
+  const [searchPrefs, setSearchPrefs] = useState(null);
   const [imgError, setImgError] = useState(false);
   
   // Settings Modal states
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [nameError, setNameError] = useState('');
+  // Change email (email/password accounts only)
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newEmailError, setNewEmailError] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
 
   // Foundation Location Modal states
@@ -104,12 +139,48 @@ export default function UserProfile() {
     }
   };
 
-  useEffect(() => {
-    if (profile) {
-      setEditFullName(profile.full_name || user?.user_metadata?.full_name || '');
-      setEditPhone(profile.phone ? formatPhoneNumber(profile.phone) : '');
+
+  // Help + privacy sheets, and the two-step account deletion
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const openDelete = () => {
+    setDeleteConfirmText('');
+    setDeleteError('');
+    setIsPrivacyOpen(false);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!supabase || !user || deleteConfirmText.trim() !== t('pf.delete.word')) return;
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      // Best effort: remove uploaded profile photos first (the account rows go with the RPC)
+      try {
+        const { data: files } = await supabase.storage.from('chat_images').list('', { search: `avatar_${user.id}_` });
+        const names = (files || []).map((f) => f.name).filter((n) => n.startsWith(`avatar_${user.id}_`));
+        if (names.length) await supabase.storage.from('chat_images').remove(names);
+      } catch { /* not critical */ }
+
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+      try {
+        localStorage.removeItem(`user_verification_status_${user.id}`);
+      } catch { /* ignore */ }
+      await logout().catch(() => {});
+      toast(t('pf.delete.done'), { tone: 'success' });
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Delete account failed:', err);
+      setDeleteError(err?.message?.includes('admin_cannot_self_delete') ? t('pf.delete.adminError') : t('pf.delete.error'));
+      setIsDeleting(false);
     }
-  }, [profile, user]);
+  };
 
   const handleLogout = async () => {
     try {
@@ -125,12 +196,12 @@ export default function UserProfile() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('กรุณาเลือกไฟล์รูปภาพ');
+      toast(t('pf.photo.notImage'), { tone: 'error' });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+      toast(t('pf.photo.tooBig'), { tone: 'error' });
       return;
     }
 
@@ -155,7 +226,7 @@ export default function UserProfile() {
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert('ไม่สามารถอัปโหลดรูปโปรไฟล์ได้ กรุณาลองใหม่อีกครั้ง');
+      toast(t('pf.photo.failed'), { tone: 'error' });
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -163,31 +234,37 @@ export default function UserProfile() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    if (!editFullName.trim()) {
-      setSaveErrorMsg('กรุณากรอกชื่อ-นามสกุล');
+    // Both are required: foundations call adopters on this number
+    const phoneDigits = editPhone.replace(/\D/g, '');
+    const nameErr = editFullName.trim() ? '' : t('pf.edit.nameRequired');
+    const phoneErr = !phoneDigits
+      ? t('pf.edit.phoneRequired')
+      : !/^0\d{8,9}$/.test(phoneDigits) ? t('pf.edit.phoneInvalid') : '';
+    setNameError(nameErr);
+    setPhoneError(phoneErr);
+    if (nameErr || phoneErr) {
+      document.getElementById(nameErr ? 'pf-name' : 'pf-phone')?.focus();
       return;
     }
 
     setIsSavingProfile(true);
     setSaveErrorMsg('');
-    setSaveSuccessMsg('');
+    setPhoneError('');
 
     try {
       const result = await updateProfile({
         full_name: editFullName.trim(),
-        phone: editPhone.trim()
+        phone: formatPhoneNumber(phoneDigits)
       });
 
       if (result.error) throw result.error;
 
-      setSaveSuccessMsg('บันทึกข้อมูลเรียบร้อยแล้ว');
-      setTimeout(() => {
-        setIsSettingsOpen(false);
-        setSaveSuccessMsg('');
-      }, 1200);
+      setIsEditingInfo(false);
+      toast(t('pf.edit.saved'), { tone: 'success' });
     } catch (err) {
       console.error('Error updating settings:', err);
-      setSaveErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      if (err?.code === '23514') setPhoneError(t('pf.edit.phoneInvalid'));
+      else setSaveErrorMsg(t('pf.edit.saveFailed'));
     } finally {
       setIsSavingProfile(false);
     }
@@ -252,7 +329,7 @@ export default function UserProfile() {
       fetchFoundationLocation();
       setIsLocationModalOpen(true);
     } else if (modalParam === 'settings') {
-      setIsSettingsOpen(true);
+      settingsOpen();
     }
   }, [role, user, searchParams]);
 
@@ -520,9 +597,9 @@ export default function UserProfile() {
   };
 
   const getRoleDisplayName = (r) => {
-    if (r === 'super_admin') return 'ผู้ดูแลระบบ';
-    if (r === 'foundation') return 'มูลนิธิ/ศูนย์พักพิง';
-    return 'ผู้ใช้งานทั่วไป';
+    if (r === 'super_admin') return t('pf.role.admin');
+    if (r === 'foundation') return t('pf.role.foundation');
+    return t('pf.role.user');
   };
 
   const getRoleBadgeClasses = (r) => {
@@ -535,7 +612,6 @@ export default function UserProfile() {
 
   const isVerified = 
     userVerificationStatus === 'verified' ||
-    (user?.email && user.email.toLowerCase().trim() === 'songkaen2547@gmail.com') ||
     user?.user_metadata?.is_verified === true ||
     user?.user_metadata?.user_verification_status === 'verified' ||
     profile?.is_verified === true;
@@ -544,11 +620,7 @@ export default function UserProfile() {
     {
       key: 'settings', label: 'การตั้งค่าบัญชี', desc: '',
       icon: <Settings size={24} />, show: true, 
-      onClick: () => {
-        setSaveErrorMsg('');
-        setSaveSuccessMsg('');
-        setIsSettingsOpen(true);
-      },
+      onClick: () => settingsOpen(),
     },
     {
       key: 'foundation-location', label: 'ข้อมูลศูนย์พักพิง, ที่อยู่จัดส่ง และพร้อมเพย์', desc: 'แก้ไขที่อยู่จัดส่งพัสดุ, เบอร์ติดต่อ, เบอร์พร้อมเพย์ และพิกัด GPS',
@@ -596,269 +668,404 @@ export default function UserProfile() {
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ผู้ใช้งาน';
   const displayEmail = user?.email || 'user@example.com';
 
-  return (
-    <div className="page-container" style={{ padding: '24px 16px 100px', backgroundColor: 'var(--background)', minHeight: '100dvh' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+  // Search preferences shown in the "การค้นหา" section (adopters only)
+  useEffect(() => {
+    if (role !== 'user' || !user?.id) return;
+    api.getUserPreferences(user.id).then(setSearchPrefs).catch(() => {});
+  }, [role, user?.id]);
 
-        {/* Hidden File Input for Avatar */}
-        <input 
-          type="file" 
-          ref={avatarInputRef} 
-          accept="image/*" 
-          style={{ display: 'none' }} 
-          onChange={handleAvatarSelect} 
+  const savedArea = loadSavedLocation();
+  // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
+  const prefsSummary = (() => {
+    if (!searchPrefs) return '…';
+    const picked = [
+      { dog: t('animal.dog'), cat: t('animal.cat') }[searchPrefs.animalType],
+      { male: t('animal.male'), female: t('animal.female') }[searchPrefs.gender],
+    ].filter(Boolean);
+    const distance = searchPrefs.maxDistance >= 300
+      ? t('pf.filters.anyDistance')
+      : t('filters.km', { n: searchPrefs.maxDistance });
+    // Only mention what the user narrowed down, e.g. "แมว · 50 กม." or "ทั้งหมด · 50 กม."
+    const living = searchPrefs.living?.length ? [t('pf.filters.livingCount', { n: searchPrefs.living.length })] : [];
+    return [...(picked.length ? picked : [t('pf.filters.all')]), distance, ...living].join(' · ');
+  })();
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+  const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));
+  // Dashes appear as you type (081-234-5678) while the cursor stays next to the digit you just typed.
+  // Backspace / Delete on a dash removes the digit beside it instead of getting stuck.
+  const handlePhoneChange = (e) => {
+    const el = e.target;
+    const raw = el.value;
+    const caret = el.selectionStart ?? raw.length;
+    const inputType = e.nativeEvent?.inputType || '';
+    let digits = raw.replace(/\D/g, '');
+    let before = raw.slice(0, caret).replace(/\D/g, '').length;
+    if (digits === editPhone.replace(/\D/g, '') && raw.length < editPhone.length) {
+      if (inputType === 'deleteContentBackward' && before > 0) {
+        digits = digits.slice(0, before - 1) + digits.slice(before);
+        before -= 1;
+      } else if (inputType === 'deleteContentForward') {
+        digits = digits.slice(0, before) + digits.slice(before + 1);
+      }
+    }
+    // Already 10 digits: an extra key press is ignored instead of pushing the last digit out
+    if (digits.length > 10 && inputType.startsWith('insert') && editPhone.replace(/\D/g, '').length >= 10) {
+      const keepAt = Math.max(0, caret - (raw.length - editPhone.length));
+      requestAnimationFrame(() => { try { el.setSelectionRange(keepAt, keepAt); } catch { /* input gone */ } });
+      setEditPhone(editPhone);
+      return;
+    }
+    digits = digits.slice(0, 10);
+    before = Math.min(before, digits.length);
+    const formatted = formatPhoneNumber(digits);
+    setEditPhone(formatted);
+    setPhoneError('');
+    requestAnimationFrame(() => {
+      let pos = 0;
+      let seen = 0;
+      while (pos < formatted.length && seen < before) {
+        if (/\d/.test(formatted[pos])) seen += 1;
+        pos += 1;
+      }
+      try { el.setSelectionRange(pos, pos); } catch { /* input gone */ }
+    });
+  };
+
+  // How this account signs in decides whether the email can be changed here
+  const isGoogleAccount = (user?.app_metadata?.providers || [user?.app_metadata?.provider]).includes('google');
+  const pendingEmail = user?.new_email || '';
+
+  const handleSendEmailChange = async () => {
+    const next = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { setNewEmailError(t('pf.email.invalid')); return; }
+    if (next === (user?.email || '').toLowerCase()) { setNewEmailError(t('pf.email.same')); return; }
+    setIsSendingEmail(true);
+    setNewEmailError('');
+    const { error } = await changeEmail(next);
+    setIsSendingEmail(false);
+    if (error) {
+      console.error('Change email failed:', error.message);
+      setNewEmailError(/already|registered|exists/i.test(error.message || '') ? t('pf.email.taken') : t('pf.email.failed'));
+      return;
+    }
+    setIsChangingEmail(false);
+    setNewEmail('');
+    toast(t('pf.email.sent', { email: next }), { tone: 'success', duration: 6000 });
+  };
+
+  // Profile phone, falling back to the one given at sign-up / verification
+  const savedPhone = profile?.phone || user?.user_metadata?.phone || '';
+  const settingsOpen = () => {
+    setEditFullName(profile?.full_name || user?.user_metadata?.full_name || '');
+    setEditPhone(formatPhoneNumber(savedPhone));
+    setSaveErrorMsg('');
+    setPhoneError('');
+    setNameError('');
+    setIsChangingEmail(false);
+    setNewEmail('');
+    setNewEmailError('');
+    setIsEditingInfo(true);
+  };
+
+  return (
+    <div className="page-container" style={{ padding: 0, minHeight: '100dvh' }}>
+      <div className="pf-page">
+        <input
+          type="file"
+          ref={avatarInputRef}
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleAvatarSelect}
         />
 
-        {/* Profile Header */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ 
-            background: '#FFFFFF',
-            borderRadius: '16px', padding: '24px 32px', display: 'flex', alignItems: 'center', 
-            gap: '24px', marginBottom: '24px', border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}
-        >
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: '88px', height: '88px', borderRadius: '50%', overflow: 'hidden', border: '3px solid #E5E7EB', backgroundColor: 'var(--gray-100)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {isUploadingAvatar ? (
-                <Loader className="spin" size={32} color="var(--primary)" />
-              ) : avatarUrl && !imgError ? (
-                <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setImgError(true)} />
-              ) : (
-                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D97706&color=fff&size=128`} alt="Profile Default" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
-            </div>
-            <button 
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-              title="เปลี่ยนรูปโปรไฟล์"
-              style={{ position: 'absolute', bottom: '2px', right: '2px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '50%', padding: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}
-            >
-              <Edit3 size={15} />
-            </button>
-          </div>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-dark)', margin: '0 0 4px 0' }}>{displayName}</h2>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--text-medium)' }}>{displayEmail}</p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: roleBadge.bg, color: roleBadge.text, fontSize: '0.85rem', fontWeight: 600, border: `1px solid ${roleBadge.border}` }}>
-                {role === 'foundation' ? <Building2 size={14} /> : <User size={14} />}
-                {getRoleDisplayName(role)}
-              </span>
-              {role === 'user' && (
-                isVerified ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #A7F3D0' }}>
-                    <ShieldCheck size={14} /> ยืนยันตัวตนแล้ว
-                  </span>
+        {/* Left column on desktop (identity card); on mobile its pieces flow into the page in order */}
+        <aside className="pf-side">
+          <motion.header className="pf-header">
+            <div className="pf-avatar">
+              <div className="pf-avatar__img">
+                {isUploadingAvatar ? (
+                  <Loader className="spin" size={28} />
+                ) : avatarUrl && !imgError ? (
+                  <img src={avatarUrl} alt="" onError={() => setImgError(true)} />
                 ) : (
-                  <button 
-                    onClick={() => navigate('/verify-user')} 
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '6px', backgroundColor: '#FEF3C7', color: '#D97706', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #FCD34D', cursor: 'pointer' }}
-                  >
-                    <Shield size={14} /> ยังไม่ยืนยันตัวตน
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-        </motion.section>
-
-
-        {/* Menu List */}
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          style={{ 
-            background: '#FFFFFF',
-            borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)', marginBottom: '20px'
-          }}
-        >
-          {menuItems.map((item, index) => (
-            <div
-              key={item.key}
-              onClick={item.onClick}
-              style={{
-                display: 'flex', alignItems: 'center', padding: '16px 20px',
-                borderBottom: index < menuItems.length - 1 ? '1px solid #F3F4F6' : 'none',
-                cursor: 'pointer', transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <div style={{ color: 'var(--text-medium)', marginRight: '14px', display: 'flex', alignItems: 'center' }}>
-                {item.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.95rem', color: 'var(--text-dark)', fontWeight: 500 }}>
-                  {item.label}
-                </div>
-                {item.desc && !item.badge && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-medium)', marginTop: '2px' }}>
-                    {item.desc}
-                  </div>
+                  initial
                 )}
               </div>
-              {item.badge && (
-                <span style={{ 
-                  padding: '3px 10px', 
-                  backgroundColor: item.badgeColor || '#F3F4F6', 
-                  color: item.badgeTextColor || 'var(--text-medium)', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 600, 
-                  borderRadius: '6px', 
-                  marginRight: '10px' 
-                }}>
-                  {item.desc}
-                </span>
-              )}
-              <ChevronRight size={18} color="var(--gray-300)" />
+              <button
+                type="button"
+                className="pf-avatar__edit"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                aria-label={t('pf.changePhoto')}
+                title={t('pf.changePhoto')}
+              >
+                <Camera size={18} />
+              </button>
             </div>
-          ))}
-        </motion.section>
+            <div className="pf-header__text">
+              <h1 className="pf-header__name">{displayName}</h1>
+              <div className="pf-header__badges">
+                {role === 'user' ? (
+                  isVerified
+                    ? <Badge tone="success" icon={ShieldCheck}>{t('pf.verified')}</Badge>
+                    : <Badge tone="pending" icon={Shield}>{t('pf.notVerified')}</Badge>
+                ) : (
+                  <Badge tone="neutral" icon={role === 'foundation' ? Building2 : User}>{getRoleDisplayName(role)}</Badge>
+                )}
+              </div>
+            </div>
+          </motion.header>
 
-        {/* Logout Button */}
-        <motion.button
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.1 }}
-          onClick={handleLogout}
-          style={{
-            width: '100%', height: '44px', backgroundColor: '#FFFFFF', color: '#DC2626',
-            borderRadius: '8px', border: '1px solid #FCA5A5', boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-            fontSize: '0.95rem', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-            cursor: 'pointer', transition: 'all 0.15s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEF2F2'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
-        >
-          <LogOut size={16} />
-          ออกจากระบบ
-        </motion.button>
+          <div className="pf-info">
+            <ProfileSection
+              title={t('pf.myInfo')}
+              action={!isEditingInfo && <button type="button" className="pf-section__action" onClick={settingsOpen}>{t('common.edit')}</button>}
+            >
+              {isEditingInfo ? (
+                // Edit in place: no pop-up, the fields sit where the values were
+                <form onSubmit={handleSaveSettings} className="pf-inline-form" noValidate>
+                  {saveErrorMsg && (
+                    <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
+                      <AlertCircle size={18} aria-hidden="true" /> {saveErrorMsg}
+                    </p>
+                  )}
+                  <Field
+                    id="pf-name"
+                    label={t('pf.edit.fullName')}
+                    value={editFullName}
+                    onChange={(e) => { setEditFullName(e.target.value); setNameError(''); }}
+                    placeholder={t('pf.edit.fullNamePh')}
+                    autoComplete="name"
+                    required
+                    aria-required="true"
+                    error={nameError}
+                    autoFocus
+                    enterKeyHint="next"
+                  />
+                  <Field
+                    id="pf-phone"
+                    label={t('pf.edit.phone')}
+                    type="tel"
+                    inputMode="tel"
+                    value={editPhone}
+                    onChange={handlePhoneChange}
+                    placeholder={t('pf.edit.phonePh')}
+                    autoComplete="tel"
+                    enterKeyHint="done"
+                    required
+                    aria-required="true"
+                    error={phoneError}
+                  />
+                  <div className="pf-inline-form__static">
+                    <span className="pf-row__label">{t('pf.email')}</span>
+                    <span className="pf-inline-form__email">{displayEmail}</span>
+                    {isGoogleAccount ? (
+                      <span className="pf-inline-form__note">{t('pf.email.googleLocked')}</span>
+                    ) : !EMAIL_CHANGE_ENABLED ? (
+                      <span className="pf-inline-form__note">
+                        {t('pf.email.askTeam')} <Link to="/support-chat" className="pf-inline-form__inline-link">{t('pf.chatTeam')}</Link>
+                      </span>
+                    ) : !isChangingEmail ? (
+                      <button type="button" className="pf-inline-form__link" onClick={() => { setIsChangingEmail(true); setNewEmailError(''); }}>
+                        {t('pf.email.change')}
+                      </button>
+                    ) : null}
+                  </div>
+                  {!isGoogleAccount && EMAIL_CHANGE_ENABLED && isChangingEmail && (
+                    <div className="pf-email-change">
+                      <Field
+                        id="pf-new-email"
+                        label={t('pf.email.new')}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder={t('pf.email.newPh')}
+                        value={newEmail}
+                        onChange={(e) => { setNewEmail(e.target.value); setNewEmailError(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendEmailChange(); } }}
+                        error={newEmailError}
+                        autoFocus
+                      />
+                      <p className="pf-inline-form__note">{t('pf.email.howItWorks')}</p>
+                      <div className="pf-email-change__actions">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setIsChangingEmail(false); setNewEmail(''); setNewEmailError(''); }} disabled={isSendingEmail}>{t('pf.email.keep')}</Button>
+                        <Button type="button" variant="secondary" size="sm" loading={isSendingEmail} onClick={handleSendEmailChange}>{t('pf.email.send')}</Button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="pf-inline-form__actions">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditingInfo(false)} disabled={isSavingProfile}>{t('common.cancel')}</Button>
+                    <Button type="submit" variant="primary" size="sm" loading={isSavingProfile}>{t('common.save')}</Button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <InfoRow label={t('pf.phone')} value={savedPhone ? formatPhoneNumber(savedPhone) : t('pf.notSet')} tone={savedPhone ? undefined : 'muted'} />
+                  <div className="pf-row pf-row--email">
+                    <span className="pf-row__label">{t('pf.email')}</span>
+                    <span className="pf-row__value">
+                      <span className="pf-email__addr">{displayEmail}</span>
+                      {pendingEmail ? (
+                        <span className="pf-email__meta pf-email__meta--pending">{t('pf.email.pending', { email: pendingEmail })}</span>
+                      ) : isGoogleAccount ? (
+                        <span className="pf-email__meta"><GoogleMark /> {t('pf.email.google')}</span>
+                      ) : EMAIL_CHANGE_ENABLED && user?.email_confirmed_at ? (
+                        <span className="pf-email__meta pf-email__meta--ok"><CheckCircle size={14} aria-hidden="true" /> {t('pf.email.verified')}</span>
+                      ) : null}
+                    </span>
+                  </div>
+                </>
+              )}
+            </ProfileSection>
+          </div>
+        </aside>
 
+        <div className="pf-main">
+          {/* Not verified yet: the one thing blocking adoption requests */}
+          {role === 'user' && !isVerified && (
+            <div className="pf-verify">
+              <p className="pf-verify__title">{t('pf.verifyCard.title')}</p>
+              <p className="pf-verify__text">{t('pf.verifyCard.text')}</p>
+              <Button variant="primary" onClick={() => navigate('/verify-user')}>
+                <ShieldCheck size={20} aria-hidden="true" /> {t('pf.verifyCard.cta')}
+              </Button>
+            </div>
+          )}
+
+          {role === 'user' && (
+            <div className="pf-requests">
+              <ProfileSection
+                title={t('pf.requests')}
+                action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
+              >
+                <AdoptionRequests matches={matches} />
+              </ProfileSection>
+            </div>
+          )}
+
+          {role === 'foundation' && foundationMenu.length > 0 && (
+            <div className="pf-requests">
+              <ProfileSection title={t('pf.myFoundation')}>
+                {foundationMenu.map((item) => (
+                  <InfoRow
+                    key={item.key}
+                    label={item.label}
+                    value={item.badge ? item.desc : ''}
+                    tone={item.badge && foundationStatus === 'approved' ? 'success' : item.badge ? 'muted' : undefined}
+                    onClick={item.onClick}
+                  />
+                ))}
+              </ProfileSection>
+            </div>
+          )}
+
+          {role === 'user' && (
+            <div className="pf-more">
+              <ProfileSection title={t('pf.search')}>
+                <InfoRow
+                  icon={MapPin}
+                  label={t('pf.area')}
+                  value={savedArea?.label ? t('pf.areaNear', { area: savedArea.label }) : t('pf.areaGps')}
+                  to="/?sheet=location"
+                />
+                <InfoRow icon={Search} label={t('pf.filters')} value={prefsSummary} to="/?sheet=filters" />
+              </ProfileSection>
+            </div>
+          )}
+
+          {/* Settings + help in one group (DESIGN.md §8.1); log out sits last, quietly */}
+          <div className="pf-more">
+            <ProfileSection title={role === 'super_admin' ? t('pf.settings') : t('pf.settingsHelp')}>
+              <div className="pf-row">
+                <Languages size={20} className="pf-row__icon" aria-hidden="true" />
+                <span className="pf-row__label">{t('pf.language')}</span>
+                <span className="pf-row__value"><LanguageSwitch /></span>
+              </div>
+              {role !== 'super_admin' && (
+                <>
+                  <InfoRow icon={HelpCircle} label={t('pf.faq')} value="" onClick={() => setIsFaqOpen(true)} />
+                  <InfoRow icon={MessageSquare} label={t('pf.chatTeam')} value="" to="/support-chat" />
+                </>
+              )}
+              <InfoRow icon={Lock} label={t('pf.privacy')} value="" onClick={() => setIsPrivacyOpen(true)} />
+              <button type="button" className="pf-row pf-row--menu pf-row--link pf-row--danger" onClick={handleLogout}>
+                <LogOut size={20} className="pf-row__icon" aria-hidden="true" />
+                <span className="pf-row__label">{t('pf.logout')}</span>
+              </button>
+            </ProfileSection>
+          </div>
+        </div>
       </div>
 
-      {/* Account Settings Modal */}
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={() => setIsSettingsOpen(false)}
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              backgroundColor: 'rgba(0, 0, 0, 0.45)', 
-              backdropFilter: 'blur(8px)', 
-              WebkitBackdropFilter: 'blur(8px)',
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              zIndex: 1000, 
-              padding: '16px' 
-            }}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              onClick={e => e.stopPropagation()}
-              style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>ตั้งค่าบัญชีผู้ใช้</h2>
-                <button onClick={() => setIsSettingsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-medium)', padding: '4px' }}>
-                  <X size={20} />
-                </button>
-              </div>
 
-              {saveSuccessMsg && (
-                <div style={{ padding: '10px 14px', backgroundColor: '#ECFDF5', color: '#059669', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid #A7F3D0' }}>
-                  <CheckCircle size={18} /> {saveSuccessMsg}
-                </div>
-              )}
+      {/* Help: questions people ask most */}
+      <Dialog open={isFaqOpen} onClose={() => setIsFaqOpen(false)} title={t('pf.faq')} className="pf-sheet">
+        <FaqList />
+        <div className="ui-dialog__actions">
+          <Link to="/support-chat" className="ui-btn ui-btn--secondary">
+            <MessageSquare size={18} aria-hidden="true" /> {t('pf.chatTeam')}
+          </Link>
+        </div>
+      </Dialog>
 
-              {saveErrorMsg && (
-                <div style={{ padding: '10px 14px', backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid #FCA5A5' }}>
-                  {saveErrorMsg}
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>ชื่อ - นามสกุล</label>
-                  <div style={{ position: 'relative' }}>
-                    <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="text" 
-                      value={editFullName} 
-                      onChange={e => setEditFullName(e.target.value)} 
-                      placeholder="ระบุชื่อของคุณ" 
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-300)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>เบอร์โทรศัพท์</label>
-                  <div style={{ position: 'relative' }}>
-                    <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="tel" 
-                      value={editPhone} 
-                      onChange={e => setEditPhone(formatPhoneNumber(e.target.value))} 
-                      placeholder="เช่น 0812345678 หรือ 021234567" 
-                      maxLength={12}
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-300)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                    พิมพ์เฉพาะตัวเลขได้ ระบบจะจัดรูปแบบขีด (-) ให้อัตโนมัติ
-                  </span>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '6px' }}>อีเมล (ไม่สามารถเปลี่ยนแปลงได้)</label>
-                  <div style={{ position: 'relative' }}>
-                    <Mail size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-medium)' }} />
-                    <input 
-                      type="email" 
-                      value={displayEmail} 
-                      disabled 
-                      style={{ width: '100%', height: '44px', padding: '0 16px 0 42px', borderRadius: '8px', border: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)', color: 'var(--text-medium)', outline: 'none', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setIsSettingsOpen(false)} 
-                    style={{ flex: 1, height: '44px', borderRadius: '8px', border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    ยกเลิก
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={isSavingProfile} 
-                    className="btn btn-primary" 
-                    style={{ flex: 1, height: '44px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}
-                  >
-                    {isSavingProfile ? <Loader className="spin" size={20} /> : 'บันทึกข้อมูล'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
+      {/* Privacy & data: what we keep, and the way out */}
+      <Dialog open={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} title={t('pf.privacy')} className="pf-sheet">
+        <div className="pf-privacy">
+          <p>{t('pf.privacy.intro')}</p>
+          <ul>
+            <li>{t('pf.privacy.account')}</li>
+            {role === 'user' && <li>{t('pf.privacy.kyc')}</li>}
+            <li>{t('pf.privacy.activity')}</li>
+          </ul>
+          <p>{t('pf.privacy.use')}</p>
+        </div>
+        {role !== 'super_admin' && (
+          <div className="pf-danger-zone">
+            <p className="pf-danger-zone__title">{t('pf.delete.title')}</p>
+            <p className="pf-danger-zone__text">{t('pf.delete.text')}</p>
+            <Button variant="secondary" className="pf-danger-zone__btn" onClick={openDelete}>
+              <Trash2 size={18} aria-hidden="true" /> {t('pf.delete.cta')}
+            </Button>
+          </div>
         )}
-      </AnimatePresence>
+      </Dialog>
+
+      <Dialog open={isDeleteOpen} onClose={() => !isDeleting && setIsDeleteOpen(false)} title={t('pf.delete.confirmTitle')}>
+        <div className="pf-edit-form">
+        <div className="pf-privacy">
+          <p>{t('pf.delete.confirmText')}</p>
+          <ul>
+            <li>{t('pf.delete.lose1')}</li>
+            <li>{t('pf.delete.lose2')}</li>
+            <li>{t('pf.delete.lose3')}</li>
+          </ul>
+        </div>
+        {deleteError && (
+          <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
+            <AlertCircle size={18} aria-hidden="true" /> {deleteError}
+          </p>
+        )}
+        <Field
+          id="pf-delete-confirm"
+          label={t('pf.delete.typeToConfirm', { word: t('pf.delete.word') })}
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          autoComplete="off"
+          disabled={isDeleting}
+        />
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            loading={isDeleting}
+            disabled={deleteConfirmText.trim() !== t('pf.delete.word')}
+            onClick={handleDeleteAccount}
+          >
+            {t('pf.delete.confirmCta')}
+          </Button>
+        </div>
+        </div>
+      </Dialog>
 
       {/* Foundation Verification Certificate & Status Modal */}
       <AnimatePresence>
@@ -867,7 +1074,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setIsFoundationStatusModalOpen(false)}
             style={{
               position: 'fixed',
@@ -886,7 +1093,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: '#FFFFFF',
@@ -1132,7 +1339,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setViewDocModalOpen(false)}
             style={{
               position: 'fixed',
@@ -1151,7 +1358,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',
@@ -1328,7 +1535,7 @@ export default function UserProfile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={MOTION.base}
             onClick={() => setIsLocationModalOpen(false)}
             style={{
               position: 'fixed',
@@ -1347,7 +1554,7 @@ export default function UserProfile() {
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={MOTION.base}
               onClick={e => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',

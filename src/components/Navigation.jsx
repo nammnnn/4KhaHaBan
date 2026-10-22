@@ -1,10 +1,69 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Heart, MessageCircle, User, LogIn, Shield, Building2, HandHeart, PawPrint, AlertTriangle, PlusCircle } from 'lucide-react';
+import { motion, useReducedMotion, useAnimationControls } from 'framer-motion';
+import { Home, MessageCircle, LogIn, Shield, Building2, HandHeart, PawPrint, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
+import { useI18n } from '../i18n';
+
+// Desktop shows the sidebar, where the profile lives in the user card instead of a tab
+function useIsDesktop() {
+  const query = '(min-width: 768px)';
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia?.(query);
+    if (!mql) return undefined;
+    const onChange = (e) => setMatches(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return matches;
+}
+
+// One tab in the dock (mobile) / sidebar (desktop). DESIGN.md §7.4
+function NavItem({ to, active, icon: Icon, label, ariaLabel, badge = 0, children }) {
+  const reduceMotion = useReducedMotion();
+  const { t } = useI18n();
+  const press = useAnimationControls();
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && !reduceMotion) {
+      press.start({
+        scale: [1, 0.78, 1.14, 0.97, 1],
+        y: [0, 2, -3, 0, 0],
+        transition: { duration: 0.45, ease: 'easeOut' },
+      });
+    }
+    wasActive.current = active;
+  }, [active, reduceMotion, press]);
+  return (
+    <Link
+      to={to}
+      className={`nav-item${active ? ' active' : ''}`}
+      aria-label={badge > 0 ? t('nav.newItems', { label: ariaLabel || label, count: badge }) : ariaLabel || label}
+      aria-current={active ? 'page' : undefined}
+    >
+      {active && (
+        <motion.span
+          layoutId="nav-active-pill"
+          className="nav-pill"
+          transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 38 }}
+          aria-hidden="true"
+        />
+      )}
+      <span className="nav-icon">
+        {/* Paw-press: when a tab becomes active its icon squishes down and springs back (DESIGN.md §6.1) */}
+        <motion.span className="nav-icon__glyph" animate={press}>
+          {children || <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />}
+        </motion.span>
+        {badge > 0 && <span className="nav-badge" aria-hidden="true">{badge > 9 ? '9+' : badge}</span>}
+      </span>
+      <span className="nav-label">{label}</span>
+    </Link>
+  );
+}
 
 export function Navigation() {
   const location = useLocation();
@@ -196,6 +255,10 @@ export function Navigation() {
 
   const isActive = (path) => location.pathname === path;
 
+  // Hooks must run before the early return below, or React crashes when the nav hides (e.g. after logout)
+  const { t } = useI18n();
+  const isDesktop = useIsDesktop();
+
   // Hide navbar on login, onboarding
   const hiddenPaths = ['/login', '/foundation/onboarding'];
   if (hiddenPaths.some(p => location.pathname.startsWith(p))) {
@@ -204,138 +267,83 @@ export function Navigation() {
 
   const isFoundationPending = role === 'foundation' && foundationStatus !== 'approved';
 
+  const initial = (displayName || '?').trim().charAt(0).toUpperCase();
+  const avatar = (
+    <span className="nav-avatar" aria-hidden="true">
+      {avatarUrl && !imgError ? (
+        <img src={avatarUrl} alt="" onError={() => setImgError(true)} />
+      ) : (
+        initial
+      )}
+    </span>
+  );
+  const path = location.pathname;
+
   return (
-    <nav className="main-nav">
-      {/* Logo — visible only on desktop sidebar */}
-      <div className="nav-logo">
-        <PawPrint className="logo-icon text-primary" size={24} />
-        <span className="font-bold text-headline-md">4 ขา<span className="text-primary">หาบ้าน</span></span>
+    <nav className="main-nav" aria-label={t('nav.main')}>
+      {/* Logo — desktop sidebar only */}
+      <Link to={isFoundationApproved ? '/foundation' : '/'} className="nav-logo" aria-label={t('app.home')}>
+        <span className="nav-logo__mark" aria-hidden="true"><PawPrint size={20} /></span>
+        <span>{t('app.name.prefix')}<span className="nav-logo__accent">{t('app.name.accent')}</span></span>
+      </Link>
+
+      <div className="nav-items">
+        {/* Adopter / donor */}
+        {!isFoundationPending && !isFoundationApproved && role !== 'super_admin' && (
+          <>
+            <NavItem to="/" active={isActive('/')} icon={Home} label={t('nav.home')} ariaLabel={t('nav.homeAria')} />
+            <NavItem to="/matches" active={isActive('/matches') || path.startsWith('/chat')} icon={MessageCircle} label={t('nav.chat')} badge={userChatBadge} />
+            <NavItem to="/report" active={isActive('/report')} icon={AlertTriangle} label={t('nav.report')} ariaLabel={t('nav.reportAria')} />
+            <NavItem to="/donation" active={isActive('/donation')} icon={HandHeart} label={t('nav.donate')} />
+          </>
+        )}
+
+        {isFoundationPending && (
+          <NavItem to="/foundation/pending" active={isActive('/foundation/pending')} icon={Building2} label={t('nav.foundationStatus')} />
+        )}
+
+        {isFoundationApproved && (
+          <>
+            <NavItem to="/foundation" active={path === '/foundation'} icon={Home} label={t('nav.foundationHome')} ariaLabel={t('nav.foundationHomeAria')} />
+            <NavItem to="/foundation/animals" active={path.startsWith('/foundation/animals')} icon={PawPrint} label={t('nav.animals')} />
+            <NavItem
+              to="/foundation/matches"
+              active={path.startsWith('/foundation/matches') || path.startsWith('/foundation/chat')}
+              icon={MessageCircle}
+              label={t('nav.chat')}
+              badge={foundationChatBadge}
+            />
+            <NavItem to="/foundation/incidents" active={path.startsWith('/foundation/incidents')} icon={AlertTriangle} label={t('nav.report')} ariaLabel={t('nav.incidentsAria')} badge={pendingIncidents} />
+          </>
+        )}
+
+        {role === 'super_admin' && (
+          <NavItem to="/admin" active={isActive('/admin')} icon={Shield} label={t('nav.admin')} ariaLabel={t('nav.adminAria')} />
+        )}
+
+        {/* Not rendered (rather than CSS-hidden) on desktop, so the sliding pill never
+            animates out of an invisible 0x0 tab in the corner */}
+        {user && !isDesktop ? (
+          <NavItem to="/profile" active={isActive('/profile')} label={t('nav.profile')} ariaLabel={t('nav.profileAria')}>
+            {avatar}
+          </NavItem>
+        ) : user ? null : (
+          <NavItem to="/login" active={false} icon={LogIn} label={t('nav.login')} />
+        )}
       </div>
 
-      {/* Main menu for users */}
-      {!isFoundationPending && !isFoundationApproved && role !== 'super_admin' && (
-        <>
-          <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`} aria-label="หน้าหลัก หาบ้าน">
-            <Home size={24} />
-            <span>หน้าแรก</span>
-          </Link>
-          <Link
-            to="/matches"
-            className={`nav-item ${isActive('/matches') || location.pathname.startsWith('/chat') ? 'active' : ''}`}
-            aria-label="แชท"
-          >
-            <div className="relative flex justify-center">
-              <MessageCircle size={24} />
-              {userChatBadge > 0 && (
-                <span className="nav-badge absolute -top-1 -right-2 bg-[#DC2626] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {userChatBadge}
-                </span>
-              )}
-            </div>
-            <span>แชท</span>
-          </Link>
-          <Link to="/report" className={`nav-item ${isActive('/report') ? 'active' : ''}`} aria-label="แจ้งเหตุกู้ภัย">
-            <AlertTriangle size={24} />
-            <span>แจ้งเหตุ</span>
-          </Link>
-          <Link to="/donation" className={`nav-item ${isActive('/donation') ? 'active' : ''}`} aria-label="บริจาคช่วยเหลือ">
-            <HandHeart size={24} />
-            <span>บริจาค</span>
-          </Link>
-        </>
-      )}
-
-      {/* Foundation pending */}
-      {isFoundationPending && (
-        <Link to="/foundation/pending" className={`nav-item ${isActive('/foundation/pending') ? 'active' : ''}`} aria-label="สถานะมูลนิธิ">
-          <Building2 size={24} />
-          <span>สถานะมูลนิธิ</span>
-        </Link>
-      )}
-
-      {/* Foundation approved: 4 core tabs (Home, Animals, Chats, Incidents) */}
-      {isFoundationApproved && (
-        <>
-          <Link
-            to="/foundation"
-            className={`nav-item ${location.pathname === '/foundation' ? 'active' : ''}`}
-            aria-label="หน้าหลักมูลนิธิ"
-          >
-            <Home size={24} />
-            <span>หน้าหลัก</span>
-          </Link>
-          <Link
-            to="/foundation/animals"
-            className={`nav-item ${location.pathname.startsWith('/foundation/animals') ? 'active' : ''}`}
-            aria-label="สัตว์ในดูแล"
-          >
-            <PawPrint size={24} />
-            <span>สัตว์ในดูแล</span>
-          </Link>
-          <Link
-            to="/foundation/matches"
-            className={`nav-item ${location.pathname.startsWith('/foundation/matches') || location.pathname.startsWith('/foundation/chat') ? 'active' : ''}`}
-            aria-label="แชท"
-          >
-            <div className="relative flex justify-center">
-              <MessageCircle size={24} />
-              {foundationChatBadge > 0 && (
-                <span className="nav-badge absolute -top-1 -right-2 bg-[#DC2626] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {foundationChatBadge}
-                </span>
-              )}
-            </div>
-            <span>แชท</span>
-          </Link>
-          <Link
-            to="/foundation/incidents"
-            className={`nav-item ${location.pathname.startsWith('/foundation/incidents') ? 'active' : ''}`}
-            aria-label="แจ้งเหตุกู้ภัย"
-          >
-            <div className="relative flex justify-center">
-              <AlertTriangle size={24} />
-              {pendingIncidents > 0 && (
-                <span className="nav-badge absolute -top-1 -right-2 bg-[#DC2626] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {pendingIncidents}
-                </span>
-              )}
-            </div>
-            <span>แจ้งเหตุกู้ภัย</span>
-          </Link>
-        </>
-      )}
-
-      {/* Super Admin */}
-      {role === 'super_admin' && (
-        <Link to="/admin" className={`nav-item ${isActive('/admin') ? 'active' : ''}`} aria-label="ระบบจัดการผู้ใช้งาน">
-          <Shield size={24} />
-          <span>ระบบจัดการ</span>
-        </Link>
-      )}
-
-      {/* Profile / Login */}
-      {user ? (
-        <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`} aria-label="โปรไฟล์ผู้ใช้งาน">
-          {avatarUrl && !imgError ? (
-            <img
-              src={avatarUrl}
-              alt="Profile"
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D97706&color=fff`}
-              alt="Profile Default"
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-            />
-          )}
-          <span>โปรไฟล์</span>
-        </Link>
-      ) : (
-        <Link to="/login" className="nav-item" aria-label="เข้าสู่ระบบ">
-          <LogIn size={24} />
-          <span>เข้าสู่ระบบ</span>
+      {/* Desktop: signed-in user card at the bottom of the sidebar */}
+      {user && (
+        <Link
+          to="/profile"
+          className={`nav-user${isActive('/profile') ? ' active' : ''}`}
+          aria-current={isActive('/profile') ? 'page' : undefined}
+        >
+          {avatar}
+          <span className="nav-user__text">
+            <span className="nav-user__name">{displayName}</span>
+            <span className="nav-user__hint">{t('nav.viewProfile')}</span>
+          </span>
         </Link>
       )}
     </nav>

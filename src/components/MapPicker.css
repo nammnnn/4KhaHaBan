@@ -1,0 +1,50 @@
+.mp { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.mp-search { position: relative; display: flex; align-items: center; }
+.mp-search > svg:first-child { position: absolute; left: 14px; color: var(--ink-500); pointer-events: none; }
+.mp-search .ui-input { width: 100%; padding-left: 42px; box-sizing: border-box; }
+.mp-search__spin { position: absolute; right: 14px; color: var(--ink-500); }
+
+.mp-map {
+  position: relative;
+  height: min(340px, 48dvh);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-sunken);
+  isolation: isolate; /* keep Leaflet's z-indexes inside the dialog */
+}
+
+/* Pin tip sits exactly on the map centre */
+.mp-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 500;
+  transform: translate(-50%, -100%);
+  color: var(--danger);
+  filter: drop-shadow(0 3px 4px rgba(28, 25, 23, 0.35));
+  pointer-events: none;
+}
+.mp-pin svg { fill: #fff; }
+
+.mp-locate {
+  position: absolute;
+  right: 12px;
+  bottom: 28px;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-strong);
+  box-shadow: var(--elev-floating);
+  cursor: pointer;
+}
+
+.mp-note { margin: 0; font-size: var(--text-caption); line-height: 1.5; color: var(--ink-500); }
+.mp-note--warn { color: var(--danger-strong); }
+
+.mp .leaflet-control-attribution { font-size: 10px; }

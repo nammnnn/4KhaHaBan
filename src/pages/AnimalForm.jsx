@@ -7,6 +7,12 @@ import { ChevronLeft, Save, Upload, X, Loader2, Image as ImageIcon, CheckCircle2
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { useToast } from '../components/ui';
+import { TagPicker } from '../components/TagPicker';
+import { splitStoredTags, buildStoredTags } from '../lib/tags';
+
+// Card photos fill ~900px-wide screens; anything much smaller looks blurry (DESIGN.md §5)
+const MIN_SHARP_WIDTH = 800;
 
 const AnimalForm = () => {
   const { id } = useParams(); // ถ้ามี id = แก้ไข, ถ้าไม่มี = สร้างใหม่
@@ -32,13 +38,16 @@ const AnimalForm = () => {
     gender: 'unknown',
     size: 'medium',
     story: '',
-    tags: '', // string คั่นด้วยลูกน้ำ
     latitude: '',
     longitude: '',
   });
 
   // รูปภาพ
   const [images, setImages] = useState([]); // ไฟล์ใหม่ที่กำลังจะอัปโหลด
+  const [smallImages, setSmallImages] = useState({}); // preview url -> natural width (only small ones)
+  const [tagIds, setTagIds] = useState([]); // standard tag ids (src/lib/tags.js)
+  const [customTags, setCustomTags] = useState([]); // [{ th, en }]
+  const toast = useToast();
   const [previewImages, setPreviewImages] = useState([]); // URL ของรูป (ทั้งของเดิมและที่กำลัง preview)
   const [deletedImages, setDeletedImages] = useState([]); // URL ของรูปเดิมที่ถูกกดลบ
 
@@ -92,10 +101,12 @@ const AnimalForm = () => {
         gender: data.gender || 'unknown',
         size: data.size || 'medium',
         story: data.story || '',
-        tags: (data.tags || []).join(', '),
         latitude: data.latitude ? String(data.latitude) : '',
         longitude: data.longitude ? String(data.longitude) : '',
       });
+      const storedTags = splitStoredTags(data.tags || []);
+      setTagIds(storedTags.ids);
+      setCustomTags(storedTags.custom);
       
       setPreviewImages(data.images || []);
     } catch (error) {
@@ -216,11 +227,11 @@ const AnimalForm = () => {
     // กรองเฉพาะรูปภาพและจำกัดขนาด 5MB
     const validFiles = files.filter(f => {
       if (!f.type.startsWith('image/')) {
-        alert(`${f.name} ไม่ใช่ไฟล์รูปภาพ`);
+        toast(`${f.name} ไม่ใช่ไฟล์รูปภาพ เลือกไฟล์ JPG หรือ PNG`, { tone: 'error' });
         return false;
       }
       if (f.size > 5 * 1024 * 1024) {
-        alert(`${f.name} ขนาดเกิน 5MB`);
+        toast(`${f.name} ใหญ่เกิน 5MB ลองเลือกรูปที่เล็กลง`, { tone: 'error' });
         return false;
       }
       return true;
@@ -249,6 +260,11 @@ const AnimalForm = () => {
     }
 
     setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    setSmallImages((prev) => {
+      const next = { ...prev };
+      delete next[targetUrl];
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -286,10 +302,8 @@ const AnimalForm = () => {
       const existingUrls = previewImages.filter(url => url.startsWith('http'));
       const finalImages = [...existingUrls, ...uploadedUrls];
 
-      const tagsArray = formData.tags
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t !== '');
+      // Standard tag ids first, then custom tags ("ไทย" or "ไทย||English")
+      const tagsArray = buildStoredTags(tagIds, customTags);
 
       let shelterName = profile?.full_name || 'มูลนิธิช่วยเหลือสัตว์';
       if (supabase && user) {
@@ -368,9 +382,6 @@ const AnimalForm = () => {
         
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}
         >
           <button
@@ -448,9 +459,6 @@ const AnimalForm = () => {
         )}
 
         <motion.form
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.08 }}
           onSubmit={handleSubmit}
           style={{
             backgroundColor: '#FFFFFF',
@@ -467,7 +475,7 @@ const AnimalForm = () => {
               รูปภาพสัตว์เลี้ยง
             </label>
             <p style={{ fontSize: '0.8rem', color: '#6B7280', margin: '0 0 12px' }}>
-              รูปแรกจะใช้เป็นภาพหน้าปกบนการ์ดค้นหา (แนะนำขนาดสัดส่วน 4:5 หรือรูปแนวตั้ง)
+              รูปแรกจะใช้เป็นภาพหน้าปกบนการ์ดค้นหา แนะนำรูปแนวตั้ง (4:5) กว้างอย่างน้อย 800px
             </p>
             
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -482,7 +490,27 @@ const AnimalForm = () => {
                   border: '1px solid #D1D5DB',
                   backgroundColor: '#F3F4F6'
                 }}>
-                  <img src={src} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img
+                    src={src}
+                    alt={`รูปที่ ${idx + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onLoad={(e) => {
+                      const w = e.currentTarget.naturalWidth;
+                      setSmallImages((prev) => {
+                        const next = { ...prev };
+                        if (w > 0 && w < MIN_SHARP_WIDTH) next[src] = w; else delete next[src];
+                        return next;
+                      });
+                    }}
+                  />
+                  {smallImages[src] && (
+                    <span
+                      title={`รูปกว้าง ${smallImages[src]}px อาจไม่ชัดบนการ์ด`}
+                      style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.6875rem', fontWeight: 600, padding: '1px 6px', borderRadius: '9999px' }}
+                    >
+                      รูปเล็ก
+                    </span>
+                  )}
                   {idx === 0 && (
                     <span style={{
                       position: 'absolute',
@@ -543,6 +571,15 @@ const AnimalForm = () => {
                 <input type="file" multiple accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
               </label>
             </div>
+            {previewImages.some((src) => smallImages[src]) && (
+              <p role="note" style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '12px', padding: '10px 14px', borderRadius: '12px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
+                <span>
+                  รูปที่มีป้าย "รูปเล็ก" กว้างไม่ถึง {MIN_SHARP_WIDTH}px อาจดูเบลอบนการ์ด
+                  แนะนำใช้รูปที่ถ่ายจากมือถือโดยตรง (ไม่ใช่รูปที่แคปหน้าจอหรือส่งผ่านแชท ซึ่งมักถูกย่อ)
+                </span>
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -625,19 +662,13 @@ const AnimalForm = () => {
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Tags (DESIGN.md §7.19) */}
             <div>
-              <label style={labelStyle}>ลักษณะนิสัย / สุขภาพ (คั่นด้วยเครื่องหมายจุลภาค ,)</label>
-              <input
-                type="text"
-                value={formData.tags}
-                onChange={e => handleFieldChange('tags', e.target.value)}
-                style={inputStyle}
-                placeholder="เช่น ขี้อ้อน, ทำหมันแล้ว, ฉีดวัคซีนครบ, เข้ากับแมวได้"
-              />
-              <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                ข้อความนี้จะแสดงเป็นแท็กบนการ์ดค้นหา เพื่อช่วยให้ผู้รับเลี้ยงตัดสินใจได้ง่ายขึ้น
+              <label style={labelStyle}>ลักษณะนิสัยและสุขภาพ</label>
+              <span style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0 0 12px', display: 'block' }}>
+                แตะเพื่อเลือก แท็กจะแสดงบนการ์ดและหน้าประวัติน้อง ทั้งภาษาไทยและภาษาอังกฤษ
               </span>
+              <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
             </div>
 
             {/* Story */}

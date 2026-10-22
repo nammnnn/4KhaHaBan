@@ -219,9 +219,6 @@ export default function FoundationNeeds() {
         
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -277,9 +274,6 @@ export default function FoundationNeeds() {
 
         {/* Shipping Address Notice Banner */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '12px',
@@ -339,9 +333,6 @@ export default function FoundationNeeds() {
 
         {/* Quick Suggestion Presets */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.08 }}
           style={{ marginBottom: '24px' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
@@ -385,9 +376,6 @@ export default function FoundationNeeds() {
 
         {/* Category Filter Tabs */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.1 }}
           style={{
             display: 'flex',
             gap: '6px',
@@ -441,9 +429,6 @@ export default function FoundationNeeds() {
           <FoundationNeedsSkeleton />
         ) : filteredNeeds.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.15 }}
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
@@ -477,9 +462,6 @@ export default function FoundationNeeds() {
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.15 }}
             style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
           >
             {filteredNeeds.map(item => {

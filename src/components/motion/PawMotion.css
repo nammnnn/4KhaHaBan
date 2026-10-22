@@ -1,0 +1,75 @@
+/* Paw motion pieces — DESIGN.md §6.1 */
+
+/* Burst: centred on its positioned parent, never blocks taps */
+.paw-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.paw-burst__paw {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  translate: -50% -50%;
+}
+.paw-burst__paw svg { display: block; fill: currentColor; fill-opacity: 0.25; }
+
+/* Confetti: covers its positioned parent */
+.paw-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.paw-confetti__paw { position: absolute; top: 0; display: block; }
+.paw-confetti__paw svg { display: block; fill: currentColor; fill-opacity: 0.3; }
+.paw-confetti__paw--0 { color: #FCD34D; }
+.paw-confetti__paw--1 { color: #FDBA74; }
+.paw-confetti__paw--2 { color: #FFFFFF; }
+
+/* Success mark */
+.success-mark {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  color: var(--success);
+}
+.success-mark__circle {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--success-soft);
+}
+.success-mark__check { position: relative; }
+.success-mark__paw {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-strong);
+  box-shadow: var(--elev-raised);
+}
+.success-mark__paw svg { fill: currentColor; fill-opacity: 0.2; }
+
+/* Paw walk (loading) */
+.paw-walk { display: inline-flex; align-items: flex-end; gap: 6px; color: var(--ink-400); }
+.paw-walk__step { display: block; opacity: 0.12; animation: paw-step 1.4s var(--ease-standard, ease) infinite; }
+.paw-walk__step.is-left { transform: translateY(-6px) rotate(-14deg); }
+.paw-walk__step.is-right { transform: translateY(4px) rotate(14deg); }
+@keyframes paw-step {
+  0%, 100% { opacity: 0.12; }
+  20% { opacity: 0.75; }
+  55% { opacity: 0.12; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paw-walk__step { animation: none; opacity: 0.35; }
+}

@@ -1,311 +1,309 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Heart, Clock, MessageCircle, Loader, Search, XCircle, CheckCircle } from 'lucide-react';
+import { Search, MessageCircleHeart, PawPrint, Heart, ShieldCheck, MessagesSquare, ChevronDown } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
+import { Badge } from '../components/ui';
+import { useI18n } from '../i18n';
+import { displayNames } from '../lib/animal';
 import ChatRoom from './ChatRoom';
+import './MatchChat.css';
+
+// Adopter chat list — DESIGN.md §7.21
+// One list grouped by status instead of tabs, so a new request is never hidden.
+
+const SEARCH_MIN = 6; // show search only when the list is long enough to need it
+
+const groupOf = (status) => {
+  if (status === 'pending') return 'pending';
+  if (status === 'rejected') return 'rejected';
+  return 'active'; // approved, adopted, completed
+};
+
+const activityTime = (m) => new Date(m.last_message_at || m.created_at || 0).getTime();
+
+function formatWhen(ms, lang, t) {
+  if (!ms) return '';
+  const d = new Date(ms);
+  const now = new Date();
+  const locale = lang === 'en' ? 'en-GB' : 'th-TH';
+  const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (days <= 0) return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  if (days === 1) return t('chat.yesterday');
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}
+
+// Same rule as the chat badge in the navigation
+function isUnread(m, readChats) {
+  const sender = m.lastSender || m.last_sender;
+  if (sender === 'user') return false;
+  if ((readChats[m.id] || 0) >= activityTime(m)) return false;
+  const hasUnread = (m.unread || 0) > 0;
+  const actionable = ['approved', 'rejected', 'adopted'].includes(m.status) && !readChats[m.id];
+  return hasUnread || actionable;
+}
+
+const readChatsFor = (userId) => {
+  try {
+    return JSON.parse(localStorage.getItem(`read_chats_${userId}`) || '{}');
+  } catch {
+    return {};
+  }
+};
+
+function HowItWorks({ t, compact }) {
+  const steps = [
+    { icon: Heart, title: t('chat.how.1.title'), text: t('chat.how.1.text') },
+    { icon: ShieldCheck, title: t('chat.how.2.title'), text: t('chat.how.2.text') },
+    { icon: MessagesSquare, title: t('chat.how.3.title'), text: t('chat.how.3.text') },
+  ];
+  return (
+    <div className={`mc-how ${compact ? 'mc-how--compact' : ''}`}>
+      <div className="mc-how__icon" aria-hidden="true"><MessageCircleHeart size={compact ? 32 : 40} /></div>
+      <h2 className="mc-how__title">{t('chat.empty.title')}</h2>
+      <p className="mc-how__lead">{t('chat.empty.text')}</p>
+      <ol className="mc-how__steps">
+        {steps.map(({ icon: Icon, title, text }, i) => (
+          <li key={title}>
+            <span className="mc-how__num" aria-hidden="true"><Icon size={18} /></span>
+            <div>
+              <strong>{i + 1}. {title}</strong>
+              <span>{text}</span>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <Link to="/" className="ui-btn ui-btn--primary mc-how__cta">
+        <PawPrint size={18} aria-hidden="true" /> {t('chat.empty.cta')}
+      </Link>
+    </div>
+  );
+}
+
+function MatchRow({ match, animal, active, unread, onOpen, t, lang }) {
+  const { primary } = displayNames(animal?.name || '', lang);
+  const name = primary || t('chat.unknownAnimal');
+  const [imgOk, setImgOk] = useState(true);
+  const img = animal?.images?.[0];
+  const isDone = match.status === 'adopted' || match.status === 'completed';
+
+  let preview = match.lastMessage;
+  if (match.status === 'pending') preview = t('chat.preview.pending');
+  if (match.status === 'rejected') preview = t('chat.preview.rejected');
+
+  return (
+    <li>
+      <button
+        type="button"
+        className={`mc-row ${active ? 'is-active' : ''} ${unread ? 'is-unread' : ''} mc-row--${groupOf(match.status)}`}
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+      >
+        <span className="mc-row__avatar">
+          {img && imgOk ? (
+            <img loading="lazy" src={img} alt="" onError={() => setImgOk(false)} />
+          ) : (
+            <PawPrint size={22} aria-hidden="true" />
+          )}
+        </span>
+        <span className="mc-row__body">
+          <span className="mc-row__top">
+            <span className="mc-row__name">{name}</span>
+            <span className="mc-row__time">{formatWhen(activityTime(match), lang, t)}</span>
+          </span>
+          <span className="mc-row__preview">{preview}</span>
+          <span className="mc-row__meta">
+            {isDone && <Badge tone="success">{t('chat.status.adopted')}</Badge>}
+            {animal?.shelter && <span className="mc-row__shelter">{animal.shelter}</span>}
+          </span>
+        </span>
+        {unread && <span className="mc-row__dot" aria-label={t('chat.unread')} />}
+      </button>
+    </li>
+  );
+}
 
 function MatchChat() {
   const { matches, loadingMatches } = useAppContext();
   const { user } = useAuth();
-  const [animalData, setAnimalData] = useState({});
-  const [loadingAnimals, setLoadingAnimals] = useState(true);
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { matchId } = useParams();
 
-  const [activeTab, setActiveTab] = useState('active'); // 'active' or 'pending'
+  const [fetchedAnimals, setFetchedAnimals] = useState({});
+  const [loadingAnimals, setLoadingAnimals] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRejected, setShowRejected] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia?.('(min-width: 768px)').matches);
 
-  // We need to fetch details for all animals that are in our matches list
   useEffect(() => {
-    const fetchMatchedAnimals = async () => {
-      if (!matches || matches.length === 0) {
-        setLoadingAnimals(false);
-        return;
-      }
+    const mq = window.matchMedia?.('(min-width: 768px)');
+    if (!mq) return;
+    const onChange = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
+  // Matches already carry their animal (joined in the query); only fetch the ones that don't
+  useEffect(() => {
+    const missing = [...new Set((matches || []).filter((m) => !m.animal).map((m) => m.animalId))]
+      .filter((id) => id && !fetchedAnimals[id]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    setLoadingAnimals(true);
+    Promise.all(
+      missing.map((id) => api.getAnimalById(id).then((a) => [id, a]).catch(() => [id, null]))
+    ).then((pairs) => {
+      if (cancelled) return;
+      setFetchedAnimals((prev) => ({ ...prev, ...Object.fromEntries(pairs.map(([id, a]) => [id, a || {}])) }));
+      setLoadingAnimals(false);
+    });
+    return () => { cancelled = true; };
+  }, [matches]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const animalFor = (m) => m.animal || fetchedAnimals[m.animalId] || null;
+
+  const readChats = useMemo(() => (user?.id ? readChatsFor(user.id) : {}), [user?.id, matches, matchId]);
+
+  const q = searchQuery.trim().toLowerCase();
+  const visible = (matches || [])
+    .filter((m) => {
+      if (!q) return true;
+      const a = animalFor(m);
+      return `${a?.name || ''} ${a?.shelter || ''}`.toLowerCase().includes(q);
+    })
+    .sort((a, b) => activityTime(b) - activityTime(a));
+
+  const groups = {
+    active: visible.filter((m) => groupOf(m.status) === 'active'),
+    pending: visible.filter((m) => groupOf(m.status) === 'pending'),
+    rejected: visible.filter((m) => groupOf(m.status) === 'rejected'),
+  };
+
+  const openMatch = (m, replace = false) => {
+    if (user?.id) {
       try {
-        const animalIds = [...new Set(matches.map(m => m.animalId))];
-        const dataMap = {};
+        const rc = readChatsFor(user.id);
+        rc[m.id] = Date.now();
+        localStorage.setItem(`read_chats_${user.id}`, JSON.stringify(rc));
+        window.dispatchEvent(new Event('chatReadUpdated'));
+      } catch { /* storage unavailable */ }
+      api.markMatchAsRead(m.id, 'user', user.id);
+    }
+    navigate(`/chat/${m.id}`, { replace });
+  };
 
-        await Promise.all(
-          animalIds.map(async (id) => {
-            try {
-              const data = await api.getAnimalById(id);
-              dataMap[id] = data;
-            } catch (err) {
-              console.error(`Error fetching animal ${id}:`, err);
-              const relevantMatch = matches.find(m => m.animalId === id);
-              let fallbackName = 'สัตว์เลี้ยง';
-              const nameMatch = relevantMatch?.last_message?.match(/ส่งมอบ\s+([^\s]+)\s+เสร็จสมบูรณ์/) ||
-                                relevantMatch?.last_message?.match(/ขอรับเลี้ยง\s+([^\s]+)\s+เพื่อให้/) ||
-                                relevantMatch?.last_message?.match(/รับเลี้ยง\s+([^\s]+)/);
-              if (nameMatch && nameMatch[1]) {
-                fallbackName = nameMatch[1];
-              }
-              dataMap[id] = {
-                name: fallbackName,
-                shelter: 'มูลนิธิเพื่อสัตว์เลี้ยง',
-                images: ['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=150&q=80']
-              };
-            }
-          })
-        );
-
-        setAnimalData(dataMap);
-      } catch (error) {
-        console.error("Error in Promise.all for matches", error);
-      } finally {
-        setLoadingAnimals(false);
-      }
-    };
-
-    fetchMatchedAnimals();
-  }, [matches]);
+  // Desktop: open the latest conversation instead of an empty "pick a chat" panel
+  const firstOpenable = groups.active[0] || groups.pending[0];
+  useEffect(() => {
+    if (isDesktop && !matchId && !loadingMatches && firstOpenable) openMatch(firstOpenable, true);
+  }, [isDesktop, matchId, loadingMatches, firstOpenable?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loadingMatches || loadingAnimals) {
     return <ChatListSkeleton />;
   }
 
-  // Filter logic
-  const filteredMatches = matches.filter(match => {
-    const animal = animalData[match.animalId];
-    if (!animal) return false;
+  const total = matches?.length || 0;
+  const hasAny = total > 0;
 
-    // Search filter
-    const matchesSearch = animal.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Tab filter
-    let matchesTab = false;
-    if (activeTab === 'active') matchesTab = match.status === 'approved' || match.status === 'adopted' || match.status === 'completed';
-    else if (activeTab === 'pending') matchesTab = match.status === 'pending';
-    else if (activeTab === 'rejected') matchesTab = match.status === 'rejected';
-
-    return matchesSearch && matchesTab;
-  });
-
-  const activeCount = matches.filter(m => m.status === 'approved' || m.status === 'adopted' || m.status === 'completed').length;
-  const pendingCount = matches.filter(m => m.status === 'pending').length;
-  const rejectedCount = matches.filter(m => m.status === 'rejected').length;
+  const renderGroup = (key, items) =>
+    items.length > 0 && (
+      <section className="mc-group" aria-labelledby={`mc-${key}`}>
+        <h2 id={`mc-${key}`} className="mc-group__title">
+          {t(`chat.group.${key}`)} <span>{items.length}</span>
+        </h2>
+        {key === 'pending' && <p className="mc-group__hint">{t('chat.group.pendingHint')}</p>}
+        <ul className="mc-list">
+          {items.map((m) => (
+            <MatchRow
+              key={m.id}
+              match={m}
+              animal={animalFor(m)}
+              active={m.id === matchId}
+              unread={m.id !== matchId && isUnread(m, readChats)}
+              onOpen={() => openMatch(m)}
+              t={t}
+              lang={lang}
+            />
+          ))}
+        </ul>
+      </section>
+    );
 
   return (
-    <div className="match-page matches-split-view">
-      
-      {/* List Panel */}
+    <div className="match-page matches-split-view mc">
+      {/* List panel */}
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="list-header"
-          style={{ padding: '20px 20px 0' }}
+        <motion.header
+          className="mc-header"
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 className="page-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-dark, #111827)' }}>
-              แชทพูดคุย
-            </h1>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-medium, #6B7280)', backgroundColor: 'var(--gray-100, #F3F4F6)', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
-              {matches.length} รายการ
-            </span>
-          </div>
-
-          {/* Tabs with Count Badges */}
-          <div className="chat-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--gray-200, #E5E7EB)', marginTop: '16px' }}>
-            <button 
-              onClick={() => setActiveTab('active')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'active' ? '2.5px solid var(--primary, #D97706)' : '2.5px solid transparent',
-                color: activeTab === 'active' ? 'var(--primary, #D97706)' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>ข้อความ</span>
-              {activeCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'active' ? '#FEF3C7' : '#F3F4F6',
-                  color: activeTab === 'active' ? '#D97706' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {activeCount}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setActiveTab('pending')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'pending' ? '2.5px solid var(--primary, #D97706)' : '2.5px solid transparent',
-                color: activeTab === 'pending' ? 'var(--primary, #D97706)' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>รอดำเนินการ</span>
-              {pendingCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'pending' ? '#FEF3C7' : '#F3F4F6',
-                  color: activeTab === 'pending' ? '#D97706' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setActiveTab('rejected')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'rejected' ? '2.5px solid #DC2626' : '2.5px solid transparent',
-                color: activeTab === 'rejected' ? '#DC2626' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>ปฏิเสธแล้ว</span>
-              {rejectedCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'rejected' ? '#FEE2E2' : '#F3F4F6',
-                  color: activeTab === 'rejected' ? '#DC2626' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {rejectedCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Search Box */}
-          <div className="chat-search-bar" style={{ padding: '14px 0' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-              <input 
-                type="text" 
-                placeholder="ค้นหาแชท..."
+          <h1 className="mc-header__title">{t('chat.title')}</h1>
+          {total >= SEARCH_MIN && (
+            <label className="mc-search">
+              <Search size={18} aria-hidden="true" />
+              <input
+                type="search"
+                placeholder={t('chat.search')}
+                aria-label={t('chat.search')}
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ 
-                  width: '100%', height: '40px', padding: '0 16px 0 38px', 
-                  borderRadius: '10px', border: '1px solid var(--gray-200, #E5E7EB)', 
-                  backgroundColor: '#F9FAFB', outline: 'none', fontSize: '16px', 
-                  boxSizing: 'border-box', transition: 'all 0.15s ease' 
-                }}
-                onFocus={(e) => { e.target.style.backgroundColor = '#FFFFFF'; e.target.style.borderColor = 'var(--primary, #D97706)'; }}
-                onBlur={(e) => { e.target.style.backgroundColor = '#F9FAFB'; e.target.style.borderColor = '#E5E7EB'; }}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
-          </div>
-        </motion.div>
+            </label>
+          )}
+        </motion.header>
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          className="matches-list"
-          style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}
+          className="mc-scroll"
         >
-          {filteredMatches.length === 0 ? (
-            <div className="empty-state" style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                <Search size={24} color="#9CA3AF" />
-              </div>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: '#374151' }}>ไม่พบรายการแชท</p>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#9CA3AF' }}>{searchQuery ? 'ลองค้นหาด้วยคำอื่น' : 'ยังไม่มีข้อความในหมวดหมู่นี้'}</p>
-            </div>
+          {!hasAny ? (
+            <>
+              {/* Mobile shows the full guide here; desktop shows it in the right panel */}
+              <div className="mc-only-mobile"><HowItWorks t={t} compact /></div>
+              <p className="mc-only-desktop mc-empty-note">{t('chat.empty.listNote')}</p>
+            </>
+          ) : visible.length === 0 ? (
+            <p className="mc-empty-note">{t('chat.noResults')}</p>
           ) : (
-            filteredMatches.map(match => {
-              const animal = animalData[match.animalId];
-              if (!animal) return null;
-
-              const isAdopted = match.status === 'adopted' || match.status === 'completed';
-              const isApproved = match.status === 'approved';
-              const isRejected = match.status === 'rejected';
-              const isActive = match.id === matchId;
-
-              return (
-                <div
-                  key={match.id}
-                  className={`match-item ${isAdopted ? 'adopted' : isApproved ? 'approved' : isRejected ? 'rejected' : 'pending'} ${isActive ? 'active' : ''}`}
-                  style={{ minHeight: '84px', boxSizing: 'border-box' }}
-                  onClick={() => {
-                    if (user?.id) {
-                      try {
-                        const readChats = JSON.parse(localStorage.getItem(`read_chats_${user.id}`) || '{}');
-                        readChats[match.id] = Date.now();
-                        localStorage.setItem(`read_chats_${user.id}`, JSON.stringify(readChats));
-                        window.dispatchEvent(new Event('chatReadUpdated'));
-                      } catch (e) {}
-                      api.markMatchAsRead(match.id, 'user', user.id);
-                    }
-                    navigate(`/chat/${match.id}`);
-                  }}
-                >
-                  <div className="match-avatar" style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', flexShrink: 0 }}>
-                    <img loading="lazy" src={animal.images[0]} alt={animal.name} style={{ width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', borderRadius: '50%', objectFit: 'cover' }} />
-                    {isAdopted ? (
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', backgroundColor: '#10B981', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CheckCircle size={10} color="#fff" strokeWidth={3} />
-                      </div>
-                    ) : isApproved ? (
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', backgroundColor: 'var(--success)', borderRadius: '50%', border: '2px solid white' }}></div>
-                    ) : isRejected ? (
-                      <div className="status-badge" style={{ backgroundColor: '#EF4444' }}><XCircle size={12} color="#fff" /></div>
-                    ) : (
-                      <div className="status-badge bg-warning"><Clock size={12} color="#fff" /></div>
-                    )}
-                  </div>
-                  <div className="match-info" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="match-header">
-                      <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{animal.name}</h3>
-                      <span className="timestamp">{match.timestamp}</span>
-                    </div>
-                    <p className="last-message">
-                      {match.lastMessage}
-                    </p>
-                    {isAdopted ? (
-                      <p className="pending-text text-sm" style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
-                        <CheckCircle size={12} /> ได้รับเลี้ยงแล้ว • ติดตามสถานะ
-                      </p>
-                    ) : isRejected ? (
-                      <p className="pending-text text-sm" style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0 0' }}>
-                        <XCircle size={12} /> ปฏิเสธคำขอรับเลี้ยงแล้ว
-                      </p>
-                    ) : isApproved ? (
-                      <p className="pending-text text-sm" style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
-                        <CheckCircle size={12} /> อนุมัติแล้ว • กำลังสนทนา
-                      </p>
-                    ) : (
-                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark)', margin: '2px 0 0' }}>รอผู้ดูแลตรวจสอบประวัติการรับเลี้ยง</p>
-                    )}
-                  </div>
+            <>
+              {renderGroup('active', groups.active)}
+              {renderGroup('pending', groups.pending)}
+              {groups.rejected.length > 0 && (
+                <div className="mc-rejected">
+                  <button
+                    type="button"
+                    className="mc-rejected__toggle"
+                    aria-expanded={showRejected}
+                    onClick={() => setShowRejected((v) => !v)}
+                  >
+                    {t('chat.group.rejected', { count: groups.rejected.length })}
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </button>
+                  {showRejected && renderGroup('rejectedList', groups.rejected)}
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </motion.div>
       </div>
 
-      {/* Chat Panel */}
-      <div className={`matches-chat-panel ${!matchId ? 'hidden-on-mobile hidden-on-desktop' : ''}`}>
+      {/* Chat panel */}
+      <div className={`matches-chat-panel ${!matchId ? 'hidden-on-mobile' : ''}`}>
         {matchId ? (
           <ChatRoom />
         ) : (
-          <div className="empty-chat-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-medium)' }}>
-            <div style={{ padding: '24px', backgroundColor: 'var(--surface-container-high)', borderRadius: '50%', marginBottom: '16px' }}>
-              <MessageCircle size={48} color="var(--primary)" style={{ opacity: 0.5 }} />
-            </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>เลือกแชทเพื่อสนทนา</h3>
+          <div className="mc-panel-empty">
+            {hasAny ? (
+              <p className="mc-empty-note">{t('chat.pick')}</p>
+            ) : (
+              <HowItWorks t={t} />
+            )}
           </div>
         )}
       </div>
-
     </div>
   );
 }
