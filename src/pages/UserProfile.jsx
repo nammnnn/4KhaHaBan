@@ -669,6 +669,46 @@ export default function UserProfile() {
   })();
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const foundationMenu = menuItems.filter((item) => item.key.startsWith('foundation'));
+  // Dashes appear as you type (081-234-5678) while the cursor stays next to the digit you just typed.
+  // Backspace / Delete on a dash removes the digit beside it instead of getting stuck.
+  const handlePhoneChange = (e) => {
+    const el = e.target;
+    const raw = el.value;
+    const caret = el.selectionStart ?? raw.length;
+    const inputType = e.nativeEvent?.inputType || '';
+    let digits = raw.replace(/\D/g, '');
+    let before = raw.slice(0, caret).replace(/\D/g, '').length;
+    if (digits === editPhone.replace(/\D/g, '') && raw.length < editPhone.length) {
+      if (inputType === 'deleteContentBackward' && before > 0) {
+        digits = digits.slice(0, before - 1) + digits.slice(before);
+        before -= 1;
+      } else if (inputType === 'deleteContentForward') {
+        digits = digits.slice(0, before) + digits.slice(before + 1);
+      }
+    }
+    // Already 10 digits: an extra key press is ignored instead of pushing the last digit out
+    if (digits.length > 10 && inputType.startsWith('insert') && editPhone.replace(/\D/g, '').length >= 10) {
+      const keepAt = Math.max(0, caret - (raw.length - editPhone.length));
+      requestAnimationFrame(() => { try { el.setSelectionRange(keepAt, keepAt); } catch { /* input gone */ } });
+      setEditPhone(editPhone);
+      return;
+    }
+    digits = digits.slice(0, 10);
+    before = Math.min(before, digits.length);
+    const formatted = formatPhoneNumber(digits);
+    setEditPhone(formatted);
+    setPhoneError('');
+    requestAnimationFrame(() => {
+      let pos = 0;
+      let seen = 0;
+      while (pos < formatted.length && seen < before) {
+        if (/\d/.test(formatted[pos])) seen += 1;
+        pos += 1;
+      }
+      try { el.setSelectionRange(pos, pos); } catch { /* input gone */ }
+    });
+  };
+
   // Profile phone, falling back to the one given at sign-up / verification
   const savedPhone = profile?.phone || user?.user_metadata?.phone || '';
   const settingsOpen = () => {
@@ -761,8 +801,7 @@ export default function UserProfile() {
                     type="tel"
                     inputMode="tel"
                     value={editPhone}
-                    onChange={(e) => { setEditPhone(e.target.value.replace(/[^\d-]/g, '').slice(0, 12)); setPhoneError(''); }}
-                    onBlur={() => setEditPhone((v) => formatPhoneNumber(v))}
+                    onChange={handlePhoneChange}
                     placeholder={t('pf.edit.phonePh')}
                     autoComplete="tel"
                     enterKeyHint="done"
