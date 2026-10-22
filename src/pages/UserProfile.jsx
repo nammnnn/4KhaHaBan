@@ -8,7 +8,7 @@ import {
   Heart, Settings, MessageCircle, Shield,
   Award, Sparkles, Mail, Camera, PawPrint, ClipboardList, Users, FileWarning,
   Building2, PiggyBank, ShieldCheck, MessageSquare, Briefcase, X, Loader, CheckCircle, Phone, MapPin, Search, ExternalLink,
-  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye, Languages
+  CheckCircle2, ArrowRight, FileText, AlertCircle, Eye, Languages, HelpCircle, Lock, Trash2
 } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
@@ -122,6 +122,48 @@ export default function UserProfile() {
       setEditPhone(profile.phone ? formatPhoneNumber(profile.phone) : '');
     }
   }, [profile, user]);
+
+  // Help + privacy sheets, and the two-step account deletion
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const openDelete = () => {
+    setDeleteConfirmText('');
+    setDeleteError('');
+    setIsPrivacyOpen(false);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!supabase || !user || deleteConfirmText.trim() !== t('pf.delete.word')) return;
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      // Best effort: remove uploaded profile photos first (the account rows go with the RPC)
+      try {
+        const { data: files } = await supabase.storage.from('chat_images').list('', { search: `avatar_${user.id}_` });
+        const names = (files || []).map((f) => f.name).filter((n) => n.startsWith(`avatar_${user.id}_`));
+        if (names.length) await supabase.storage.from('chat_images').remove(names);
+      } catch { /* not critical */ }
+
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+      try {
+        localStorage.removeItem(`user_verification_status_${user.id}`);
+      } catch { /* ignore */ }
+      await logout().catch(() => {});
+      toast(t('pf.delete.done'), { tone: 'success' });
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Delete account failed:', err);
+      setDeleteError(err?.message?.includes('admin_cannot_self_delete') ? t('pf.delete.adminError') : t('pf.delete.error'));
+      setIsDeleting(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -695,9 +737,6 @@ export default function UserProfile() {
             </ProfileSection>
           </div>
 
-          <Button variant="secondary" className="pf-logout pf-logout--side" onClick={handleLogout}>
-            <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
-          </Button>
         </aside>
 
         <div className="pf-main">
@@ -753,7 +792,7 @@ export default function UserProfile() {
             </div>
           )}
 
-          {/* Settings + help in one group (DESIGN.md §8.1) */}
+          {/* Settings + help in one group (DESIGN.md §8.1); log out sits last, quietly */}
           <div className="pf-more">
             <ProfileSection title={role === 'super_admin' ? t('pf.settings') : t('pf.settingsHelp')}>
               <div className="pf-row">
@@ -763,16 +802,17 @@ export default function UserProfile() {
               </div>
               {role !== 'super_admin' && (
                 <>
+                  <InfoRow icon={HelpCircle} label={t('pf.faq')} value="" onClick={() => setIsFaqOpen(true)} />
                   <InfoRow icon={MessageSquare} label={t('pf.chatTeam')} value="" to="/support-chat" />
-                  <FaqList />
                 </>
               )}
+              <InfoRow icon={Lock} label={t('pf.privacy')} value="" onClick={() => setIsPrivacyOpen(true)} />
+              <button type="button" className="pf-row pf-row--menu pf-row--link pf-row--danger" onClick={handleLogout}>
+                <LogOut size={20} className="pf-row__icon" aria-hidden="true" />
+                <span className="pf-row__label">{t('pf.logout')}</span>
+              </button>
             </ProfileSection>
           </div>
-
-          <Button variant="secondary" className="pf-logout pf-logout--main" onClick={handleLogout}>
-            <LogOut size={18} aria-hidden="true" /> {t('pf.logout')}
-          </Button>
         </div>
       </div>
 
@@ -814,6 +854,75 @@ export default function UserProfile() {
             <Button type="submit" variant="primary" loading={isSavingProfile}>{t('common.save')}</Button>
           </div>
         </form>
+      </Dialog>
+
+      {/* Help: questions people ask most */}
+      <Dialog open={isFaqOpen} onClose={() => setIsFaqOpen(false)} title={t('pf.faq')} className="pf-sheet">
+        <FaqList />
+        <div className="ui-dialog__actions">
+          <Link to="/support-chat" className="ui-btn ui-btn--secondary">
+            <MessageSquare size={18} aria-hidden="true" /> {t('pf.chatTeam')}
+          </Link>
+        </div>
+      </Dialog>
+
+      {/* Privacy & data: what we keep, and the way out */}
+      <Dialog open={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} title={t('pf.privacy')} className="pf-sheet">
+        <div className="pf-privacy">
+          <p>{t('pf.privacy.intro')}</p>
+          <ul>
+            <li>{t('pf.privacy.account')}</li>
+            {role === 'user' && <li>{t('pf.privacy.kyc')}</li>}
+            <li>{t('pf.privacy.activity')}</li>
+          </ul>
+          <p>{t('pf.privacy.use')}</p>
+        </div>
+        {role !== 'super_admin' && (
+          <div className="pf-danger-zone">
+            <p className="pf-danger-zone__title">{t('pf.delete.title')}</p>
+            <p className="pf-danger-zone__text">{t('pf.delete.text')}</p>
+            <Button variant="secondary" className="pf-danger-zone__btn" onClick={openDelete}>
+              <Trash2 size={18} aria-hidden="true" /> {t('pf.delete.cta')}
+            </Button>
+          </div>
+        )}
+      </Dialog>
+
+      <Dialog open={isDeleteOpen} onClose={() => !isDeleting && setIsDeleteOpen(false)} title={t('pf.delete.confirmTitle')}>
+        <div className="pf-edit-form">
+        <div className="pf-privacy">
+          <p>{t('pf.delete.confirmText')}</p>
+          <ul>
+            <li>{t('pf.delete.lose1')}</li>
+            <li>{t('pf.delete.lose2')}</li>
+            <li>{t('pf.delete.lose3')}</li>
+          </ul>
+        </div>
+        {deleteError && (
+          <p className="pf-edit-form__msg pf-edit-form__msg--error" role="alert">
+            <AlertCircle size={18} aria-hidden="true" /> {deleteError}
+          </p>
+        )}
+        <Field
+          id="pf-delete-confirm"
+          label={t('pf.delete.typeToConfirm', { word: t('pf.delete.word') })}
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          autoComplete="off"
+          disabled={isDeleting}
+        />
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>{t('common.cancel')}</Button>
+          <Button
+            variant="danger"
+            loading={isDeleting}
+            disabled={deleteConfirmText.trim() !== t('pf.delete.word')}
+            onClick={handleDeleteAccount}
+          >
+            {t('pf.delete.confirmCta')}
+          </Button>
+        </div>
+        </div>
       </Dialog>
 
       {/* Foundation Verification Certificate & Status Modal */}

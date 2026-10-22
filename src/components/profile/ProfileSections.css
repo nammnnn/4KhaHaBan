@@ -17,8 +17,6 @@
 .pf-requests { order: 2; }
 .pf-info { order: 3; }
 .pf-more { order: 4; }
-.pf-logout--main { order: 5; }
-.pf-logout--side { display: none; }
 
 /* Header */
 .pf-header {
@@ -210,12 +208,53 @@
 .pf-empty {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  font-size: var(--text-body);
-  color: var(--ink-600);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
 }
+.pf-empty__icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+.pf-empty__icon svg { fill: currentColor; fill-opacity: 0.2; }
+.pf-empty__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-empty__title { font-size: var(--text-body); font-weight: 600; color: var(--ink-900); }
+.pf-empty__hint { font-size: var(--text-label); color: var(--ink-600); line-height: 1.5; }
+.pf-empty__cta { flex-shrink: 0; }
+
+@media (max-width: 479px) {
+  .pf-empty { flex-wrap: wrap; }
+  .pf-empty__text { flex-basis: calc(100% - 52px - var(--space-4)); }
+  .pf-empty__cta { width: 100%; }
+}
+
+/* Log out: a quiet row at the end of settings */
+.pf-row--danger .pf-row__icon,
+.pf-row--danger .pf-row__label { color: var(--danger-strong); }
+.pf-row--danger:hover { background: var(--danger-soft); }
+
+/* Help / privacy sheets */
+.pf-sheet .pf-faq { margin: 0 calc(var(--space-4) * -1); }
+.pf-privacy { display: flex; flex-direction: column; gap: var(--space-3); font-size: var(--text-label); line-height: 1.7; color: var(--ink-600); }
+.pf-privacy p:first-child { color: var(--ink-900); font-weight: 600; }
+.pf-privacy ul { list-style: disc; margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+
+.pf-danger-zone {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  box-shadow: inset 0 1px 0 var(--line-200);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pf-danger-zone__title { font-size: var(--text-body); font-weight: 600; color: var(--ink-900); }
+.pf-danger-zone__text { font-size: var(--text-label); color: var(--ink-600); }
+.pf-danger-zone__btn { align-self: flex-start; margin-top: var(--space-2); color: var(--danger-strong); }
 
 /* FAQ */
 .pf-faq__q {
@@ -242,14 +281,6 @@
   line-height: 1.7;
   color: var(--ink-600);
 }
-
-/* Logout */
-.pf-logout {
-  width: 100%;
-  color: var(--danger-strong);
-}
-
-.pf-logout:hover:not(:disabled) { background: var(--danger-soft); }
 
 @media (min-width: 768px) {
   .pf-page { padding-top: var(--space-10); }
@@ -306,8 +337,6 @@
 
   .pf-side > *,
   .pf-main > * { order: 0; }
-  .pf-logout--side { display: inline-flex; margin-top: auto; }
-  .pf-logout--main { display: none; }
 }
 
 /* Edit sheet */

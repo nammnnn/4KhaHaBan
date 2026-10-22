@@ -72,8 +72,12 @@ export function AdoptionRequests({ matches, limit = 3 }) {
   if (shown.length === 0) {
     return (
       <div className="pf-empty">
-        <p>{t('pf.req.empty')}</p>
-        <Link to="/" className="ui-btn ui-btn--secondary ui-btn--sm">{t('pf.req.browse')}</Link>
+        <span className="pf-empty__icon" aria-hidden="true"><PawPrint size={26} /></span>
+        <div className="pf-empty__text">
+          <p className="pf-empty__title">{t('pf.req.empty')}</p>
+          <p className="pf-empty__hint">{t('pf.req.emptyHint')}</p>
+        </div>
+        <Link to="/" className="ui-btn ui-btn--primary ui-btn--sm pf-empty__cta">{t('pf.req.browse')}</Link>
       </div>
     );
   }
