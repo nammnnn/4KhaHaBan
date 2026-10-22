@@ -21,6 +21,7 @@ import { LocationSheet } from '../components/LocationSheet';
 import { FeedDetailPanel } from '../components/FeedDetailPanel';
 import { FeedOnboarding, hasSeenFeedOnboarding, markFeedOnboardingSeen } from '../components/FeedOnboarding';
 import { MOTION } from '../lib/motion';
+import { PawBurst, PawConfetti } from '../components/motion/PawMotion';
 
 // Distance is only shown when we have the user's real location — never a guessed one.
 const withDistance = (animal, coords) => {
@@ -90,7 +91,13 @@ function Feed() {
   const [filters, setFilters] = useState({ maxDistance: 100, animalType: 'all', gender: 'all' });
 
   const { addMatch } = useAppContext();
-  const { user, userVerificationStatus } = useAuth();
+  const { user, profile, userVerificationStatus } = useAuth();
+  const myAvatar = profile?.avatar_url || user?.user_metadata?.avatar_url || null;
+  const myInitial = (profile?.full_name || user?.user_metadata?.full_name || user?.email || '?').trim().charAt(0).toUpperCase();
+  // Bumped on each like / skip / rewind to replay the button's little animation (DESIGN.md §6.1)
+  const [likePulse, setLikePulse] = useState(0);
+  const [nopePulse, setNopePulse] = useState(0);
+  const [undoPulse, setUndoPulse] = useState(0);
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
 
   const isVerifiedUser = 
@@ -330,12 +337,14 @@ function Feed() {
         return;
       }
       api.submitSwipe(realAnimalId, user?.id, 'like');
+      setLikePulse((n) => n + 1);
       setPendingMatch({ animal: swipedAnimal, id: cardIdentifier });
       // สัตว์ที่ถูกใจแล้ว จะตัดออกจาก pool ถาวร ไม่นำกลับมาวนซ้ำ
       poolRef.current = poolRef.current.filter((a) => a.id !== realAnimalId);
     } else {
       // ปัดข้าม (Nope): ยังคงอยู่ใน pool เพื่อรอการวนกลับมา
       api.submitSwipe(realAnimalId, user?.id, 'nope');
+      setNopePulse((n) => n + 1);
       setHistory((prev) => [...prev, { animal: swipedAnimal, action: 'left' }]);
     }
 
@@ -394,6 +403,7 @@ function Feed() {
     const lastAction = history[history.length - 1];
     setHistory((prev) => prev.slice(0, -1));
     setCards((prev) => [makeCard(lastAction.animal), ...prev]);
+    setUndoPulse((n) => n + 1);
   };
 
   const handleSwipeAction = (direction) => {
@@ -551,7 +561,15 @@ function Feed() {
       ) : cards.length > 0 && (
         <div className="swiper-actions">
           <button className="swiper-btn btn-nope" onClick={() => handleSwipeAction('left')} aria-label={t('feed.skip')} title={t('feed.skipTitle')}>
-            <X size={28} strokeWidth={2.5} />
+            {/* Skip: a quick head-shake */}
+            <motion.span
+              key={nopePulse}
+              className="swiper-btn__icon"
+              animate={nopePulse ? { rotate: [0, -16, 12, -6, 0] } : undefined}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            >
+              <X size={28} strokeWidth={2.5} />
+            </motion.span>
           </button>
           {/* Rewind sits between skip and like, like Tinder's small middle button, so the row stays
               symmetric; always shown, dimmed until there's a skip to undo */}
@@ -562,10 +580,27 @@ function Feed() {
             aria-label={t('feed.rewindAria')}
             title={history.length > 0 ? t('feed.rewindTitle') : t('feed.rewindDisabled')}
           >
-            <RotateCcw size={20} strokeWidth={2.5} />
+            {/* Rewind: spins backwards once */}
+            <motion.span
+              key={undoPulse}
+              className="swiper-btn__icon"
+              animate={undoPulse ? { rotate: [0, -360] } : undefined}
+              transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] }}
+            >
+              <RotateCcw size={20} strokeWidth={2.5} />
+            </motion.span>
           </button>
           <button className="swiper-btn btn-like" onClick={() => handleSwipeAction('right')} aria-label={t('feed.likeAria')} title={t('feed.likeTitle')}>
-            <Heart size={28} fill="currentColor" strokeWidth={0} />
+            {/* Like: the heart pops and little paws burst out */}
+            <motion.span
+              key={likePulse}
+              className="swiper-btn__icon"
+              animate={likePulse ? { scale: [1, 1.38, 0.9, 1.06, 1] } : undefined}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              <Heart size={28} fill="currentColor" strokeWidth={0} />
+            </motion.span>
+            <PawBurst burstKey={likePulse} />
           </button>
         </div>
       )}
@@ -600,22 +635,39 @@ function Feed() {
             exit={{ opacity: 0 }}
             transition={MOTION.base}
           >
+            <PawConfetti />
             <div className="match-content">
-              <motion.div
-                className="match-photo"
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 22, delay: 0.05 }}
-              >
-                {showMatch.animal?.images?.[0] ? (
-                  <img src={showMatch.animal.images[0]} alt="" />
-                ) : (
-                  <div className="match-photo__placeholder"><PawPrint size={48} /></div>
-                )}
-                <span className="match-photo__heart" aria-hidden="true">
-                  <Heart size={20} fill="currentColor" strokeWidth={0} />
-                </span>
-              </motion.div>
+              {/* You and the pet slide together, then the heart pops between you */}
+              <div className="match-pair" aria-hidden="true">
+                <motion.div
+                  className="match-photo match-photo--you"
+                  initial={{ x: -70, rotate: -16, opacity: 0 }}
+                  animate={{ x: 0, rotate: -7, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.05 }}
+                >
+                  {myAvatar ? <img src={myAvatar} alt="" /> : <div className="match-photo__placeholder match-photo__placeholder--you">{myInitial}</div>}
+                </motion.div>
+                <motion.div
+                  className="match-photo match-photo--pet"
+                  initial={{ x: 70, rotate: 16, opacity: 0 }}
+                  animate={{ x: 0, rotate: 7, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.05 }}
+                >
+                  {showMatch.animal?.images?.[0] ? (
+                    <img src={showMatch.animal.images[0]} alt="" />
+                  ) : (
+                    <div className="match-photo__placeholder"><PawPrint size={48} /></div>
+                  )}
+                </motion.div>
+                <motion.span
+                  className="match-photo__heart"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [0, 1.35, 1] }}
+                  transition={{ duration: 0.45, delay: 0.38, ease: 'easeOut' }}
+                >
+                  <Heart size={22} fill="currentColor" strokeWidth={0} />
+                </motion.span>
+              </div>
               <h2 id="match-title" className="match-title">
                 {t('feed.sentTitle', { name: nameOf(showMatch.animal) })}
               </h2>

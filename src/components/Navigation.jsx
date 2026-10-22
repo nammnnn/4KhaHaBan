@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useAnimationControls } from 'framer-motion';
 import { Home, MessageCircle, LogIn, Shield, Building2, HandHeart, PawPrint, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,18 @@ function useIsDesktop() {
 function NavItem({ to, active, icon: Icon, label, ariaLabel, badge = 0, children }) {
   const reduceMotion = useReducedMotion();
   const { t } = useI18n();
+  const press = useAnimationControls();
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && !reduceMotion) {
+      press.start({
+        scale: [1, 0.78, 1.14, 0.97, 1],
+        y: [0, 2, -3, 0, 0],
+        transition: { duration: 0.45, ease: 'easeOut' },
+      });
+    }
+    wasActive.current = active;
+  }, [active, reduceMotion, press]);
   return (
     <Link
       to={to}
@@ -42,7 +54,10 @@ function NavItem({ to, active, icon: Icon, label, ariaLabel, badge = 0, children
         />
       )}
       <span className="nav-icon">
-        {children || <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />}
+        {/* Paw-press: when a tab becomes active its icon squishes down and springs back (DESIGN.md §6.1) */}
+        <motion.span className="nav-icon__glyph" animate={press}>
+          {children || <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />}
+        </motion.span>
         {badge > 0 && <span className="nav-badge" aria-hidden="true">{badge > 9 ? '9+' : badge}</span>}
       </span>
       <span className="nav-label">{label}</span>

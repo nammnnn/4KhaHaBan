@@ -11,6 +11,7 @@ import { getAddressFromCoordinates } from '../lib/geo';
 import { Badge, Button, Dialog, EmptyState, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 import './ServicePages.css';
+import { SuccessMark } from '../components/motion/PawMotion';
 
 // Rescue report — DESIGN.md §7.22
 
@@ -313,7 +314,7 @@ function IncidentReport() {
 
       {activeTab === 'form' && submittedReport && (
         <motion.section className="sp-card sp-done" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
-          <span className="sp-done__icon" aria-hidden="true"><CheckCircle2 size={36} /></span>
+          <SuccessMark />
           <h2>{t('report.done.title')}</h2>
           <p>{t('report.done.text')}</p>
           <div className="sp-done__actions">

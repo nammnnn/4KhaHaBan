@@ -368,6 +368,7 @@ button {
 }
 
 .nav-item:active .nav-icon { transform: scale(0.88); }
+.nav-icon__glyph { display: grid; place-items: center; }
 
 .nav-label {
   position: relative;

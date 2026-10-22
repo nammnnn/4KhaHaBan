@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, CheckCircle2, Building2, ChevronDown, ChevronRight, AlertCircle, Info, ShoppingBag, Pill, Sparkles } from 'lucide-react';
+import { Heart, Package, Copy, Check, X, ShieldCheck, Upload, Building2, ChevronDown, ChevronRight, AlertCircle, Info, ShoppingBag, Pill, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
@@ -11,6 +11,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
 import './ServicePages.css';
 import { MOTION } from '../lib/motion';
+import { SuccessMark } from '../components/motion/PawMotion';
 
 // Donation — DESIGN.md §7.23
 
@@ -461,7 +462,7 @@ function Donation() {
       >
         {paymentSuccess ? (
           <div className="sp-done sp-done--flat">
-            <span className="sp-done__icon" aria-hidden="true"><CheckCircle2 size={36} /></span>
+            <SuccessMark />
             <h2>{t('donate.done.title')}</h2>
             <p>{t('donate.done.text', { amount: baht(amount) })}</p>
           </div>

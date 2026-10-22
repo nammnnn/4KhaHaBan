@@ -1,5 +1,5 @@
 import React from 'react';
-import { PawPrint } from 'lucide-react';
+import { PawWalk } from './motion/PawMotion';
 import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
@@ -13,7 +13,8 @@ import '../pages/ServicePages.css';
 export const FeedCardSkeleton = () => (
   <div className="swipe-card feed-skel" aria-hidden="true">
     <div className="feed-skel__photo">
-      <PawPrint size={56} strokeWidth={1.5} className="feed-skel__paw" />
+      {/* Little paws walking across while the deck loads (DESIGN.md §6.1) */}
+      <PawWalk steps={4} size={26} />
     </div>
     <div className="feed-skel__info">
       <span className="feed-skel__bar feed-skel__bar--name" />
