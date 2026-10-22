@@ -4,4 +4,5 @@
 -- ------------------------------------------------------------------------------
 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
-UPDATE public.profiles SET is_verified = true WHERE email = 'songkaen2547@gmail.com';
+-- (Removed: a one-off UPDATE that marked a specific personal account as verified.
+--  Verification is granted through the verification flow / admin approval, not by email in a migration.)

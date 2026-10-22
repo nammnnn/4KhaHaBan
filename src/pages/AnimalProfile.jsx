@@ -124,7 +124,6 @@ function AnimalProfile() {
 
   const isVerifiedUser =
     userVerificationStatus === 'verified' ||
-    (user?.email && user.email.toLowerCase().trim() === 'songkaen2547@gmail.com') ||
     user?.user_metadata?.is_verified === true ||
     user?.user_metadata?.user_verification_status === 'verified';
 

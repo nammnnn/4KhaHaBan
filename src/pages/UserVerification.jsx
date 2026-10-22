@@ -234,7 +234,6 @@ export default function UserVerification() {
 
   const isUserVerified = 
     userVerificationStatus === 'verified' ||
-    (user?.email && user.email.toLowerCase().trim() === 'songkaen2547@gmail.com') ||
     user?.user_metadata?.is_verified === true ||
     user?.user_metadata?.user_verification_status === 'verified' ||
     profile?.is_verified === true;

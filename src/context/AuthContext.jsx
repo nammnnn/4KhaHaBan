@@ -6,24 +6,14 @@ const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
 // Helper ฟังก์ชันตรวจสอบสถานะยืนยันตัวตนแบบหลายชั้น (Multi-source verification check)
+// Verified only from this account's own data: Supabase user metadata, the profile row,
+// or this account's own cached status. No email shortcuts, and never another account's cache.
 export const checkAccountVerified = (u, p) => {
   if (!u) return false;
-  const email = (u.email || '').toLowerCase().trim();
-  if (email === 'songkaen2547@gmail.com') return true;
   if (u.user_metadata?.user_verification_status === 'verified' || u.user_metadata?.is_verified === true) return true;
   if (p?.is_verified === true) return true;
   try {
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem('user_verified_account_songkaen') === 'verified') return true;
-      if (u.id && localStorage.getItem(`user_verification_status_${u.id}`) === 'verified') return true;
-      if (email && localStorage.getItem(`user_verification_status_${email}`) === 'verified') return true;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.includes('user_verification_status') && localStorage.getItem(k) === 'verified') {
-          return true;
-        }
-      }
-    }
+    if (typeof window !== 'undefined' && u.id && localStorage.getItem(`user_verification_status_${u.id}`) === 'verified') return true;
   } catch (e) {}
   return false;
 };
@@ -33,25 +23,15 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null); // ข้อมูล profile จากตาราง profiles
   const [role, setRole] = useState(null); // 'user' | 'foundation' | 'super_admin'
   const [foundationStatus, setFoundationStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected' | 'none'
-  const [userVerificationStatus, setUserVerificationStatus] = useState(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const directFlag = localStorage.getItem('user_verified_account_songkaen') ||
-                           localStorage.getItem('user_verification_status_songkaen2547@gmail.com');
-        if (directFlag === 'verified') return 'verified';
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('user_verification_status_') && localStorage.getItem(key) === 'verified') {
-            return 'verified';
-          }
-        }
-      }
-    } catch (e) {}
-    return null;
-  });
+  // Known only once we know which account is logged in (see fetchProfile)
+  const [userVerificationStatus, setUserVerificationStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Old builds wrote a device-wide "verified" flag that made every account on the device look
+    // verified; it is no longer read, and is cleared here so it can't come back.
+    try { localStorage.removeItem('user_verified_account_songkaen'); } catch (e) {}
+
     // ถ้า supabase ยังไม่พร้อมใช้งาน ให้ปิด loading เลย
     if (!supabase) {
       console.warn('[Auth] Supabase ยังไม่พร้อมใช้งาน - แอปจะทำงานในโหมดไม่ล็อกอิน');
@@ -69,8 +49,6 @@ export const AuthProvider = ({ children }) => {
             setUserVerificationStatus('verified');
             try {
               localStorage.setItem(`user_verification_status_${session.user.id}`, 'verified');
-              if (session.user.email) localStorage.setItem(`user_verification_status_${session.user.email.toLowerCase().trim()}`, 'verified');
-              localStorage.setItem('user_verified_account_songkaen', 'verified');
             } catch (e) {}
           }
           await fetchProfile(session.user);
@@ -92,8 +70,6 @@ export const AuthProvider = ({ children }) => {
           setUserVerificationStatus('verified');
           try {
             localStorage.setItem(`user_verification_status_${session.user.id}`, 'verified');
-            if (session.user.email) localStorage.setItem(`user_verification_status_${session.user.email.toLowerCase().trim()}`, 'verified');
-            localStorage.setItem('user_verified_account_songkaen', 'verified');
           } catch (e) {}
         }
         await fetchProfile(session.user);
@@ -138,13 +114,10 @@ export const AuthProvider = ({ children }) => {
     if (!supabase || !currentUser) return;
 
     // ตรวจสอบและตั้งค่าสถานะยืนยันตัวตนทันทีตั้งแต่บรรทัดแรก ป้องกันความล่าช้าจากฐานข้อมูล
-    const userEmail = (currentUser.email || '').toLowerCase().trim();
     if (checkAccountVerified(currentUser, null)) {
       setUserVerificationStatus('verified');
       try {
         localStorage.setItem(`user_verification_status_${currentUser.id}`, 'verified');
-        if (userEmail) localStorage.setItem(`user_verification_status_${userEmail}`, 'verified');
-        localStorage.setItem('user_verified_account_songkaen', 'verified');
       } catch (e) {}
     }
 
@@ -213,12 +186,6 @@ export const AuthProvider = ({ children }) => {
         // ถ้าเป็น user ทั่วไป เช็คการยืนยันตัวตนจากหลายแหล่ง (Multi-source Verification Check)
         let resolvedStatus = null;
 
-        // 0. บัญชีที่เคยยืนยันตัวตนแล้วโดยสมบูรณ์
-        const userEmail = (currentUser.email || '').toLowerCase().trim();
-        if (userEmail === 'songkaen2547@gmail.com') {
-          resolvedStatus = 'verified';
-        }
-
         // 1. เช็คจาก Supabase Auth user_metadata (เสถียรที่สุด ข้ามเครื่อง ข้ามเบราว์เซอร์ ไม่หายหลังออกจากระบบ)
         if (!resolvedStatus) {
           const metaStatus = currentUser.user_metadata?.user_verification_status;
@@ -250,12 +217,11 @@ export const AuthProvider = ({ children }) => {
           resolvedStatus = 'verified';
         }
 
-        // 4. เช็คจาก fallback ใน LocalStorage (แยกตาม user.id และ email)
+        // 4. เช็คจากสถานะที่แคชไว้ในเครื่องของบัญชีนี้เท่านั้น (ตาม user.id)
         if (!resolvedStatus) {
           try {
             const cachedById = localStorage.getItem(`user_verification_status_${currentUser.id}`);
-            const cachedByEmail = userEmail ? localStorage.getItem(`user_verification_status_${userEmail}`) : null;
-            if (cachedById === 'verified' || cachedByEmail === 'verified') {
+            if (cachedById === 'verified') {
               resolvedStatus = 'verified';
             }
           } catch (e) {}
@@ -263,62 +229,11 @@ export const AuthProvider = ({ children }) => {
 
         setUserVerificationStatus(resolvedStatus || null);
 
-        // Auto-heal / Sync: ถ้าพบว่าผู้ใช้ยืนยันตัวตนแล้ว ให้ซิงค์กลับไปยังทุก Storage ทันที
+        // Cache this account's status on this device only. Verification itself is written by the
+        // verification flow / admin — never "healed" from the client with placeholder identity data.
         if (resolvedStatus === 'verified') {
           try {
             localStorage.setItem(`user_verification_status_${currentUser.id}`, 'verified');
-            if (userEmail) {
-              localStorage.setItem(`user_verification_status_${userEmail}`, 'verified');
-            }
-
-            const defaultPayload = {
-              id: currentUser.id,
-              full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || profileData?.full_name || 'Pakapol Akalanoi',
-              phone: currentUser.user_metadata?.phone || profileData?.phone || '0812345678',
-              id_card_no: '1xxxxxxxxxxxx',
-              status: 'verified',
-              assessment: {
-                housing: 'มีบ้าน/คอนโดที่อนุญาตให้เลี้ยงสัตว์',
-                time: 'มาก (อย่างน้อยวันละ 2 ครั้ง)',
-                budget: 'มี (อย่างน้อย 1,000 บาท/เดือน)',
-                family: 'เห็นด้วยทั้งหมด',
-                longterm: 'พร้อม ดูแลตลอดชีวิต'
-              },
-              created_at: new Date().toISOString()
-            };
-
-            // ซิงค์ profile ให้มี is_verified: true
-            supabase
-              .from('profiles')
-              .upsert({
-                id: currentUser.id,
-                email: currentUser.email,
-                full_name: defaultPayload.full_name,
-                phone: defaultPayload.phone,
-                role: currentRole || 'user',
-                is_verified: true,
-                last_seen: new Date().toISOString()
-              })
-              .then(() => {})
-              .catch(() => {});
-
-            // ซิงค์ user_verifications
-            supabase
-              .from('user_verifications')
-              .upsert(defaultPayload)
-              .then(() => {})
-              .catch(() => {});
-
-            // ซิงค์ user_metadata
-            if (!currentUser.user_metadata?.is_verified || currentUser.user_metadata?.user_verification_status !== 'verified') {
-              supabase.auth.updateUser({
-                data: {
-                  is_verified: true,
-                  user_verification_status: 'verified',
-                  user_verification_data: defaultPayload
-                }
-              }).catch(() => {});
-            }
           } catch (e) {}
         }
       }
