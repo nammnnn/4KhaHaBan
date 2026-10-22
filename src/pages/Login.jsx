@@ -143,8 +143,11 @@ const Login = () => {
     };
 
     try {
-      const { error } = await registerWithEmail(email, password, metadata);
+      const { data, error } = await registerWithEmail(email, password, metadata);
       if (error) throw error;
+      // With "Confirm email" off in Supabase the account is signed in right away (data.session);
+      // only ask them to check their inbox when a confirmation link was actually sent.
+      if (data?.session) return;
       setPendingEmail(email.trim());
       setResendState('idle');
       setSuccessMsg(t('login.checkEmailTo', { email: email.trim() }));
