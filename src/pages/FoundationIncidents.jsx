@@ -150,6 +150,7 @@ export default function FoundationIncidents() {
   if (loading) return <FoundationIncidentsSkeleton />;
 
   // Tabs never overlap: each open case sits in exactly one of the first three
+  const isOpen = (i) => i.status === 'pending' || i.status === 'in_progress';
   const mine = (i) => i.status === 'in_progress' && i.rescuer_id === user?.id;
   const FILTERS = [
     { id: 'open', label: 'รอคนช่วย', test: (i) => i.status === 'pending' },
