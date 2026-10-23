@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
 import { MOTION } from '../lib/motion';
+import { initialsAvatar, PET_PLACEHOLDER } from '../lib/avatar';
 
 const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
@@ -746,11 +747,11 @@ function ChatRoom() {
   };
 
   const userAvatarUrl = useMemo(() => {
-    return profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || profile?.name || 'User')}&background=D97706&color=fff`;
+    return profile?.avatar_url || initialsAvatar(profile?.full_name || profile?.name || 'User');
   }, [profile?.avatar_url, profile?.full_name, profile?.name]);
 
   const animalAvatarUrl = useMemo(() => {
-    return animal?.images?.[0] || 'https://via.placeholder.com/150';
+    return animal?.images?.[0] || PET_PLACEHOLDER;
   }, [animal?.images]);
 
   if (loading) {
@@ -784,7 +785,7 @@ function ChatRoom() {
             <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, margin: 0, flex: 1 }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <img 
-                  src={animal.images?.[0] || 'https://via.placeholder.com/150'} 
+                  src={animal.images?.[0] || PET_PLACEHOLDER} 
                   alt={animal.name} 
                   className="chat-avatar" 
                   style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 

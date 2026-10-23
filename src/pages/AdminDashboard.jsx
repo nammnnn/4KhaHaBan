@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles, Building2, Star, Banknote, PiggyBank, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOTION } from '../lib/motion';
+import { initialsAvatar } from '../lib/avatar';
 
 const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -864,12 +865,12 @@ const AdminDashboard = () => {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                       <img 
-                        src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`} 
+                        src={profile.avatar_url || initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User')} 
                         alt="avatar" 
                         style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`;
+                          e.target.src = initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User');
                         }}
                       />
                       <div style={{ minWidth: 0 }}>
@@ -935,12 +936,12 @@ const AdminDashboard = () => {
                               style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} 
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`;
+                                e.target.src = initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User');
                               }}
                             />
                           ) : (
                             <img 
-                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`} 
+                              src={initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User')} 
                               alt="avatar fallback" 
                               style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} 
                             />

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
 import { MOTION } from '../lib/motion';
+import { initialsAvatar } from '../lib/avatar';
 
 const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
@@ -873,7 +874,7 @@ function FoundationChatRoom() {
   }, [match?.user_id, match?.userData]);
 
   const adopterName = match?.userData?.full_name || 'ผู้ใช้งานทั่วไป';
-  const defaultAdopterAvatar = useMemo(() => `https://ui-avatars.com/api/?name=${encodeURIComponent(adopterName)}&background=D97706&color=fff`, [adopterName]);
+  const defaultAdopterAvatar = useMemo(() => initialsAvatar(adopterName), [adopterName]);
   const adopterAvatar = (!adopterImgErr && match?.userData?.avatar_url) ? match.userData.avatar_url : defaultAdopterAvatar;
 
   if (loading) {
