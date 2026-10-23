@@ -74,6 +74,12 @@ function CasePhoto({ src, onOpen, animalType }) {
   );
 }
 
+const EMPTY_TEXT = {
+  open: 'ไม่มีเคสที่รอคนช่วยตอนนี้ เมื่อมีคนแจ้งเหตุ จะขึ้นที่นี่ทันที',
+  mine: 'คุณยังไม่ได้รับเคสไหน กด "รับเคสนี้" ในแท็บรอคนช่วย',
+  taken: 'ตอนนี้ไม่มีเคสที่มูลนิธิอื่นกำลังช่วย',
+};
+
 export default function FoundationIncidents() {
   const { user, profile } = useAuth();
   const toast = useToast();
@@ -143,11 +149,12 @@ export default function FoundationIncidents() {
 
   if (loading) return <FoundationIncidentsSkeleton />;
 
-  const isOpen = (i) => i.status === 'pending' || i.status === 'in_progress';
+  // Tabs never overlap: each open case sits in exactly one of the first three
   const mine = (i) => i.status === 'in_progress' && i.rescuer_id === user?.id;
   const FILTERS = [
-    { id: 'open', label: 'รอคนช่วย / กำลังช่วย', test: isOpen },
+    { id: 'open', label: 'รอคนช่วย', test: (i) => i.status === 'pending' },
     { id: 'mine', label: 'เคสของฉัน', test: mine },
+    { id: 'taken', label: 'มีคนรับแล้ว', test: (i) => i.status === 'in_progress' && !mine(i) },
     { id: 'resolved', label: 'สำเร็จแล้ว', test: (i) => i.status === 'resolved' },
     { id: 'cancelled', label: 'ยกเลิก', test: (i) => i.status === 'cancelled' },
     { id: 'all', label: 'ทั้งหมด', test: () => true },
@@ -184,7 +191,7 @@ export default function FoundationIncidents() {
       {list.length === 0 ? (
         <div className="inc-empty">
           <CheckCircle2 size={32} aria-hidden="true" />
-          <p>{filter === 'open' ? 'ไม่มีเคสที่รอคนช่วยตอนนี้ เมื่อมีคนแจ้งเหตุ จะขึ้นที่นี่ทันที' : 'ไม่มีเคสในหมวดนี้'}</p>
+          <p>{EMPTY_TEXT[filter] || 'ไม่มีเคสในหมวดนี้'}</p>
         </div>
       ) : (
         <ul className="inc-list">
