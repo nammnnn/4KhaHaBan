@@ -3,6 +3,7 @@ import { PawWalk } from './motion/PawMotion';
 import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
+import '../pages/FoundationDashboard.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -234,81 +235,38 @@ export const ChatRoomSkeleton = () => (
 
 // 4. Foundation Dashboard Skeleton (Redesigned matching current UI)
 export const FoundationDashboardSkeleton = () => (
-  <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', padding: '24px 16px 90px', boxSizing: 'border-box' }}>
-    <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '180px', height: '26px' }} />
-            <div className="skeleton" style={{ width: '90px', height: '20px', borderRadius: '9999px' }} />
-          </div>
-          <div className="skeleton skeleton-text" style={{ width: '260px', height: '14px' }} />
+  <div className="fd-page" aria-busy="true" aria-label="กำลังโหลด">
+    <header className="fd-header">
+      <div className="fd-header__text">
+        <span className="fd-sk" style={{ width: 240, height: 30 }} />
+        <span className="fd-sk" style={{ width: 120, height: 24, borderRadius: 999 }} />
+      </div>
+      <span className="fd-sk fd-header__cta" style={{ height: 48, minWidth: 170 }} />
+    </header>
+    <section className="fd-card fd-todo">
+      <span className="fd-sk" style={{ width: 110, height: 22 }} />
+      <div className="fd-todo__list">
+        <span className="fd-sk" style={{ height: 64 }} />
+        <span className="fd-sk" style={{ height: 64 }} />
+      </div>
+    </section>
+    <section className="fd-stats">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="fd-stat">
+          <span className="fd-sk fd-stat__label" style={{ width: 80, height: 16 }} />
+          <span className="fd-sk fd-stat__icon" />
+          <span className="fd-sk fd-stat__value" style={{ width: 70, height: 28 }} />
         </div>
-        <div className="skeleton" style={{ width: '145px', height: '42px', borderRadius: '10px' }} />
-      </div>
-
-      {/* 4 Overview Metrics Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-        {[1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '14px',
-              padding: '16px',
-              border: '1px solid #E5E7EB',
-              height: '100px',
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
-              <div className="skeleton" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
-            </div>
-            <div>
-              <div className="skeleton skeleton-text" style={{ width: '50px', height: '24px', marginBottom: '4px' }} />
-              <div className="skeleton skeleton-text" style={{ width: '90px', height: '11px' }} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Operational 2-Column Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {/* Box 1: Wishlist */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '18px 20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '160px', height: '18px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
-          </div>
-          {[1, 2, 3].map(i => (
-            <div key={i} className="skeleton" style={{ height: '48px', borderRadius: '10px' }} />
-          ))}
-        </div>
-
-        {/* Box 2: Operations & Shelter Info */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '18px 20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '170px', height: '18px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
-          </div>
-          <div className="skeleton" style={{ height: '52px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '52px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '38px', borderRadius: '10px' }} />
-        </div>
-      </div>
-
-      {/* Guidance Card */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '18px 20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div className="skeleton skeleton-text" style={{ width: '220px', height: '18px', marginBottom: '4px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '90%', height: '14px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '85%', height: '14px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '75%', height: '14px' }} />
-      </div>
+      ))}
+    </section>
+    <div className="fd-grid">
+      {[0, 1].map((i) => (
+        <section key={i} className="fd-card">
+          <span className="fd-sk" style={{ width: 120, height: 22 }} />
+          <span className="fd-sk" style={{ height: 40 }} />
+          <span className="fd-sk" style={{ height: 40 }} />
+        </section>
+      ))}
     </div>
   </div>
 );
