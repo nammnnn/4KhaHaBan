@@ -1,7 +1,10 @@
 // Foundation: the animals in its care. Phones get a compact list, desktop a photo grid.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit2, ExternalLink, EyeOff, MessageCircle, MoreHorizontal, PawPrint, PlusCircle, Search, Trash2 } from 'lucide-react';
+import {
+  ArrowUpDown, Check, ChevronDown, Edit2, ExternalLink, EyeOff, LayoutGrid, List, MessageCircle,
+  MoreHorizontal, PawPrint, PlusCircle, Search, SlidersHorizontal, Trash2, X,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationAnimalsSkeleton } from '../components/Skeletons';
@@ -9,10 +12,116 @@ import { Button, Dialog, useToast } from '../components/ui';
 import './FoundationAnimals.css';
 
 const STATUSES = [
-  { id: 'available', label: 'กำลังหาบ้าน' },
-  { id: 'adopted', label: 'ได้บ้านแล้ว' },
-  { id: 'hidden', label: 'ซ่อนไว้' },
+  { id: 'available', label: 'กำลังหาบ้าน', hint: 'แสดงในหน้าปัดหาบ้าน' },
+  { id: 'adopted', label: 'ได้บ้านแล้ว', hint: 'ไม่แสดงในหน้าปัดแล้ว' },
+  { id: 'hidden', label: 'ซ่อนไว้', hint: 'ซ่อนชั่วคราว ข้อมูลยังอยู่ครบ' },
 ];
+const SORTS = [
+  { id: 'newest', label: 'ลงประกาศล่าสุด', fn: (a, b) => new Date(b.created_at) - new Date(a.created_at) },
+  { id: 'oldest', label: 'รอบ้านนานที่สุด', fn: (a, b) => new Date(a.created_at) - new Date(b.created_at) },
+  { id: 'requests', label: 'คำขอรับเลี้ยงมากสุด', fn: null }, // needs the request counts, set below
+  { id: 'name', label: 'ชื่อ ก–ฮ', fn: (a, b) => (a.name || '').localeCompare(b.name || '', 'th') },
+];
+const FILTER_GROUPS = [
+  { key: 'type', label: 'ประเภท', options: [['dog', 'สุนัข'], ['cat', 'แมว']] },
+  { key: 'gender', label: 'เพศ', options: [['male', 'เพศผู้'], ['female', 'เพศเมีย']] },
+  { key: 'size', label: 'ขนาดตัว', options: [['small', 'เล็ก'], ['medium', 'กลาง'], ['large', 'ใหญ่']] },
+];
+const NO_FILTERS = { type: null, gender: null, size: null, hasRequests: false };
+const VIEW_KEY = '4kh_fa_view';
+
+const readView = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
+const saveView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } };
+
+function useWide() {
+  const query = '(min-width: 768px)';
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
+  useEffect(() => {
+    const mql = window.matchMedia?.(query);
+    if (!mql) return undefined;
+    const on = () => setWide(mql.matches);
+    mql.addEventListener('change', on);
+    return () => mql.removeEventListener('change', on);
+  }, []);
+  return wide;
+}
+
+// Small popover: closes on outside tap and Escape
+function usePopover() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  // Keep the panel on screen: nudge it left at the right edge, flip it up near the bottom/dock
+  useLayoutEffect(() => {
+    const panel = open && ref.current?.querySelector('.fa-menu__panel');
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const overRight = r.right - (window.innerWidth - 8);
+    if (overRight > 0) panel.style.transform = `translateX(${-overRight}px)`;
+    // On phones the floating dock covers the bottom of the screen
+    const dock = document.querySelector('.nav-item')?.closest('nav')?.getBoundingClientRect();
+    const bottomLimit = dock && dock.top > window.innerHeight / 2 ? dock.top - 8 : window.innerHeight - 8;
+    if (r.bottom > bottomLimit && r.height < ref.current.getBoundingClientRect().top - 8) panel.classList.add('is-up');
+  }, [open]);
+  return { open, setOpen, ref };
+}
+
+// Status pill that opens the app's own menu (native <select> lists can't be styled)
+function StatusMenu({ animal, onChange }) {
+  const { open, setOpen, ref } = usePopover();
+  const current = STATUSES.find((s) => s.id === animal.status) || STATUSES[0];
+  return (
+    <div className="fa-pop" ref={ref}>
+      <button type="button" className={`fa-status fa-status--${current.id}`} aria-haspopup="menu" aria-expanded={open}
+        aria-label={`สถานะของ${animal.name}: ${current.label}`} onClick={() => setOpen((v) => !v)}>
+        <span className="fa-status__dot" aria-hidden="true" /> {current.label} <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="fa-menu__panel fa-menu__panel--left" role="menu">
+          {STATUSES.map((s) => (
+            <button key={s.id} role="menuitemradio" aria-checked={s.id === current.id} type="button"
+              className={`fa-menu__item fa-menu__item--status ${s.id === current.id ? 'is-on' : ''}`}
+              onClick={() => { setOpen(false); if (s.id !== current.id) onChange(s.id); }}>
+              <span className={`fa-status__dot fa-status__dot--${s.id}`} aria-hidden="true" />
+              <span className="fa-menu__text"><span>{s.label}</span><small>{s.hint}</small></span>
+              {s.id === current.id && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SortMenu({ value, onChange }) {
+  const { open, setOpen, ref } = usePopover();
+  const current = SORTS.find((s) => s.id === value) || SORTS[0];
+  return (
+    <div className="fa-pop" ref={ref}>
+      <button type="button" className="fa-tool" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <ArrowUpDown size={16} aria-hidden="true" /> <span className="fa-tool__label">{current.label}</span>
+      </button>
+      {open && (
+        <div className="fa-menu__panel" role="menu">
+          {SORTS.map((s) => (
+            <button key={s.id} role="menuitemradio" aria-checked={s.id === value} type="button"
+              className={`fa-menu__item ${s.id === value ? 'is-on' : ''}`} onClick={() => { setOpen(false); onChange(s.id); }}>
+              <span className="fa-menu__text"><span>{s.label}</span></span>
+              {s.id === value && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 const FILTERS = [{ id: 'all', label: 'ทั้งหมด' }, ...STATUSES];
 const TYPE_LABEL = { dog: 'สุนัข', cat: 'แมว' };
 const GENDER_LABEL = { male: 'เพศผู้', female: 'เพศเมีย' };
@@ -26,16 +135,7 @@ function AnimalPhoto({ src }) {
 
 // ⋯ menu: view as adopters see it, edit, hide, delete
 function RowMenu({ animal, onHide, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    const esc = (e) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('pointerdown', close);
-    document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
-  }, [open]);
+  const { open, setOpen, ref } = usePopover();
   return (
     <div className="fa-menu" ref={ref}>
       <button type="button" className="fa-icon-btn" aria-label={`ตัวเลือกเพิ่มเติมของ${animal.name}`} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
@@ -63,6 +163,13 @@ const FoundationAnimals = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [filters, setFilters] = useState(NO_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sort, setSort] = useState('newest');
+  const wide = useWide();
+  const [viewChoice, setViewChoice] = useState(readView);
+  const view = viewChoice === 'grid' || viewChoice === 'list' ? viewChoice : (wide ? 'grid' : 'list');
+  const chooseView = (v) => { setViewChoice(v); saveView(v); };
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -117,8 +224,17 @@ const FoundationAnimals = () => {
 
   const q = searchQuery.toLowerCase().trim();
   const counts = animals.reduce((acc, a) => ({ ...acc, [a.status]: (acc[a.status] || 0) + 1 }), {});
+  const activeFilters = FILTER_GROUPS.filter((g) => filters[g.key]).length + (filters.hasRequests ? 1 : 0);
+  const sortFn = sort === 'requests'
+    ? (a, b) => (requests[b.id] || 0) - (requests[a.id] || 0) || SORTS[0].fn(a, b)
+    : (SORTS.find((x) => x.id === sort) || SORTS[0]).fn;
   const filtered = animals.filter((a) =>
-    (statusFilter === 'all' || a.status === statusFilter) && (!q || (a.name || '').toLowerCase().includes(q)));
+    (statusFilter === 'all' || a.status === statusFilter)
+    && (!q || (a.name || '').toLowerCase().includes(q))
+    && FILTER_GROUPS.every((g) => !filters[g.key] || a[g.key] === filters[g.key])
+    && (!filters.hasRequests || (requests[a.id] || 0) > 0)).sort(sortFn);
+  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: f[key] === value ? null : value }));
+  const clearAll = () => { setFilters(NO_FILTERS); setSearchQuery(''); setStatusFilter('all'); };
   const deleteRequests = toDelete ? requests[toDelete.id] || 0 : 0;
 
   return (
@@ -135,10 +251,56 @@ const FoundationAnimals = () => {
 
       {animals.length > 0 && (
         <div className="fa-toolbar">
-          <label className="fa-search">
-            <Search size={18} aria-hidden="true" />
-            <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อน้อง" aria-label="ค้นหาชื่อน้อง" />
-          </label>
+          <div className="fa-toolbar__row">
+            <label className="fa-search">
+              <Search size={18} aria-hidden="true" />
+              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อน้อง" aria-label="ค้นหาชื่อน้อง" />
+            </label>
+            <button type="button" className={`fa-tool ${showFilters || activeFilters ? 'is-on' : ''}`} aria-expanded={showFilters}
+              aria-controls="fa-filter-panel" onClick={() => setShowFilters((v) => !v)}>
+              <SlidersHorizontal size={16} aria-hidden="true" /> <span className="fa-tool__label">ตัวกรอง</span>
+              {activeFilters > 0 && <span className="fa-tool__count">{activeFilters}</span>}
+            </button>
+            <SortMenu value={sort} onChange={setSort} />
+            <div className="fa-view" role="group" aria-label="รูปแบบการแสดง">
+              <button type="button" className={view === 'grid' ? 'is-on' : ''} aria-pressed={view === 'grid'} aria-label="แสดงเป็นการ์ดรูป" title="การ์ดรูป" onClick={() => chooseView('grid')}>
+                <LayoutGrid size={18} aria-hidden="true" />
+              </button>
+              <button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} aria-label="แสดงเป็นรายการ" title="รายการ" onClick={() => chooseView('list')}>
+                <List size={18} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          {showFilters && (
+            <div id="fa-filter-panel" className="fa-fpanel">
+              {FILTER_GROUPS.map((g) => (
+                <div key={g.key} className="fa-fpanel__group" role="group" aria-label={g.label}>
+                  <span className="fa-fpanel__label">{g.label}</span>
+                  <div className="fa-fpanel__opts">
+                    {g.options.map(([id, label]) => (
+                      <button key={id} type="button" aria-pressed={filters[g.key] === id}
+                        className={`fa-chip ${filters[g.key] === id ? 'is-on' : ''}`} onClick={() => setFilter(g.key, id)}>
+                        {filters[g.key] === id && <Check size={14} aria-hidden="true" />} {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="fa-fpanel__group" role="group" aria-label="คำขอรับเลี้ยง">
+                <span className="fa-fpanel__label">คำขอรับเลี้ยง</span>
+                <div className="fa-fpanel__opts">
+                  <button type="button" aria-pressed={filters.hasRequests}
+                    className={`fa-chip ${filters.hasRequests ? 'is-on' : ''}`} onClick={() => setFilters((f) => ({ ...f, hasRequests: !f.hasRequests }))}>
+                    {filters.hasRequests && <Check size={14} aria-hidden="true" />} มีคนขอรับเลี้ยง
+                  </button>
+                </div>
+              </div>
+              <div className="fa-fpanel__foot">
+                <button type="button" className="fa-link" onClick={() => setFilters(NO_FILTERS)} disabled={!activeFilters}>ล้างตัวกรอง</button>
+                <Button size="sm" onClick={() => setShowFilters(false)}>ดู {filtered.length} ตัว</Button>
+              </div>
+            </div>
+          )}
           <div className="fa-filters" role="tablist" aria-label="กรองตามสถานะ">
             {FILTERS.map((f) => (
               <button
@@ -164,9 +326,12 @@ const FoundationAnimals = () => {
           <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary">เพิ่มสัตว์หาบ้าน</Link>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="fa-none">ไม่พบน้องที่ตรงกับการค้นหา</p>
+        <div className="fa-none">
+          <p>ไม่พบน้องที่ตรงกับการค้นหาหรือตัวกรอง</p>
+          <button type="button" className="fa-link" onClick={clearAll}><X size={14} aria-hidden="true" /> ล้างทั้งหมด</button>
+        </div>
       ) : (
-        <ul className="fa-grid">
+        <ul className={`fa-grid fa-grid--${view}`}>
           {filtered.map((animal) => {
             const open = requests[animal.id] || 0;
             const meta = [TYPE_LABEL[animal.type] || animal.type, animal.age, GENDER_LABEL[animal.gender]].filter(Boolean).join(' · ');
@@ -175,6 +340,11 @@ const FoundationAnimals = () => {
                 <Link to={`/foundation/animals/${animal.id}/edit`} className="fa-card__media" aria-label={`แก้ไขข้อมูล${animal.name}`}>
                   <AnimalPhoto src={animal.images?.[0]} />
                 </Link>
+                {open > 0 && view === 'grid' && (
+                  <Link to="/foundation/matches" className="fa-requests fa-requests--badge" aria-label={`คำขอรับเลี้ยง ${open} รายการ`} title={`คำขอรับเลี้ยง ${open} รายการ`}>
+                    <MessageCircle size={14} aria-hidden="true" /> {open} คำขอ
+                  </Link>
+                )}
                 <div className="fa-card__body">
                   <div className="fa-card__top">
                     <h2 className="fa-card__name">{animal.name}</h2>
@@ -182,15 +352,8 @@ const FoundationAnimals = () => {
                   </div>
                   {meta && <p className="fa-card__meta">{meta}</p>}
                   <div className="fa-card__foot">
-                    <select
-                      className={`fa-status fa-status--${animal.status}`}
-                      value={STATUSES.some((s) => s.id === animal.status) ? animal.status : 'available'}
-                      onChange={(e) => handleStatusChange(animal.id, e.target.value)}
-                      aria-label={`สถานะของ${animal.name}`}
-                    >
-                      {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
-                    {open > 0 && (
+                    <StatusMenu animal={animal} onChange={(st) => handleStatusChange(animal.id, st)} />
+                    {open > 0 && view === 'list' && (
                       <Link to="/foundation/matches" className="fa-requests" aria-label={`คำขอรับเลี้ยง ${open} รายการ`} title={`คำขอรับเลี้ยง ${open} รายการ`}>
                         <MessageCircle size={15} aria-hidden="true" /> {open}
                       </Link>
