@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
-import { ChevronLeft, Save, Upload, X, Loader2, Image as ImageIcon, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
+import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { FormPageSkeleton } from '../components/Skeletons';
 import { useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
+import './AnimalForm.css';
 
 // Card photos fill ~900px-wide screens; anything much smaller looks blurry (DESIGN.md §5)
 const MIN_SHARP_WIDTH = 800;
@@ -370,515 +370,179 @@ const AnimalForm = () => {
     return <FormPageSkeleton />;
   }
 
+  const hasCoords = Boolean(formData.latitude && formData.longitude);
+
   return (
-    <div style={{
-      minHeight: '100dvh',
-      backgroundColor: '#FAF8F5',
-      fontFamily: 'Prompt, sans-serif',
-      padding: '32px 16px 100px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-        
-        {/* Header */}
-        <motion.div
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}
+    <div className="af-page">
+      <header className="af-header">
+        <button
+          type="button"
+          className="af-back"
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/foundation/animals'))}
+          aria-label="ย้อนกลับ"
         >
-          <button
-            type="button"
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/foundation');
-              }
-            }}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '8px',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #D1D5DB',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              color: '#374151',
-              cursor: 'pointer',
-              transition: 'background-color 0.15s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-            aria-label="ย้อนกลับ"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 700, color: '#111827' }}>
-              {isEditMode ? 'แก้ไขข้อมูลสัตว์เลี้ยง' : 'เพิ่มสัตว์หาบ้านใหม่'}
-            </h1>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280' }}>
-              กรอกข้อมูลเพื่อแสดงบนฟีดค้นหาและแมตช์กับผู้รับเลี้ยง
-            </p>
-          </div>
-        </motion.div>
+          <ChevronLeft size={22} />
+        </button>
+        <div>
+          <h1 className="af-header__title">{isEditMode ? 'แก้ไขข้อมูลน้อง' : 'เพิ่มสัตว์หาบ้าน'}</h1>
+          <p className="af-header__sub">ข้อมูลนี้แสดงบนการ์ดในหน้าปัดและหน้าประวัติของน้อง</p>
+        </div>
+      </header>
 
-        {errorMsg && (
-          <div style={{
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FCA5A5',
-            padding: '12px 14px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            fontSize: '0.85rem',
-            color: '#DC2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <AlertCircle size={16} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-        
-        {successMsg && (
-          <div style={{
-            backgroundColor: '#ECFDF5',
-            border: '1px solid #A7F3D0',
-            padding: '12px 14px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            fontSize: '0.85rem',
-            color: '#059669',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <CheckCircle2 size={16} />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        <motion.form
-          onSubmit={handleSubmit}
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '28px 24px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}
-        >
-          
-          {/* Photos Upload Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '6px' }}>
-              รูปภาพสัตว์เลี้ยง
+      <form id="animal-form" onSubmit={handleSubmit} className="af-form" noValidate={false}>
+        {/* 1. Photos */}
+        <section className="af-section" aria-labelledby="af-s1">
+          <h2 id="af-s1" className="af-section__title"><span>1</span> รูปภาพ</h2>
+          <p className="af-hint">รูปแรกคือรูปหน้าปกบนการ์ด แนะนำรูปแนวตั้ง กว้างอย่างน้อย {MIN_SHARP_WIDTH}px</p>
+          <div className="af-photos">
+            {previewImages.map((src, idx) => (
+              <div key={src} className="af-photo">
+                <img
+                  src={src}
+                  alt={`รูปที่ ${idx + 1}`}
+                  onLoad={(e) => {
+                    const w = e.currentTarget.naturalWidth;
+                    setSmallImages((prev) => {
+                      const next = { ...prev };
+                      if (w > 0 && w < MIN_SHARP_WIDTH) next[src] = w; else delete next[src];
+                      return next;
+                    });
+                  }}
+                />
+                {idx === 0 && <span className="af-photo__tag af-photo__tag--cover">รูปปก</span>}
+                {smallImages[src] && <span className="af-photo__tag af-photo__tag--small" title={`รูปกว้าง ${smallImages[src]}px อาจไม่ชัดบนการ์ด`}>รูปเล็ก</span>}
+                <button type="button" className="af-photo__remove" onClick={() => removeImage(idx)} aria-label={`ลบรูปที่ ${idx + 1}`}>
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            <label className="af-photo af-photo--add">
+              <Upload size={22} aria-hidden="true" />
+              <span>{previewImages.length ? 'เพิ่มรูป' : 'เลือกรูปน้อง'}</span>
+              <input type="file" multiple accept="image/*" onChange={handleImageSelect} />
             </label>
-            <p style={{ fontSize: '0.8rem', color: '#6B7280', margin: '0 0 12px' }}>
-              รูปแรกจะใช้เป็นภาพหน้าปกบนการ์ดค้นหา แนะนำรูปแนวตั้ง (4:5) กว้างอย่างน้อย 800px
+          </div>
+          {previewImages.some((src) => smallImages[src]) && (
+            <p role="note" className="af-note">
+              <AlertCircle size={18} aria-hidden="true" />
+              <span>รูปที่มีป้าย "รูปเล็ก" กว้างไม่ถึง {MIN_SHARP_WIDTH}px อาจดูเบลอ แนะนำรูปที่ถ่ายจากมือถือโดยตรง (รูปที่แคปหน้าจอหรือส่งผ่านแชทมักถูกย่อ)</span>
             </p>
-            
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-              {previewImages.map((src, idx) => (
-                <div key={idx} style={{
-                  position: 'relative',
-                  width: '90px',
-                  height: '90px',
-                  flexShrink: 0,
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid #D1D5DB',
-                  backgroundColor: '#F3F4F6'
-                }}>
-                  <img
-                    src={src}
-                    alt={`รูปที่ ${idx + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onLoad={(e) => {
-                      const w = e.currentTarget.naturalWidth;
-                      setSmallImages((prev) => {
-                        const next = { ...prev };
-                        if (w > 0 && w < MIN_SHARP_WIDTH) next[src] = w; else delete next[src];
-                        return next;
-                      });
-                    }}
-                  />
-                  {smallImages[src] && (
-                    <span
-                      title={`รูปกว้าง ${smallImages[src]}px อาจไม่ชัดบนการ์ด`}
-                      style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.6875rem', fontWeight: 600, padding: '1px 6px', borderRadius: '9999px' }}
-                    >
-                      รูปเล็ก
-                    </span>
-                  )}
-                  {idx === 0 && (
-                    <span style={{
-                      position: 'absolute',
-                      bottom: '4px',
-                      left: '4px',
-                      backgroundColor: 'rgba(0,0,0,0.7)',
-                      color: '#FFFFFF',
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      padding: '1px 6px',
-                      borderRadius: '4px'
-                    }}>
-                      ภาพปก
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(0,0,0,0.6)',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      cursor: 'pointer'
-                    }}
-                    title="ลบรูป"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
+          )}
+        </section>
 
-              <label style={{
-                width: '90px',
-                height: '90px',
-                flexShrink: 0,
-                borderRadius: '8px',
-                border: '1px dashed #D1D5DB',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                cursor: 'pointer',
-                backgroundColor: '#FAF8F5',
-                color: '#6B7280',
-                transition: 'border-color 0.15s, background-color 0.15s'
+        {/* 2. About */}
+        <section className="af-section" aria-labelledby="af-s2">
+          <h2 id="af-s2" className="af-section__title"><span>2</span> ข้อมูลน้อง</h2>
+          <div className="af-field">
+            <label htmlFor="af-name" className="af-label">ชื่อน้อง <span className="af-req">*</span></label>
+            <input id="af-name" type="text" required className="af-input" value={formData.name}
+              onChange={(e) => handleFieldChange('name', e.target.value)} placeholder="เช่น ถุงทอง, เจ้าหลง" />
+          </div>
+          <Segmented label="ประเภท" value={formData.type} onChange={(v) => handleFieldChange('type', v)}
+            options={[['dog', 'สุนัข'], ['cat', 'แมว'], ['other', 'อื่นๆ']]} />
+          <Segmented label="เพศ" value={formData.gender} onChange={(v) => handleFieldChange('gender', v)}
+            options={[['male', 'เพศผู้'], ['female', 'เพศเมีย'], ['unknown', 'ไม่ทราบ']]} />
+          <div className="af-row">
+            <div className="af-field">
+              <label htmlFor="af-age" className="af-label">อายุโดยประมาณ</label>
+              <input id="af-age" type="text" className="af-input" value={formData.age}
+                onChange={(e) => handleFieldChange('age', e.target.value)} placeholder="เช่น 3 เดือน, 1 ปี 6 เดือน" />
+            </div>
+            <Segmented label="ขนาดตัว" value={formData.size} onChange={(v) => handleFieldChange('size', v)}
+              options={[['small', 'เล็ก', '< 10 กก.'], ['medium', 'กลาง', '10–25 กก.'], ['large', 'ใหญ่', '> 25 กก.']]} />
+          </div>
+        </section>
+
+        {/* 3. Personality */}
+        <section className="af-section" aria-labelledby="af-s3">
+          <h2 id="af-s3" className="af-section__title"><span>3</span> นิสัยและเรื่องราว</h2>
+          <p className="af-hint">แตะเพื่อเลือก แท็กจะแสดงบนการ์ดทั้งภาษาไทยและอังกฤษ ช่วยให้คนที่เหมาะเจอน้องง่ายขึ้น</p>
+          <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
+          <div className="af-field">
+            <label htmlFor="af-story" className="af-label">เรื่องราวของน้อง</label>
+            <textarea id="af-story" className="af-input af-textarea" value={formData.story}
+              onChange={(e) => handleFieldChange('story', e.target.value)}
+              placeholder="เล่าที่มา นิสัย สุขภาพ หรือสิ่งที่น้องชอบ" />
+          </div>
+        </section>
+
+        {/* 4. Location */}
+        <section className="af-section" aria-labelledby="af-s4">
+          <h2 id="af-s4" className="af-section__title"><span>4</span> น้องอยู่ที่ไหน</h2>
+          <p className="af-hint">ใช้คำนวณระยะทางให้ผู้ที่สนใจในหน้าปัด</p>
+          <div className="af-loc-actions">
+            {foundationCoords && (
+              <button type="button" className="af-chip-btn" onClick={() => {
+                handleFieldChange('latitude', String(foundationCoords.latitude));
+                handleFieldChange('longitude', String(foundationCoords.longitude));
+                if (foundationCoords.foundation_name) setLocationSearchQuery(foundationCoords.foundation_name);
               }}>
-                <Upload size={20} color="#D97706" style={{ marginBottom: '4px' }} />
-                <span style={{ fontSize: '0.72rem', fontWeight: 500 }}>เพิ่มรูปภาพ</span>
-                <input type="file" multiple accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
-              </label>
-            </div>
-            {previewImages.some((src) => smallImages[src]) && (
-              <p role="note" style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '12px', padding: '10px 14px', borderRadius: '12px', backgroundColor: 'var(--primary-soft)', color: 'var(--primary-deep)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
-                <span>
-                  รูปที่มีป้าย "รูปเล็ก" กว้างไม่ถึง {MIN_SHARP_WIDTH}px อาจดูเบลอบนการ์ด
-                  แนะนำใช้รูปที่ถ่ายจากมือถือโดยตรง (ไม่ใช่รูปที่แคปหน้าจอหรือส่งผ่านแชท ซึ่งมักถูกย่อ)
-                </span>
-              </p>
+                <MapPin size={16} aria-hidden="true" /> ที่ตั้งมูลนิธิ
+              </button>
             )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Name */}
-            <div>
-              <label style={labelStyle}>
-                ชื่อสัตว์เลี้ยง <span style={{ color: '#DC2626' }}>*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={e => handleFieldChange('name', e.target.value)}
-                style={inputStyle}
-                placeholder="เช่น ถุงทอง, เจ้าหลง"
-              />
-            </div>
-
-            {/* Type & Gender (2 columns) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '14px'
-            }}>
-              <div>
-                <label style={labelStyle}>ประเภท</label>
-                <select
-                  value={formData.type}
-                  onChange={e => handleFieldChange('type', e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="dog">สุนัข</option>
-                  <option value="cat">แมว</option>
-                  <option value="other">อื่นๆ</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>เพศ</label>
-                <select
-                  value={formData.gender}
-                  onChange={e => handleFieldChange('gender', e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="male">เพศผู้</option>
-                  <option value="female">เพศเมีย</option>
-                  <option value="unknown">ไม่ระบุ</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Age & Size (2 columns) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '14px'
-            }}>
-              <div>
-                <label style={labelStyle}>อายุโดยประมาณ</label>
-                <input
-                  type="text"
-                  value={formData.age}
-                  onChange={e => handleFieldChange('age', e.target.value)}
-                  style={inputStyle}
-                  placeholder="เช่น 3 เดือน, 1 ปี 6 เดือน"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>ขนาดตัว</label>
-                <select
-                  value={formData.size}
-                  onChange={e => handleFieldChange('size', e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="small">เล็ก (ต่ำกว่า 10 กก.)</option>
-                  <option value="medium">กลาง (10 - 25 กก.)</option>
-                  <option value="large">ใหญ่ (มากกว่า 25 กก.)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Tags (DESIGN.md §7.19) */}
-            <div>
-              <label style={labelStyle}>ลักษณะนิสัยและสุขภาพ</label>
-              <span style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0 0 12px', display: 'block' }}>
-                แตะเพื่อเลือก แท็กจะแสดงบนการ์ดและหน้าประวัติน้อง ทั้งภาษาไทยและภาษาอังกฤษ
-              </span>
-              <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
-            </div>
-
-            {/* Story */}
-            <div>
-              <label style={labelStyle}>เรื่องราวและประวัติความเป็นมา</label>
-              <textarea
-                value={formData.story}
-                onChange={e => handleFieldChange('story', e.target.value)}
-                style={{
-                  ...inputStyle,
-                  height: '110px',
-                  resize: 'vertical',
-                  padding: '12px 14px',
-                  lineHeight: 1.5
-                }}
-                placeholder="เล่าประวัติ ที่มา อุปนิสัย หรือความน่ารักของน้อง..."
-              />
-            </div>
-
-            {/* Location */}
-            <div style={{
-              backgroundColor: '#FAF8F5',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
-              padding: '16px',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                <label style={{ ...labelStyle, marginBottom: 0, fontWeight: 600 }}>
-                  ตำแหน่งที่อยู่ของสัตว์เลี้ยง
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {foundationCoords && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleFieldChange('latitude', String(foundationCoords.latitude));
-                        handleFieldChange('longitude', String(foundationCoords.longitude));
-                        if (foundationCoords.foundation_name) {
-                          setLocationSearchQuery(foundationCoords.foundation_name);
-                        }
-                      }}
-                      style={{
-                        height: '30px',
-                        padding: '0 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #D1D5DB',
-                        backgroundColor: '#FFFFFF',
-                        color: '#374151',
-                        fontSize: '0.78rem',
-                        fontWeight: 500,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ใช้พิกัดมูลนิธิ
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleGetCurrentLocation}
-                    disabled={isGettingLocation}
-                    style={{
-                      height: '30px',
-                      padding: '0 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #D97706',
-                      backgroundColor: '#FEF3C7',
-                      color: '#B45309',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: isGettingLocation ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {isGettingLocation ? <Loader2 size={13} className="spin" /> : <MapPin size={13} color="#D97706" />}
-                    {isGettingLocation ? 'กำลังดึง...' : 'ใช้พิกัดปัจจุบัน'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Location Search Bar */}
-              <div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    placeholder="พิมพ์ชื่อสถานที่/ตำบล/อำเภอ/จังหวัด เช่น อ.เมือง ขอนแก่น เพื่อค้นหาพิกัด"
-                    value={locationSearchQuery}
-                    onChange={e => setLocationSearchQuery(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSearchLocation(); } }}
-                    style={{ ...inputStyle, height: '38px', fontSize: '0.88rem', flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSearchLocation}
-                    disabled={isSearchingLocation || !locationSearchQuery.trim()}
-                    style={{
-                      height: '38px',
-                      padding: '0 14px',
-                      borderRadius: '6px',
-                      border: '1px solid #D97706',
-                      backgroundColor: '#FEF3C7',
-                      color: '#B45309',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: !locationSearchQuery.trim() ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      opacity: !locationSearchQuery.trim() ? 0.6 : 1,
-                      flexShrink: 0
-                    }}
-                  >
-                    {isSearchingLocation ? <Loader2 size={13} className="spin" /> : <Search size={13} />}
-                    {isSearchingLocation ? 'กำลังค้นหา...' : 'ค้นหาตำแหน่ง'}
-                  </button>
-                </div>
-                <span style={{ fontSize: '0.73rem', color: '#6B7280', display: 'block', marginTop: '4px' }}>
-                  ระบบจะใช้พิกัดนี้คำนวณระยะทางกับผู้รับเลี้ยงในหน้าฟีดค้นหาอัตโนมัติ
-                </span>
-              </div>
-
-              {/* Interactive Map with Draggable Pin */}
-              <div style={{ marginTop: '10px' }}>
-                <InteractiveLocationPicker
-                  latitude={formData.latitude || foundationCoords?.latitude}
-                  longitude={formData.longitude || foundationCoords?.longitude}
-                  onChange={handleInteractivePinChange}
-                  height={200}
-                  zoom={16}
-                />
-                <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                  <span style={{ fontSize: '0.73rem', color: '#6B7280' }}>
-                    คลิกบนแผนที่หรือลากหมุดสีแดงเพื่อปรับจุดพิกัด
-                  </span>
-                  {formData.latitude && formData.longitude && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#059669', fontSize: '0.73rem', fontWeight: 600 }}>
-                      <CheckCircle2 size={13} /> พิกัด: {Number(formData.latitude).toFixed(5)}, {Number(formData.longitude).toFixed(5)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div style={{ marginTop: '28px' }}>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: '100%',
-                height: '44px',
-                borderRadius: '8px',
-                backgroundColor: submitting ? '#9CA3AF' : '#D97706',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={e => { if (!submitting) e.currentTarget.style.backgroundColor = '#B45309'; }}
-              onMouseLeave={e => { if (!submitting) e.currentTarget.style.backgroundColor = '#D97706'; }}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="spin" size={18} />
-                  <span>กำลังบันทึกข้อมูล...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={18} />
-                  <span>{isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกและประกาศหาบ้าน'}</span>
-                </>
-              )}
+            <button type="button" className="af-chip-btn" onClick={handleGetCurrentLocation} disabled={isGettingLocation}>
+              {isGettingLocation ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <MapPin size={16} aria-hidden="true" />}
+              {isGettingLocation ? 'กำลังหาตำแหน่ง…' : 'ตำแหน่งปัจจุบัน'}
             </button>
           </div>
-        </motion.form>
-      </div>
+          <div className="af-search">
+            <input type="search" className="af-input" value={locationSearchQuery}
+              placeholder="ค้นหาสถานที่ เช่น อ.เมือง ขอนแก่น"
+              aria-label="ค้นหาสถานที่"
+              onChange={(e) => setLocationSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchLocation(); } }} />
+            <button type="button" className="af-chip-btn" onClick={handleSearchLocation} disabled={isSearchingLocation || !locationSearchQuery.trim()} aria-label="ค้นหา">
+              {isSearchingLocation ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
+            </button>
+          </div>
+          <InteractiveLocationPicker
+            latitude={formData.latitude || foundationCoords?.latitude}
+            longitude={formData.longitude || foundationCoords?.longitude}
+            onChange={handleInteractivePinChange}
+            height={220}
+            zoom={16}
+          />
+          <p className={`af-hint ${hasCoords ? 'af-hint--ok' : ''}`}>
+            {hasCoords
+              ? <><CheckCircle2 size={14} aria-hidden="true" /> ปักหมุดแล้ว · ลากหมุดเพื่อปรับตำแหน่งได้</>
+              : 'แตะบนแผนที่หรือลากหมุดเพื่อเลือกตำแหน่ง'}
+          </p>
+        </section>
+
+        {/* Save: stays in reach at the bottom of the screen */}
+        <div className="af-savebar">
+          {(errorMsg || successMsg) && (
+            <p className={`af-savebar__msg ${errorMsg ? 'is-error' : 'is-ok'}`} role={errorMsg ? 'alert' : 'status'}>
+              {errorMsg ? <AlertCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
+              {errorMsg || successMsg}
+            </p>
+          )}
+          <button type="submit" className="ui-btn ui-btn--primary af-savebar__btn" disabled={submitting}>
+            {submitting ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Save size={18} aria-hidden="true" />}
+            {submitting ? 'กำลังบันทึก…' : isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกและประกาศหาบ้าน'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
 
-const labelStyle = {
-  display: 'block',
-  fontSize: '0.85rem',
-  fontWeight: 500,
-  color: '#374151',
-  marginBottom: '6px'
-};
-
-const inputStyle = {
-  width: '100%',
-  height: '44px',
-  padding: '0 14px',
-  borderRadius: '8px',
-  border: '1px solid #D1D5DB',
-  backgroundColor: '#FFFFFF',
-  fontFamily: 'inherit',
-  fontSize: '0.92rem',
-  color: '#111827',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.15s, box-shadow 0.15s'
-};
+// Two or three choices as tap targets instead of a dropdown
+function Segmented({ label, value, onChange, options }) {
+  return (
+    <fieldset className="af-field af-seg">
+      <legend className="af-label">{label}</legend>
+      <div className="af-seg__opts">
+        {options.map(([id, text, sub]) => (
+          <label key={id} className={`af-seg__opt ${value === id ? 'is-on' : ''}`}>
+            <input type="radio" name={label} value={id} checked={value === id} onChange={() => onChange(id)} />
+            <span>{text}</span>
+            {sub && <small>{sub}</small>}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 export default AnimalForm;
