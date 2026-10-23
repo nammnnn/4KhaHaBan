@@ -1,0 +1,17 @@
+/* Urgency the reporter picked (critical / urgent / normal) */
+.inc-urgency {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.inc-urgency__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.inc-urgency--critical { background: var(--danger, #DC2626); color: #FFFFFF; }
+.inc-urgency--critical .inc-urgency__dot { background: #FFFFFF; animation: inc-pulse 1.4s ease-in-out infinite; }
+.inc-urgency--urgent { background: var(--primary-soft, #FEF3C7); color: var(--primary-deep, #92400E); }
+.inc-urgency--normal { background: var(--surface-sunken, #F5F5F4); color: var(--ink-600, #57534E); }
+@keyframes inc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .inc-urgency--critical .inc-urgency__dot { animation: none; } }

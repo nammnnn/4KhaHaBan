@@ -926,6 +926,7 @@ export const api = {
       user_id: reportData.userId || null,
       animal_type: reportData.animalType || 'dog',
       symptoms: reportData.symptoms,
+      urgency: ['critical', 'urgent', 'normal'].includes(reportData.urgency) ? reportData.urgency : 'urgent',
       location_text: reportData.locationText,
       latitude: reportData.latitude || null,
       longitude: reportData.longitude || null,
@@ -1104,47 +1105,25 @@ export const api = {
     return data;
   },
 
-  // รายการสิ่งของจำเป็นเริ่มต้น (Fallback)
-  defaultNeeds: [
-    { id: 'def-1', item_name: 'อาหารเม็ดสำหรับสุนัขโต', category: 'food', urgency: 'critical', note: 'ต้องการสูตรโภชนาการสำหรับสุนัขโตทุกสายพันธุ์' },
-    { id: 'def-2', item_name: 'อาหารเปียกและนมลูกแมว', category: 'food', urgency: 'high', note: 'สำหรับลูกแมวแรกเกิดและแมวป่วยพักฟื้น' },
-    { id: 'def-3', item_name: 'แผ่นรองซับสิ่งขับถ่าย Size L', category: 'hygiene', urgency: 'high', note: 'แบบดูดซึมไวเพื่อความสะอาดในกรงพักฟื้น' },
-    { id: 'def-4', item_name: 'ยาป้องกันพยาธิหัวใจและเห็บหมัด', category: 'medical', urgency: 'normal', note: 'ชนิดหยดหลังคอหรือชนิดเม็ดเคี้ยว' },
-    { id: 'def-5', item_name: 'ทรายแมวเต้าหู้หรือเบนโทไนท์', category: 'hygiene', urgency: 'normal', note: 'แบบฝุ่นน้อย ปลอดภัยต่อระบบทางเดินหายใจ' }
-  ],
-
-  /**
-   * Fetch needs items for a specific foundation or all
-   */
+  // A foundation's own open needs. Returns [] when there are none (or on error) so the page shows
+  // its empty state; it used to substitute 5 sample items that looked like the foundation's real list.
   async getFoundationNeeds(foundationId) {
-    if (!supabase) return this.defaultNeeds;
-
+    if (!supabase) return [];
     try {
       let query = supabase
         .from('foundation_needs')
         .select('*')
         .eq('is_active', true);
-
-      if (foundationId) {
-        query = query.eq('foundation_id', foundationId);
-      }
-
-      query = query.order('created_at', { ascending: false });
-
-      const { data, error } = await query;
+      if (foundationId) query = query.eq('foundation_id', foundationId);
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) {
-        console.warn('Error fetching foundation_needs, using fallback:', error.message);
-        return this.defaultNeeds;
+        console.warn('Error fetching foundation_needs:', error.message);
+        return [];
       }
-
-      if (!data || data.length === 0) {
-        return this.defaultNeeds;
-      }
-
-      return data;
+      return data || [];
     } catch (err) {
       console.warn('Exception fetching foundation_needs:', err);
-      return this.defaultNeeds;
+      return [];
     }
   },
 

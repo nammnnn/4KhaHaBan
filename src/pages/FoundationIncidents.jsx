@@ -32,6 +32,14 @@ import { FoundationIncidentsSkeleton } from '../components/Skeletons';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { MOTION } from '../lib/motion';
+import './FoundationIncidents.css';
+
+// How urgent the reporter said it is (incident_reports.urgency, migration 028)
+const URGENCY_META = {
+  critical: { label: 'วิกฤต', rank: 0 },
+  urgent: { label: 'เร่งด่วน', rank: 1 },
+  normal: { label: 'ไม่เร่งด่วน', rank: 2 },
+};
 
 export default function FoundationIncidents() {
   const navigate = useNavigate();
@@ -154,11 +162,16 @@ export default function FoundationIncidents() {
   const resolvedCount = incidents.filter(i => i.status === 'resolved').length;
   const cancelledCount = incidents.filter(i => i.status === 'cancelled').length;
 
+  // Open cases first, then by urgency (critical → normal), then newest
+  const STATUS_RANK = { pending: 0, in_progress: 1, resolved: 2, cancelled: 3 };
   const filtered = incidents.filter(i => {
     if (filter === 'all') return true;
     if (filter === 'my_cases') return i.status === 'in_progress' && i.rescuer_id === user?.id;
     return i.status === filter;
-  });
+  }).sort((a, b) =>
+    (STATUS_RANK[a.status] ?? 4) - (STATUS_RANK[b.status] ?? 4)
+    || (URGENCY_META[a.urgency]?.rank ?? 1) - (URGENCY_META[b.urgency]?.rank ?? 1)
+    || new Date(b.created_at) - new Date(a.created_at));
 
   if (loading) {
     return (
@@ -490,6 +503,12 @@ export default function FoundationIncidents() {
                   <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       {/* Status Badge */}
+                      {(inc.status === 'pending' || inc.status === 'in_progress') && URGENCY_META[inc.urgency] && (
+                        <span className={`inc-urgency inc-urgency--${inc.urgency}`}>
+                          <span className="inc-urgency__dot" aria-hidden="true" />
+                          {URGENCY_META[inc.urgency].label}
+                        </span>
+                      )}
                       {inc.status === 'pending' ? (
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: '5px',
