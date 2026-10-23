@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { FoundationNeedsSkeleton } from '../components/Skeletons';
+import { Button, Dialog, useToast } from '../components/ui';
 
 const URGENCY_LEVELS = [
   { id: 'critical', label: 'วิกฤต (ด่วนที่สุด)', bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
@@ -64,6 +65,8 @@ export default function FoundationNeeds() {
 
   // Filter
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [toDelete, setToDelete] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     fetchData();
@@ -156,33 +159,36 @@ export default function FoundationNeeds() {
       setShowAddModal(false);
     } catch (err) {
       console.error('Error saving need item:', err);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      toast('บันทึกไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) return;
+  const handleDelete = async () => {
+    const item = toDelete;
+    if (!item) return;
     try {
-      if (!id.startsWith('def-')) {
-        await api.deleteFoundationNeed(id);
-      }
-      setNeeds(prev => prev.filter(n => n.id !== id));
+      await api.deleteFoundationNeed(item.id);
+      setNeeds(prev => prev.filter(n => n.id !== item.id));
+      toast(`ลบ "${item.item_name}" แล้ว`, { tone: 'success' });
     } catch (err) {
       console.error('Error deleting need item:', err);
-      alert('ไม่สามารถลบรายการได้ กรุณาลองใหม่อีกครั้ง');
+      toast('ลบรายการไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+    } finally {
+      setToDelete(null);
     }
   };
 
   const handleUrgencyQuickChange = async (id, newUrgency) => {
+    const before = needs;
+    setNeeds(prev => prev.map(n => n.id === id ? { ...n, urgency: newUrgency } : n));
     try {
-      if (!id.startsWith('def-')) {
-        await api.updateFoundationNeed(id, { urgency: newUrgency });
-      }
-      setNeeds(prev => prev.map(n => n.id === id ? { ...n, urgency: newUrgency } : n));
+      await api.updateFoundationNeed(id, { urgency: newUrgency });
     } catch (err) {
       console.error('Error updating urgency:', err);
+      setNeeds(before);
+      toast('เปลี่ยนความเร่งด่วนไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
     }
   };
 
@@ -241,7 +247,7 @@ export default function FoundationNeeds() {
             </Link>
             <div>
               <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                ของใช้ที่เปิดรับบริจาค (Wishlist)
+                ของที่ต้องการรับบริจาค
               </h1>
               <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '4px 0 0 0' }}>
                 ระบุรายการสิ่งของหรือเวชภัณฑ์ที่ศูนย์พักพิงกำลังขาดแคลน เพื่อให้ผู้ใจบุญส่งของมาช่วยได้ตรงจุด
@@ -565,7 +571,7 @@ export default function FoundationNeeds() {
                     </button>
 
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => setToDelete(item)}
                       title="ลบรายการ"
                       style={{
                         width: '34px',
@@ -765,6 +771,13 @@ export default function FoundationNeeds() {
         </div>
       )}
 
+      <Dialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={toDelete ? `ลบ "${toDelete.item_name}"?` : ''}>
+        <p>ผู้ใช้จะไม่เห็นรายการนี้ในหน้าบริจาคอีก ถ้าได้ของครบแล้วก็ลบได้เลย</p>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setToDelete(null)}>ย้อนกลับ</Button>
+          <Button variant="danger" onClick={handleDelete}>ลบรายการ</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

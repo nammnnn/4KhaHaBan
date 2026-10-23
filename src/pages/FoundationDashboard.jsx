@@ -10,9 +10,10 @@ import { supabase } from '../services/supabaseClient';
 import { FoundationDashboardSkeleton } from '../components/Skeletons';
 import './FoundationDashboard.css';
 
+// Same labels as the needs page (FoundationNeeds URGENCY_LEVELS)
 const NEED_URGENCY = {
-  critical: { label: 'ด่วนมาก', tone: 'danger' },
-  high: { label: 'จำเป็น', tone: 'warn' },
+  critical: { label: 'วิกฤต', tone: 'danger' },
+  high: { label: 'ด่วนมาก', tone: 'warn' },
 };
 
 function TodoRow({ to, tone = 'default', icon: Icon, title, text }) {
