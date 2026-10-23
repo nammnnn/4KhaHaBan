@@ -5,6 +5,7 @@ import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
 import '../pages/FoundationDashboard.css';
 import '../pages/FoundationAnimals.css';
+import '../pages/FoundationIncidents.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -303,39 +304,27 @@ export const FoundationAnimalsSkeleton = () => (
 
 // 6. Incidents List Skeleton (FoundationIncidents)
 export const FoundationIncidentsSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-    {[1, 2, 3].map(i => (
-      <div
-        key={i}
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '20px',
-          border: '1px solid #E5E7EB',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="skeleton" style={{ width: '110px', height: '24px', borderRadius: '6px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '70px', height: '14px' }} />
-        </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-          <div className="skeleton" style={{ width: '100px', height: '100px', borderRadius: '12px', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div className="skeleton skeleton-text" style={{ width: '60%', height: '18px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '90%', height: '14px' }} />
-            <div className="skeleton skeleton-text" style={{ width: '40%', height: '14px' }} />
+  <div className="inc-page" aria-busy="true" aria-label="กำลังโหลด">
+    <header className="inc-header">
+      <span className="fd-sk" style={{ display: 'block', width: 110, height: 28 }} />
+      <span className="fd-sk" style={{ display: 'block', width: 200, height: 16, marginTop: 6 }} />
+    </header>
+    <div className="inc-filters">
+      {[150, 100, 100, 80].map((w, i) => <span key={i} className="fd-sk" style={{ flexShrink: 0, width: w, height: 40, borderRadius: 999 }} />)}
+    </div>
+    <ul className="inc-list">
+      {[0, 1].map((i) => (
+        <li key={i} className="inc-card">
+          <span className="fd-sk inc-photo" style={{ borderRadius: 0 }} />
+          <div className="inc-card__body">
+            <span className="fd-sk" style={{ width: 180, height: 22, borderRadius: 999 }} />
+            <span className="fd-sk" style={{ width: '80%', height: 24 }} />
+            <span className="fd-sk" style={{ width: '60%', height: 18 }} />
+            <span className="fd-sk" style={{ width: 200, height: 48, marginTop: 8 }} />
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-          <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '10px' }} />
-        </div>
-      </div>
-    ))}
+        </li>
+      ))}
+    </ul>
   </div>
 );
 
