@@ -4,6 +4,7 @@ import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
 import '../pages/FoundationDashboard.css';
+import '../pages/FoundationAnimals.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -273,32 +274,30 @@ export const FoundationDashboardSkeleton = () => (
 
 // 5. Animals List Skeleton (FoundationAnimals)
 export const FoundationAnimalsSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-    {[1, 2, 3, 4, 5].map(i => (
-      <div
-        key={i}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          padding: '14px 18px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '14px',
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-        }}
-      >
-        <div className="skeleton" style={{ width: '60px', height: '60px', borderRadius: '10px', flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="skeleton skeleton-text" style={{ width: `${80 + (i % 3) * 20}px`, height: '18px' }} />
-            <div className="skeleton" style={{ width: '65px', height: '20px', borderRadius: '6px' }} />
-          </div>
-          <div className="skeleton skeleton-text" style={{ width: '130px', height: '13px' }} />
-        </div>
-        <div className="skeleton" style={{ width: '120px', height: '36px', borderRadius: '8px', flexShrink: 0 }} />
+  <div className="fa-page" aria-busy="true" aria-label="กำลังโหลด">
+    <header className="fa-header">
+      <div>
+        <span className="fd-sk" style={{ display: 'block', width: 150, height: 28 }} />
+        <span className="fd-sk" style={{ display: 'block', width: 190, height: 16, marginTop: 6 }} />
       </div>
-    ))}
+      <span className="fd-sk fa-header__cta" style={{ height: 48, minWidth: 170 }} />
+    </header>
+    <div className="fa-toolbar">
+      <span className="fd-sk fa-search" style={{ height: 44 }} />
+      <span className="fd-sk" style={{ height: 40, width: 320, maxWidth: '100%', borderRadius: 999 }} />
+    </div>
+    <ul className="fa-grid">
+      {[0, 1, 2, 3].map((i) => (
+        <li key={i} className="fa-card">
+          <span className="fa-card__media"><span className="fd-sk fa-card__photo" /></span>
+          <div className="fa-card__body">
+            <span className="fd-sk" style={{ width: '50%', height: 22, marginTop: 4 }} />
+            <span className="fd-sk" style={{ width: '70%', height: 16, marginTop: 6 }} />
+            <span className="fd-sk" style={{ width: 120, height: 36, marginTop: 'auto', borderRadius: 999 }} />
+          </div>
+        </li>
+      ))}
+    </ul>
   </div>
 );
 
