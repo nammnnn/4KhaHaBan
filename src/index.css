@@ -342,7 +342,9 @@ button {
 }
 
 .nav-item:hover { color: var(--ink-700); }
-.nav-item.active { color: var(--primary-strong); }
+/* Active = warm-grey pill, dark label, amber icon — same as the desktop sidebar */
+.nav-item.active { color: var(--ink-900); }
+.nav-item.active .nav-icon { color: var(--primary-strong); }
 
 /* Sliding highlight behind the active icon (animated with framer-motion layoutId) */
 .nav-pill {
@@ -353,7 +355,8 @@ button {
   height: 32px;
   margin-left: -28px;
   border-radius: var(--radius-full);
-  background: var(--primary-soft);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--line-200);
   z-index: 0;
 }
 
