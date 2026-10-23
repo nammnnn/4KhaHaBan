@@ -244,8 +244,8 @@
 .login-mobile-brand-icon {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background-color: #D97706;
+  border-radius: 7px;
+  background-color: var(--primary-strong, #B45309);
   display: flex;
   align-items: center;
   justify-content: center;

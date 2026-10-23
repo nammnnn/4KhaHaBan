@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  PawPrint, Loader2, Mail, Lock, User, Phone, FileText,
+  Loader2, Mail, Lock, User, Phone, FileText,
   X, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
+import BrandMark from '../components/BrandMark';
 import './Login.css';
 import { useI18n, LanguageSwitch } from '../i18n';
 import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
@@ -185,7 +186,7 @@ const Login = () => {
           <div className="login-mobile-topbar">
             <div className="login-mobile-brand">
               <div className="login-mobile-brand-icon">
-                <PawPrint size={15} strokeWidth={2.4} />
+                <BrandMark size={26} />
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
                 {t('app.name.prefix')}<span style={{ color: '#D97706' }}>{t('app.name.accent')}</span>

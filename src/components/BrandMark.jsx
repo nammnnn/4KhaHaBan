@@ -1,0 +1,33 @@
+// The app's mark: a house-shaped pet ID tag with a paw, on a split ring.
+// Same drawing as public/favicon.svg, minus the orange tile (the caller provides the background).
+import { useId } from 'react';
+
+export default function BrandMark({ size = 24, className }) {
+  const clipId = `brand-ring-${useId().replace(/:/g, '')}`;
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y="0" width="32" height="64" />
+          <circle cx="32" cy="28.2" r="3.3" />
+        </clipPath>
+      </defs>
+      <g transform="translate(32 32) scale(1.02) translate(-32 -35.8)">
+        <circle cx="32" cy="21.2" r="7.6" fill="none" stroke="#FFFFFF" strokeWidth="3" />
+        <path d="M29.5 21.6 Q32 19.8 34.5 21.6 L47.6 31.2 Q49.2 32.4 49.2 34.4 V52 Q49.2 58 43.2 58 H20.8 Q14.8 58 14.8 52 V34.4 Q14.8 32.4 16.4 31.2 Z" fill="#FFFFFF" />
+        <circle cx="32" cy="28.2" r="3.3" fill="#B45309" />
+        <g clipPath={`url(#${clipId})`}>
+          <circle cx="32" cy="21.2" r="7.6" fill="none" stroke="#B45309" strokeWidth="5.2" />
+          <circle cx="32" cy="21.2" r="7.6" fill="none" stroke="#FFFFFF" strokeWidth="3" />
+        </g>
+        <g transform="translate(32 40.4) scale(0.607)" fill="#B45309">
+          <path d="M0 0 C4.8 0 8.8 3.4 9.8 7.8 C10.6 11.4 8.6 14.4 5.4 14.4 C3.5 14.4 2 13.5 0 13.5 C-2 13.5 -3.5 14.4 -5.4 14.4 C-8.6 14.4 -10.6 11.4 -9.8 7.8 C-8.8 3.4 -4.8 0 0 0 Z" />
+          <ellipse cx="-10.6" cy="-2.2" rx="3.1" ry="3.9" transform="rotate(-28 -10.6 -2.2)" />
+          <ellipse cx="-4" cy="-7.2" rx="3.3" ry="4.2" transform="rotate(-9 -4 -7.2)" />
+          <ellipse cx="4" cy="-7.2" rx="3.3" ry="4.2" transform="rotate(9 4 -7.2)" />
+          <ellipse cx="10.6" cy="-2.2" rx="3.1" ry="3.9" transform="rotate(28 10.6 -2.2)" />
+        </g>
+      </g>
+    </svg>
+  );
+}
