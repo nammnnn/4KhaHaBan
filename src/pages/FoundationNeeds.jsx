@@ -530,7 +530,7 @@ export default function FoundationNeeds() {
                   {/* Urgency Selector & Actions */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
                     <select
-                      value={item.urgency || 'normal'}
+                      value={currentUrgency.id}
                       onChange={(e) => handleUrgencyQuickChange(item.id, e.target.value)}
                       style={{
                         padding: '6px 12px',
