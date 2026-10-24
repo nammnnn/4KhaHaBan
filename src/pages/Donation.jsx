@@ -27,7 +27,9 @@ function placeOf(address = '') {
   return m ? m[1] : '';
 }
 
-const hasRealPromptpay = (f) => !f?.demo && (f?.promptpay_number || f?.phone || '').replace(/\D/g, '').length >= 10;
+// Only the PromptPay number the foundation set itself. Never its contact phone: that may not be
+// registered for PromptPay, or may belong to a staff member personally.
+const hasRealPromptpay = (f) => !f?.demo && (f?.promptpay_number || '').replace(/\D/g, '').length >= 10;
 
 function FoundationAvatar({ f }) {
   const initial = (f?.full_name || '').replace(/^มูลนิธิ\s*/, '').trim().charAt(0).toUpperCase();
@@ -202,7 +204,7 @@ function Donation() {
   const foundation = foundations.find((f) => f.id === selectedFoundationId) || null;
   // Only ever build a QR for a real number — never a placeholder account
   const hasPromptpay = hasRealPromptpay(foundation);
-  const promptpay = hasPromptpay ? (foundation.promptpay_number || foundation.phone).replace(/\D/g, '') : '';
+  const promptpay = hasPromptpay ? foundation.promptpay_number.replace(/\D/g, '') : '';
   const amount = tier === CUSTOM ? Math.floor(Number(customAmount) || 0) : tier;
   const canDonate = !!foundation && hasPromptpay && amount >= 1;
 
@@ -476,7 +478,7 @@ function Donation() {
                   <div className="sp-qr">
                     <QRCodeSVG value={generatePayload(promptpay, { amount })} size={176} />
                     <button type="button" className="sp-qr__id" onClick={() => copy(promptpay, 'promptpay')}>
-                      {t('donate.pay.promptpay')} <b>{foundation?.promptpay_number || foundation?.phone}</b>
+                      {t('donate.pay.promptpay')} <b>{foundation?.promptpay_number}</b>
                       {copied === 'promptpay' ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </div>

@@ -238,29 +238,16 @@ export const api = {
         .select('id, foundation_name, address, contact_phone, promptpay_number')
         .eq('verification_status', 'approved');
 
-      if (!fpError && fpData && fpData.length > 0) {
+      if (!fpError && fpData) {
+        // Approved foundations only. promptpay_number is the foundation's own setting; the contact
+        // phone is never used as a PromptPay number. (The old fallback also listed unapproved
+        // foundations from profiles with their phone as PromptPay.)
         return fpData.map(fp => ({
           id: fp.id,
           full_name: fp.foundation_name || 'มูลนิธิช่วยเหลือสัตว์',
           phone: fp.contact_phone || '',
           address: fp.address || 'กรุณาติดต่อสอบถามที่อยู่จัดส่งจากมูลนิธิโดยตรง',
-          promptpay_number: fp.promptpay_number || (fp.contact_phone ? fp.contact_phone.replace(/\D/g, '') : '')
-        }));
-      }
-
-      // 2. Fallback ไปที่ profiles ที่มี role = 'foundation' (ไม่ query foundation_status เพราะคอลัมน์นี้ไม่มีใน profiles)
-      const { data: pData, error: pError } = await supabase
-        .from('profiles')
-        .select('id, full_name, phone')
-        .eq('role', 'foundation');
-        
-      if (!pError && pData && pData.length > 0) {
-        return pData.map(p => ({
-          id: p.id,
-          full_name: p.full_name || 'มูลนิธิช่วยเหลือสัตว์',
-          phone: p.phone || '',
-          address: 'กรุณาติดต่อสอบถามที่อยู่จัดส่งจากมูลนิธิโดยตรง',
-          promptpay_number: p.phone ? p.phone.replace(/\D/g, '') : ''
+          promptpay_number: (fp.promptpay_number || '').replace(/\D/g, '')
         }));
       }
 
