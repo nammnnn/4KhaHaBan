@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, CheckCircle2, ChevronRight, Heart, Home, MapPin, MessageCircle,
-  Package, PlusCircle, QrCode, ShieldCheck, Sparkles, X,
+  Package, PlusCircle, QrCode, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
@@ -38,39 +38,6 @@ function Stat({ to, icon: Icon, tone, value, unit, label }) {
       <span className="fd-stat__label">{label}</span>
       <span className="fd-stat__value">{value}<small>{unit}</small></span>
     </Link>
-  );
-}
-
-const TIPS_KEY = '4kh_fd_tips_hidden';
-const TIP_COUNT = 3;
-
-// One tip at a time in a slim strip; "next" cycles, × hides it (remembered on this device).
-function TipStrip({ t }) {
-  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(TIPS_KEY) === '1'; } catch { return false; } });
-  const [i, setI] = useState(0);
-  const save = (v) => { setHidden(v); try { localStorage.setItem(TIPS_KEY, v ? '1' : '0'); } catch { /* private mode */ } };
-  const hide = () => save(true);
-  // Hidden: a small link brings the tips back
-  if (hidden) {
-    return (
-      <button type="button" className="fd-tip-show" onClick={() => save(false)}>
-        <Sparkles size={14} aria-hidden="true" /> {t('fd.tips.show')}
-      </button>
-    );
-  }
-  return (
-    <aside className="fd-tip" aria-label={t('fd.tips.title')}>
-      <Sparkles size={16} className="fd-tip__icon" aria-hidden="true" />
-      <p className="fd-tip__text" aria-live="polite">
-        <span className="fd-tip__label">{t('fd.tips.label')} {i + 1}/{TIP_COUNT}</span> {t(`fd.tips.${i + 1}`)}
-      </p>
-      <button type="button" className="fd-tip__btn" onClick={() => setI((i + 1) % TIP_COUNT)} aria-label={t('fd.tips.next')}>
-        <ChevronRight size={18} aria-hidden="true" />
-      </button>
-      <button type="button" className="fd-tip__btn" onClick={hide} aria-label={t('fd.tips.hide')}>
-        <X size={16} aria-hidden="true" />
-      </button>
-    </aside>
   );
 }
 
@@ -271,7 +238,6 @@ const FoundationDashboard = () => {
         </section>
       </div>
 
-      <TipStrip t={t} />
     </div>
   );
 };
