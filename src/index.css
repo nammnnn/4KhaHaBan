@@ -765,3 +765,11 @@ button {
 @media (max-width: 767px) {
   .boot-nav-user { display: none; }
 }
+
+/* Foundation sign-up stepper (FoundationOnboarding.jsx) */
+.onb-steps { display: flex; gap: var(--space-3); }
+.onb-step { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+@media (max-width: 520px) {
+  .onb-step:not(.is-active) { flex: none; }
+  .onb-step:not(.is-active) .onb-step__title { display: none; }
+}

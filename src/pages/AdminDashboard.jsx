@@ -703,8 +703,8 @@ const AdminDashboard = () => {
           className="admin-kpi-grid"
         >
           <div className="admin-kpi-card">
-            <div className="admin-kpi-icon-wrap" style={{ background: '#F0F9FF' }}>
-              <Users size={20} color="#0284C7" />
+            <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+              <Users size={20} color="#B45309" />
             </div>
             {loading && profiles.length === 0 ? (
               <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '3px 0' }} />
@@ -744,13 +744,13 @@ const AdminDashboard = () => {
           className="admin-tab-nav"
         >
           {[
-            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} />, color: '#0284C7' },
-            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length, color: '#D97706' },
-            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={17} />, badge: incidents.filter(i => i.status === 'pending').length, color: '#DC2626' },
-            { id: 'donations', label: 'ประวัติบริจาค', icon: <Banknote size={17} />, color: 'var(--success-fill)' },
-            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount, color: '#7C3AED' },
-            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} />, color: '#DC2626' },
-            { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} />, color: '#4B5563' }
+            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} /> },
+            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length },
+            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={17} />, badge: incidents.filter(i => i.status === 'pending').length },
+            { id: 'donations', label: 'ประวัติบริจาค', icon: <Banknote size={17} /> },
+            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount },
+            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} /> },
+            { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} /> }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -766,21 +766,22 @@ const AdminDashboard = () => {
                 }}
                 className="admin-tab-pill"
                 style={{
-                  backgroundColor: isActive ? tab.color : '#FFFFFF',
-                  color: isActive ? '#FFFFFF' : '#374151',
-                  border: isActive ? `1.5px solid ${tab.color}` : '1px solid #E5E7EB',
+                  // Same as the filter chips elsewhere in the app: dark when selected
+                  backgroundColor: isActive ? 'var(--ink-900)' : 'var(--surface)',
+                  color: isActive ? '#FFFFFF' : 'var(--ink-700)',
+                  border: isActive ? '1.5px solid var(--ink-900)' : '1px solid var(--line-200)',
                   boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.02)',
                   fontWeight: isActive ? 700 : 500
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#FFFFFF' : tab.color }}>
+                <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#FFFFFF' : 'var(--ink-500)' }}>
                   {tab.icon}
                 </span>
                 <span>{tab.label}</span>
                 {tab.badge > 0 && (
                   <span style={{
                     backgroundColor: isActive ? '#FFFFFF' : '#DC2626',
-                    color: isActive ? tab.color : '#FFFFFF',
+                    color: isActive ? 'var(--ink-900)' : '#FFFFFF',
                     minWidth: '20px',
                     height: '20px',
                     borderRadius: '9999px',
@@ -1128,8 +1129,8 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="admin-kpi-card">
-                    <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
-                      <FileCheck size={20} color="#2563EB" />
+                    <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+                      <FileCheck size={20} color="#B45309" />
                     </div>
                     <span className="admin-kpi-count">{slipCount}</span>
                     <span className="admin-kpi-label">แนบหลักฐานสลิป</span>
@@ -1886,9 +1887,9 @@ const AdminDashboard = () => {
                             <span style={{ 
                               display: 'inline-flex', alignItems: 'center', gap: '5px',
                               padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE'
+                              backgroundColor: 'var(--surface-sunken)', color: 'var(--ink-700)', border: '1px solid var(--line-200)'
                             }}>
-                              <Compass size={13} color="#1D4ED8" />
+                              <Compass size={13} color="#57534E" />
                               กำลังเข้าช่วยเหลือ
                             </span>
                           ) : inc.status === 'resolved' ? (
@@ -2037,8 +2038,8 @@ const AdminDashboard = () => {
                         {inc.status === 'in_progress' && (
                           <>
                             <div style={{
-                              padding: '6px 10px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
-                              borderRadius: '8px', fontSize: '0.75rem', color: '#1D4ED8', fontWeight: 600,
+                              padding: '6px 10px', backgroundColor: 'var(--surface-sunken)', border: '1px solid var(--line-200)',
+                              borderRadius: '8px', fontSize: '0.75rem', color: 'var(--ink-700)', fontWeight: 600,
                               display: 'flex', alignItems: 'center', gap: '4px'
                             }}>
                               <UserCheck size={13} /> {inc.rescuer_name ? `ผู้รับเคส: ${inc.rescuer_name}` : 'กำลังเข้าช่วยเหลือ'}
@@ -2143,8 +2144,8 @@ const AdminDashboard = () => {
                     const isApprove = log.action === 'APPROVE_FOUNDATION';
                     const isReject = log.action === 'REJECT_FOUNDATION';
                     const isRole = log.action === 'UPDATE_ROLE';
-                    const iconBg = isApprove ? 'var(--success-soft)' : isReject ? '#FEF2F2' : isRole ? '#EFF6FF' : '#F3F4F6';
-                    const iconColor = isApprove ? 'var(--success-fill)' : isReject ? '#DC2626' : isRole ? '#2563EB' : '#4B5563';
+                    const iconBg = isApprove ? 'var(--success-soft)' : isReject ? '#FEF2F2' : isRole ? 'var(--primary-soft)' : '#F3F4F6';
+                    const iconColor = isApprove ? 'var(--success-fill)' : isReject ? '#DC2626' : isRole ? '#B45309' : '#4B5563';
                     const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : log.action;
 
                     return (
@@ -2531,8 +2532,8 @@ const DonationsTabSkeleton = () => (
         <span className="admin-kpi-label">รายการแจ้งโอนทั้งหมด</span>
       </div>
       <div className="admin-kpi-card">
-        <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
-          <FileCheck size={20} color="#2563EB" />
+        <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+          <FileCheck size={20} color="#B45309" />
         </div>
         <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
         <span className="admin-kpi-label">แนบหลักฐานสลิป</span>

@@ -173,7 +173,7 @@ const FoundationPending = () => {
                       {item.done ? (
                         <CheckCircle2 size={15} />
                       ) : item.active ? (
-                        <Loader2 className="spin" size={13} />
+                        <Clock size={14} aria-hidden="true" />
                       ) : (
                         i + 1
                       )}
