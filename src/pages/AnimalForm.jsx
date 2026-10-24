@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
-import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
+import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, PawPrint, Search } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { AnimalFormSkeleton } from '../components/Skeletons';
-import { Button, Dialog, useToast } from '../components/ui';
+import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
 import { useI18n } from '../i18n';
@@ -26,6 +26,7 @@ const AnimalForm = () => {
   const { t } = useI18n();
   
   const [loading, setLoading] = useState(isEditMode);
+  const [loadState, setLoadState] = useState(null); // null | 'notFound' | 'error' (edit mode only)
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -95,6 +96,7 @@ const AnimalForm = () => {
   }, [id, user]);
 
   const fetchAnimal = async () => {
+    setLoadState(null);
     try {
       const { data, error } = await supabase
         .from('animals')
@@ -104,6 +106,7 @@ const AnimalForm = () => {
         .single();
 
       if (error) throw error;
+      if (!data) { setLoadState('notFound'); return; }
 
       setFormData({
         name: data.name || '',
@@ -122,7 +125,9 @@ const AnimalForm = () => {
       setPreviewImages(data.images || []);
     } catch (error) {
       console.error('[AnimalForm] Error fetching:', error);
-      setErrorMsg(t('af.err.notFound'));
+      // PGRST116 = no row (deleted, or another foundation's animal), 22P02 = malformed id in the link;
+      // anything else is a load failure
+      setLoadState(['PGRST116', '22P02'].includes(error?.code) ? 'notFound' : 'error');
     } finally {
       setLoading(false);
     }
@@ -436,22 +441,43 @@ const AnimalForm = () => {
 
   const hasCoords = Boolean(formData.latitude && formData.longitude);
 
+  const header = (
+    <header className="af-header">
+      <button
+        type="button"
+        className="af-back"
+        onClick={goBack}
+        aria-label={t('fnd.back')}
+      >
+        <ChevronLeft size={22} />
+      </button>
+      <div>
+        <h1 className="af-header__title">{isEditMode ? t('af.titleEdit') : t('af.titleNew')}</h1>
+        <p className="af-header__sub">{t('af.sub')}</p>
+      </div>
+    </header>
+  );
+
+  if (loadState) {
+    return (
+      <div className="af-page">
+        {header}
+        {loadState === 'notFound' ? (
+          <EmptyState
+            icon={PawPrint}
+            title={t('af.err.notFound')}
+            action={<Button onClick={() => navigate('/foundation/animals', { replace: true })}>{t('err.toList')}</Button>}
+          />
+        ) : (
+          <LoadError onRetry={() => { setLoading(true); return fetchAnimal(); }} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="af-page">
-      <header className="af-header">
-        <button
-          type="button"
-          className="af-back"
-          onClick={goBack}
-          aria-label={t('fnd.back')}
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <div>
-          <h1 className="af-header__title">{isEditMode ? t('af.titleEdit') : t('af.titleNew')}</h1>
-          <p className="af-header__sub">{t('af.sub')}</p>
-        </div>
-      </header>
+      {header}
 
       <form id="animal-form" onSubmit={handleSubmit} className="af-form" noValidate>
         {/* 1. Photos */}

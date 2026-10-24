@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationDashboardSkeleton } from '../components/Skeletons';
+import { LoadError } from '../components/ui';
 import { useI18n } from '../i18n';
 import './FoundationDashboard.css';
 
@@ -48,13 +49,17 @@ const FoundationDashboard = () => {
   const [stats, setStats] = useState({ available: 0, adopted: 0, pendingMatches: 0, needs: 0, pendingIncidents: 0, criticalIncidents: 0 });
   const [newRequests, setNewRequests] = useState([]);
   const [needs, setNeeds] = useState([]);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!user || !supabase) { setLoading(false); return; }
     let cancelled = false;
     (async () => {
       try {
-        const count = (q) => q.then(({ count: c }) => c || 0);
+        // Supabase returns errors instead of throwing; throw so the page can show "couldn't load".
+        const ok = (r) => { if (r.error) throw r.error; return r; };
+        const count = (q) => q.then((r) => ok(r).count || 0);
         const [
           { data: foundation },
           available, adopted, pendingMatches, pendingIncidents, criticalIncidents,
@@ -62,15 +67,15 @@ const FoundationDashboard = () => {
           { data: requestRows },
         ] = await Promise.all([
           // PromptPay, address and GPS live on foundation_profiles (not on profiles)
-          supabase.from('foundation_profiles').select('foundation_name, address, promptpay_number, latitude, longitude').eq('id', user.id).maybeSingle(),
+          supabase.from('foundation_profiles').select('foundation_name, address, promptpay_number, latitude, longitude').eq('id', user.id).maybeSingle().then(ok),
           count(supabase.from('animals').select('id', { count: 'exact', head: true }).eq('foundation_id', user.id).eq('status', 'available')),
           count(supabase.from('animals').select('id', { count: 'exact', head: true }).eq('foundation_id', user.id).eq('status', 'adopted')),
           // RLS only returns requests for this foundation's animals
           count(supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
           count(supabase.from('incident_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
           count(supabase.from('incident_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('urgency', 'critical')),
-          supabase.from('foundation_needs').select('id, item_name, urgency', { count: 'exact' }).eq('foundation_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(3),
-          supabase.from('matches').select('id, user_id, animal_id, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(2),
+          supabase.from('foundation_needs').select('id, item_name, urgency', { count: 'exact' }).eq('foundation_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(3).then(ok),
+          supabase.from('matches').select('id, user_id, animal_id, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(2).then(ok),
         ]);
 
         // Names for the newest requests ("สมชาย ขอรับ ข้าวตัง")
@@ -88,20 +93,29 @@ const FoundationDashboard = () => {
         }
 
         if (cancelled) return;
+        setLoadError(false);
         setFp(foundation || null);
         setStats({ available, adopted, pendingMatches, needs: needCount || 0, pendingIncidents, criticalIncidents });
         setNeeds(needRows || []);
         setNewRequests(requests);
       } catch (error) {
         console.error('[Dashboard] Error fetching data:', error);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, reloadKey]);
 
   if (loading) return <FoundationDashboardSkeleton />;
+  if (loadError) {
+    return (
+      <div className="fd-page">
+        <LoadError onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} />
+      </div>
+    );
+  }
 
   const name = fp?.foundation_name || profile?.full_name || t('fd.ourFoundation');
   const hasPromptPay = Boolean(fp?.promptpay_number);

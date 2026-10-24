@@ -43,7 +43,7 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useI18n();
-  const { matches } = useAppContext();
+  const { matches, matchesError, retryMatches } = useAppContext();
   const [searchParams] = useSearchParams();
   const [searchPrefs, setSearchPrefs] = useState(null);
   const [imgError, setImgError] = useState(false);
@@ -938,7 +938,7 @@ export default function UserProfile() {
                 title={t('pf.requests')}
                 action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
               >
-                <AdoptionRequests matches={matches} />
+                <AdoptionRequests matches={matches} error={matchesError} onRetry={retryMatches} />
               </ProfileSection>
             </div>
           )}

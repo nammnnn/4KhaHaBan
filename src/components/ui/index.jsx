@@ -1,7 +1,8 @@
 // Shared UI components. Spec: DESIGN.md §7.
 import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CloudOff, Info, Loader2, RotateCw } from 'lucide-react';
+import { useI18n } from '../../i18n';
 import { cn } from '../../lib/utils';
 import './ui.css';
 import { MOTION } from '../../lib/motion';
@@ -86,6 +87,31 @@ export function EmptyState({ icon: Icon, title, text, action }) {
       <h3 className="ui-empty__title">{title}</h3>
       {text && <p className="ui-empty__text">{text}</p>}
       {action && <div className="ui-empty__action">{action}</div>}
+    </div>
+  );
+}
+
+// Shown instead of an empty state when data failed to load, so "nothing here" is never a lie.
+export function LoadError({ onRetry, title, text, compact }) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const retry = async () => {
+    if (!onRetry) return window.location.reload();
+    setBusy(true);
+    try { await onRetry(); } finally { setBusy(false); }
+  };
+  return (
+    <div className={cn('ui-empty ui-load-error', compact && 'ui-load-error--compact')} role="alert">
+      <div className="ui-empty__icon ui-load-error__icon" aria-hidden="true">
+        <CloudOff size={compact ? 28 : 36} />
+      </div>
+      <h3 className="ui-empty__title">{title || t('err.load.title')}</h3>
+      <p className="ui-empty__text">{text || t('err.load.text')}</p>
+      <div className="ui-empty__action">
+        <Button variant="secondary" onClick={retry} loading={busy}>
+          {!busy && <RotateCw size={16} />} {t('err.retry')}
+        </Button>
+      </div>
     </div>
   );
 }

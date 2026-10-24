@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { FoundationIncidentsSkeleton } from '../components/Skeletons';
-import { Button, Dialog, useToast } from '../components/ui';
+import { Button, Dialog, LoadError, useToast } from '../components/ui';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useI18n } from '../i18n';
@@ -58,17 +58,21 @@ export default function FoundationIncidents() {
   const [previewImage, setPreviewImage] = useState(null);
   const [confirm, setConfirm] = useState(null); // { type, incident }
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setIncidents((await api.getIncidentReports('all')) || []);
-      } catch (err) {
-        console.error('Error loading incidents:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadIncidents = async () => {
+    try {
+      setIncidents((await api.getIncidentReports('all', { strict: true })) || []);
+      setLoadError(false);
+    } catch (err) {
+      console.error('Error loading incidents:', err);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadIncidents(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // New reports and other foundations' updates arrive live
   useEffect(() => {
@@ -116,6 +120,14 @@ export default function FoundationIncidents() {
   };
 
   if (loading) return <FoundationIncidentsSkeleton />;
+  if (loadError) {
+    return (
+      <div className="inc-page">
+        <header className="inc-header"><h1 className="inc-header__title">{t('inc.title')}</h1></header>
+        <LoadError onRetry={loadIncidents} />
+      </div>
+    );
+  }
 
   // Tabs never overlap: each open case sits in exactly one of the first three
   const isOpen = (i) => i.status === 'pending' || i.status === 'in_progress';

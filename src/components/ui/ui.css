@@ -178,6 +178,12 @@ button.ui-chip[aria-pressed='true'] {
 .ui-empty__title { font-size: var(--text-headline); font-weight: 600; line-height: 1.4; color: var(--ink-900); }
 .ui-empty__text { font-size: var(--text-body); color: var(--ink-600); line-height: 1.6; }
 .ui-empty__action { margin-top: var(--space-4); }
+.err-screen { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: var(--space-6) var(--space-4); }
+.err-screen__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; }
+a.ui-btn { text-decoration: none; }
+.ui-load-error__icon { background: var(--danger-soft); color: var(--danger); }
+.ui-load-error--compact { padding: var(--space-6) var(--space-4); }
+.ui-load-error--compact .ui-empty__icon { width: 56px; height: 56px; }
 
 /* ---------- Dialog (bottom sheet on mobile) ---------- */
 .ui-dialog-backdrop {

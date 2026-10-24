@@ -21,6 +21,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui';
+import { AdoptionUnavailable } from '../components/ErrorScreens';
 import { PET_PLACEHOLDER } from '../lib/avatar';
 import { FOLLOWUP_GROUPS, followupLabel, milestoneText, formatDate } from '../lib/followup';
 import { useI18n, localizeAge } from '../i18n';
@@ -35,6 +36,7 @@ export default function AdoptionFollowup() {
   const { t, lang } = useI18n();
 
   const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState(null); // null | 'error' | 'notFound'
   const [submitting, setSubmitting] = useState(false);
   const [matchData, setMatchData] = useState(null);
   const [animal, setAnimal] = useState(null);
@@ -58,31 +60,34 @@ export default function AdoptionFollowup() {
   const fileInputRef = useRef(null);
 
   // Load initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const info = await api.getAdoptionFollowups(matchId);
-        setFollowupInfo(info);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setLoadState(null);
+      const info = await api.getAdoptionFollowups(matchId);
+      setFollowupInfo(info);
+      if (!info.match) setLoadState('notFound');
 
-        if (info.match) {
-          setMatchData(info.match);
-          if (info.match.animal) {
-            setAnimal(info.match.animal);
-          } else if (info.match.animal_id) {
-            const aData = await api.getAnimalById(info.match.animal_id);
-            setAnimal(aData);
-          }
+      if (info.match) {
+        setMatchData(info.match);
+        if (info.match.animal) {
+          setAnimal(info.match.animal);
+        } else if (info.match.animal_id) {
+          const aData = await api.getAnimalById(info.match.animal_id).catch(() => null);
+          setAnimal(aData);
         }
-      } catch (err) {
-        console.error('Error loading followup data:', err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Error loading followup data:', err);
+      setLoadState('error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-  }, [matchId]);
+  }, [matchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePhotoSelect = (e) => {
     const files = Array.from(e.target.files || []);
@@ -167,6 +172,10 @@ export default function AdoptionFollowup() {
   };
 
   const formatThaiDate = (dateStr) => formatDate(dateStr, lang, 'long');
+
+  if (!loading && loadState) {
+    return <AdoptionUnavailable state={loadState} onRetry={fetchData} />;
+  }
 
   if (loading) {
     return <AdoptionFollowupSkeleton />;

@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { ChevronDown, MessageCircle, PawPrint, Search, ShieldCheck } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
+import { LoadError } from '../components/ui';
 import FoundationChatRoom from './FoundationChatRoom';
 import { useI18n } from '../i18n';
 import './MatchChat.css';
@@ -83,6 +84,8 @@ function FoundationMatchChat() {
   const [matches, setMatches] = useState([]);
   const [animalData, setAnimalData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const navigate = useNavigate();
   const { matchId } = useParams(); // Check if a chat is active
 
@@ -98,6 +101,7 @@ function FoundationMatchChat() {
         if (showSkeleton) setLoading(true);
         const foundationMatches = await api.getFoundationMatches(user?.id);
         if (!isMounted) return;
+        setLoadError(false);
         setMatches(foundationMatches || []);
 
         if (foundationMatches && foundationMatches.length > 0) {
@@ -119,6 +123,8 @@ function FoundationMatchChat() {
         }
       } catch (error) {
         console.error("Error fetching foundation matches", error);
+        // A failed background refresh keeps the list that is already on screen
+        if (isMounted && showSkeleton) setLoadError(true);
       } finally {
         if (isMounted && showSkeleton) setLoading(false);
       }
@@ -148,7 +154,7 @@ function FoundationMatchChat() {
         supabase.removeChannel(channel);
       }
     };
-  }, [user?.id]);
+  }, [user?.id, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <ChatListSkeleton />;
@@ -230,7 +236,9 @@ function FoundationMatchChat() {
         </div>
 
         <div className="mc-scroll">
-          {matches.length === 0 ? (
+          {loadError && matches.length === 0 ? (
+            <LoadError onRetry={() => setReloadKey((k) => k + 1)} />
+          ) : matches.length === 0 ? (
             <div className="mc-how">
               <span className="mc-how__icon" aria-hidden="true"><MessageCircle size={34} /></span>
               <h2 className="mc-how__title">{t('fmc.empty.title')}</h2>

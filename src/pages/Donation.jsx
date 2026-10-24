@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
 import { DonationSkeleton, NeedsSkeleton } from '../components/Skeletons';
-import { Badge, Button, Dialog, useToast } from '../components/ui';
+import { Badge, Button, Dialog, LoadError, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
@@ -154,6 +154,8 @@ function Donation() {
   const [foundations, setFoundations] = useState([]);
   const [selectedFoundationId, setSelectedFoundationId] = useState('');
   const [loadingFoundations, setLoadingFoundations] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [foundationNeeds, setFoundationNeeds] = useState([]);
   // Which foundation the list above belongs to. Until it matches the selected one we show a
   // same-sized placeholder; live refreshes keep the old list on screen instead of flashing.
@@ -166,16 +168,18 @@ function Donation() {
       try {
         const data = await api.getFoundations();
         if (!isMounted) return;
+        setLoadError(false);
         setFoundations(data || []);
         if (data?.length) setSelectedFoundationId((prev) => (prev && data.some((f) => f.id === prev) ? prev : data[0].id));
       } catch (err) {
         console.warn('Error fetching foundations:', err);
+        if (isMounted) setLoadError(true);
       } finally {
         if (isMounted) setLoadingFoundations(false);
       }
     })();
     return () => { isMounted = false; };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selectedFoundationId) return;
@@ -268,6 +272,16 @@ function Donation() {
   };
 
   if (loadingFoundations) return <DonationSkeleton />;
+  if (loadError) {
+    return (
+      <div className="sp-page sp-page--wide">
+        <header className="sp-head">
+          <h1 className="sp-head__title">{t('donate.title')}</h1>
+        </header>
+        <LoadError onRetry={() => setReloadKey((k) => k + 1)} />
+      </div>
+    );
+  }
 
   const needs = [...foundationNeeds].sort((a, b) => (NEED_ORDER[a.urgency] ?? 2) - (NEED_ORDER[b.urgency] ?? 2));
   const baht = (n) => `฿${n.toLocaleString()}`;

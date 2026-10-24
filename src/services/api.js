@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
 import { compressImage } from '../lib/image';
-import { mockAnimals } from '../mockData';
 
 // In-memory caches for ultra-fast instant lookups (0ms latency on repeated accesses)
 const animalCache = new Map();
@@ -45,41 +44,23 @@ export const api = {
    * Fetch all available animals for adoption
    */
   async getAnimals(userId) {
+    if (!supabase) return [];
+    // Errors are thrown so the feed can show "couldn't load" instead of an empty deck.
+    const { data, error } = await supabase.from('animals').select('*').eq('status', 'available');
+    if (error) throw error;
+    let allAnimals = data || [];
     try {
-      let allAnimals = [];
+      // Always ensure all images point directly to Supabase Storage CDN
+      allAnimals = allAnimals.map(normalizeAnimalImages);
 
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.from('animals').select('*');
-        if (!error && data && data.length > 0) {
-          const availableDb = data.filter(a => a.status === 'available');
-          // If the DB only contains legacy 15 mock data ('4 ขาหาบ้าน'), prioritize the real Saved Souls Foundation dataset
-          const isLegacy = availableDb.every(a => a.shelter === '4 ขาหาบ้าน' || a.name === 'น้องทองแดง' || a.name === 'ส้มจี๊ด');
-          if (!isLegacy && availableDb.length > 0) {
-            allAnimals = availableDb;
-          }
-        }
-      } catch (err) {
-        console.warn("Could not fetch from Supabase, using real Saved Souls Foundation dataset:", err);
+      // Warm in-memory cache for 0ms transitions to profile/chat
+      if (allAnimals.length > 0) {
+        const now = Date.now();
+        allAnimals.forEach(a => {
+          if (a && a.id) animalCache.set(a.id, { data: a, timestamp: now });
+        });
       }
-    }
 
-    // Fallback to real Saved Souls Foundation dataset (cats & dogs)
-    if (allAnimals.length === 0) {
-      allAnimals = [...mockAnimals];
-    }
-
-    // Always ensure all images point directly to Supabase Storage CDN
-    allAnimals = allAnimals.map(normalizeAnimalImages);
-
-    // Warm in-memory cache for 0ms transitions to profile/chat
-    if (allAnimals.length > 0) {
-      const now = Date.now();
-      allAnimals.forEach(a => {
-        if (a && a.id) animalCache.set(a.id, { data: a, timestamp: now });
-      });
-    }
-      
       // Filter out already swiped animals if userId is provided
       if (userId && userId !== '00000000-0000-0000-0000-000000000000') {
         // 1. Fetch user's existing matches
@@ -135,8 +116,9 @@ export const api = {
       
       return allAnimals;
     } catch (err) {
-      console.error("Error in getAnimals:", err);
-      return [];
+      // Animals loaded but the swipe/match lookup failed: still show the deck.
+      console.error("Error filtering animals:", err);
+      return allAnimals;
     }
   },
 
@@ -161,15 +143,8 @@ export const api = {
           return normalized;
         }
       } catch (e) {
-        // Fallback to local mockAnimals
+        console.warn('getAnimalById failed:', e);
       }
-    }
-
-    const localFound = mockAnimals.find(a => a.id === id);
-    if (localFound) {
-      const normalized = normalizeAnimalImages(localFound);
-      animalCache.set(id, { data: normalized, timestamp: Date.now() });
-      return normalized;
     }
 
     throw new Error('Animal not found');
@@ -195,68 +170,25 @@ export const api = {
   },
 
   /**
-  // Placeholder list for demo / offline mode only. `demo: true` stops the donation page from
-  // building a PromptPay QR for these numbers, which were never verified with the foundations.
-  getDefaultFoundations() {
-    return [
-      {
-        id: 'f-soidog',
-        full_name: 'มูลนิธิเพื่อสุนัขในซอย (Soi Dog Foundation)',
-        phone: '076-681-029',
-        address: '167/9 หมู่ 4 ต.ไม้ขาว อ.ถลาง จ.ภูเก็ต 83110',
-        promptpay_number: '076681029',
-        demo: true
-      },
-      {
-        id: 'f-voice',
-        full_name: 'มูลนิธิเดอะวอยซ์ (The Voice Foundation)',
-        phone: '085-110-0055',
-        address: 'แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
-        promptpay_number: '0851100055',
-        demo: true
-      },
-      {
-        id: 'f-home4animals',
-        full_name: 'มูลนิธิบ้านสงเคราะห์สัตว์พิการ',
-        phone: '02-584-4896',
-        address: '15/1 หมู่ 1 ซอยพระมหาการุณย์ 25 ต.บ้านใหม่ อ.ปากเกร็ด จ.นนทบุรี 11120',
-        promptpay_number: '025844896',
-        demo: true
-      }
-    ];
-  },
-
-  /**
    * Get all approved foundations for donation
    */
   async getFoundations() {
-    if (!supabase) return this.getDefaultFoundations();
-    try {
-      // 1. ดึงจาก foundation_profiles เพื่อให้ได้ที่อยู่ เบอร์โทรพัสดุ และเบอร์พร้อมเพย์
-      const { data: fpData, error: fpError } = await supabase
-        .from('foundation_profiles')
-        .select('id, foundation_name, address, contact_phone, promptpay_number')
-        .eq('verification_status', 'approved');
-
-      if (!fpError && fpData) {
-        // Approved foundations only. promptpay_number is the foundation's own setting; the contact
-        // phone is never used as a PromptPay number. (The old fallback also listed unapproved
-        // foundations from profiles with their phone as PromptPay.)
-        return fpData.map(fp => ({
-          id: fp.id,
-          full_name: fp.foundation_name || 'มูลนิธิช่วยเหลือสัตว์',
-          phone: fp.contact_phone || '',
-          address: fp.address || 'กรุณาติดต่อสอบถามที่อยู่จัดส่งจากมูลนิธิโดยตรง',
-          promptpay_number: (fp.promptpay_number || '').replace(/\D/g, '')
-        }));
-      }
-
-      // 3. Fallback หากยังไม่มีข้อมูลในระบบ ให้ใช้มูลนิธิตั้งต้น
-      return this.getDefaultFoundations();
-    } catch (err) {
-      console.warn('Error fetching foundations, using default foundations fallback:', err);
-      return this.getDefaultFoundations();
-    }
+    if (!supabase) return [];
+    // Approved foundations only. promptpay_number is the foundation's own setting; the contact
+    // phone is never used as a PromptPay number. Errors are thrown so the page can say
+    // "couldn't load" (it used to fall back to a hardcoded list of other foundations).
+    const { data, error } = await supabase
+      .from('foundation_profiles')
+      .select('id, foundation_name, address, contact_phone, promptpay_number')
+      .eq('verification_status', 'approved');
+    if (error) throw error;
+    return (data || []).map(fp => ({
+      id: fp.id,
+      full_name: fp.foundation_name || 'มูลนิธิช่วยเหลือสัตว์',
+      phone: fp.contact_phone || '',
+      address: fp.address || 'กรุณาติดต่อสอบถามที่อยู่จัดส่งจากมูลนิธิโดยตรง',
+      promptpay_number: (fp.promptpay_number || '').replace(/\D/g, '')
+    }));
   },
 
   /**
@@ -492,8 +424,9 @@ export const api = {
       .select('*, animal:animals(*)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-      
-    if (!error && data && data.length > 0) {
+
+    if (error) throw error;
+    if (data && data.length > 0) {
       return data.map(match => ({
         ...match,
         animalId: match.animal_id,
@@ -533,11 +466,13 @@ export const api = {
         matchesData = res2.data;
       } else {
         // 3. Fallback: query foundation's animals directly then fetch matches
+        let fallbackError = null;
         try {
-          const { data: myAnimals } = await supabase
+          const { data: myAnimals, error: animalsError } = await supabase
             .from('animals')
             .select('id')
             .eq('foundation_id', foundationId);
+          if (animalsError) fallbackError = animalsError;
 
           if (myAnimals && myAnimals.length > 0) {
             const animalIds = myAnimals.map(a => a.id);
@@ -549,11 +484,16 @@ export const api = {
 
             if (!res3.error && res3.data) {
               matchesData = res3.data;
+            } else if (res3.error) {
+              fallbackError = res3.error;
             }
           }
         } catch (fErr) {
           console.warn('Fallback matches query failed:', fErr);
+          fallbackError = fErr;
         }
+        // Every query failed: tell the page, so it doesn't show "no requests yet"
+        if (res1.error && res2.error && fallbackError) throw fallbackError;
       }
     }
 
@@ -977,7 +917,7 @@ export const api = {
   /**
    * Fetch all incident reports with optional status filter
    */
-  async getIncidentReports(statusFilter = 'all') {
+  async getIncidentReports(statusFilter = 'all', { strict = false } = {}) {
     if (!supabase) return [];
 
     try {
@@ -995,6 +935,8 @@ export const api = {
       return data || [];
     } catch (err) {
       console.error('getIncidentReports error:', err);
+      // strict: let the page show "couldn't load" rather than "no cases"
+      if (strict) throw err;
       return [];
     }
   },
@@ -1096,7 +1038,7 @@ export const api = {
 
   // A foundation's own open needs. Returns [] when there are none (or on error) so the page shows
   // its empty state; it used to substitute 5 sample items that looked like the foundation's real list.
-  async getFoundationNeeds(foundationId) {
+  async getFoundationNeeds(foundationId, { strict = false } = {}) {
     if (!supabase) return [];
     try {
       let query = supabase
@@ -1105,13 +1047,11 @@ export const api = {
         .eq('is_active', true);
       if (foundationId) query = query.eq('foundation_id', foundationId);
       const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) {
-        console.warn('Error fetching foundation_needs:', error.message);
-        return [];
-      }
+      if (error) throw error;
       return data || [];
     } catch (err) {
-      console.warn('Exception fetching foundation_needs:', err);
+      console.warn('Error fetching foundation_needs:', err);
+      if (strict) throw err;
       return [];
     }
   },
@@ -1322,26 +1262,22 @@ export const api = {
     let matchData = null;
 
     if (supabase) {
-      try {
-        const { data: mData } = await supabase
-          .from('matches')
-          .select('*, animal:animals(*)')
-          .eq('id', matchId)
-          .maybeSingle();
-        matchData = mData;
+      // Errors are thrown so the pages can say "couldn't load" instead of drawing an empty schedule.
+      const { data: mData, error: mError } = await supabase
+        .from('matches')
+        .select('*, animal:animals(*)')
+        .eq('id', matchId)
+        .maybeSingle();
+      if (mError) throw mError;
+      matchData = mData;
 
-        const { data, error } = await supabase
-          .from('adoption_followups')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('milestone_index', { ascending: true });
-
-        if (!error && data) {
-          followups = data;
-        }
-      } catch (err) {
-        console.warn('Error fetching adoption_followups:', err);
-      }
+      const { data, error } = await supabase
+        .from('adoption_followups')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('milestone_index', { ascending: true });
+      if (error) throw error;
+      followups = data || [];
     }
 
     // Local storage fallback cache

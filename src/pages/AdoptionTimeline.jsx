@@ -17,6 +17,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui';
+import { AdoptionUnavailable } from '../components/ErrorScreens';
 import { PET_PLACEHOLDER } from '../lib/avatar';
 import { followupLabel, milestoneText, formatDate } from '../lib/followup';
 import { useI18n, localizeAge } from '../i18n';
@@ -30,6 +31,7 @@ export default function AdoptionTimeline() {
   const { t, lang } = useI18n();
 
   const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState(null); // null | 'error' | 'notFound'
   const [matchData, setMatchData] = useState(null);
   const [animal, setAnimal] = useState(null);
   const [followupInfo, setFollowupInfo] = useState({ followups: [], milestones: [], nextDue: null });
@@ -42,20 +44,23 @@ export default function AdoptionTimeline() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadState(null);
       const info = await api.getAdoptionFollowups(matchId);
       setFollowupInfo(info);
+      if (!info.match) setLoadState('notFound');
 
       if (info.match) {
         setMatchData(info.match);
         if (info.match.animal) {
           setAnimal(info.match.animal);
         } else if (info.match.animal_id) {
-          const aData = await api.getAnimalById(info.match.animal_id);
+          const aData = await api.getAnimalById(info.match.animal_id).catch(() => null);
           setAnimal(aData);
         }
       }
     } catch (err) {
       console.error('Error fetching followup timeline:', err);
+      setLoadState('error');
     } finally {
       setLoading(false);
     }
@@ -96,6 +101,10 @@ export default function AdoptionTimeline() {
   };
 
   const formatThaiDate = (dateStr) => formatDate(dateStr, lang);
+
+  if (!loading && loadState) {
+    return <AdoptionUnavailable state={loadState} onRetry={fetchData} />;
+  }
 
   if (loading) {
     return <AdoptionTimelineSkeleton />;

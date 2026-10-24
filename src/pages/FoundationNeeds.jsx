@@ -22,7 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { FoundationNeedsSkeleton, FoundationNeedsPageSkeleton } from '../components/Skeletons';
-import { Button, Dialog, useToast } from '../components/ui';
+import { Button, Dialog, LoadError, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 
 // Labels: fn.urg.<id>, fn.cat.<id>, fn.preset.<index>.name / .note
@@ -48,6 +48,7 @@ export default function FoundationNeeds() {
   const { user } = useAuth();
   const [needs, setNeeds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [foundationInfo, setFoundationInfo] = useState(null);
@@ -78,20 +79,23 @@ export default function FoundationNeeds() {
       if (user?.id) {
         // 1. Fetch foundation shipping info
         if (supabase) {
-          const { data: fp } = await supabase
+          const { data: fp, error: fpError } = await supabase
             .from('foundation_profiles')
             .select('foundation_name, address, contact_phone, contact_person, promptpay_number')
             .eq('id', user.id)
             .maybeSingle();
+          if (fpError) throw fpError;
           if (fp) setFoundationInfo(fp);
         }
 
         // 2. Fetch needs list
-        const items = await api.getFoundationNeeds(user.id);
+        const items = await api.getFoundationNeeds(user.id, { strict: true });
         setNeeds(items);
       }
+      setLoadError(false);
     } catch (err) {
       console.error('Error fetching foundation needs:', err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -198,6 +202,13 @@ export default function FoundationNeeds() {
   });
 
   if (loading) return <FoundationNeedsPageSkeleton />;
+  if (loadError) {
+    return (
+      <div style={{ padding: '32px 16px 100px' }}>
+        <LoadError onRetry={fetchData} />
+      </div>
+    );
+  }
 
   return (
     <div style={{

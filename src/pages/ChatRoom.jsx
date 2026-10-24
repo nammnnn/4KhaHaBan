@@ -11,7 +11,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { ChatRoomSkeleton } from '../components/Skeletons';
-import { Button, Dialog, useToast } from '../components/ui';
+import { Button, Dialog, LoadError, useToast } from '../components/ui';
 import { initialsAvatar } from '../lib/avatar';
 import { MessageItem, dayLabel } from '../components/chat/ChatParts';
 import { useI18n } from '../i18n';
@@ -114,9 +114,13 @@ function ChatRoom() {
     }
   }, [matchId, messages, match, animal, foundation]);
 
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   // Load once per chat
   useEffect(() => {
     let cancelled = false;
+    setLoadError(false);
     if (userChatCache.has(matchId)) {
       const cached = userChatCache.get(matchId);
       if (cached.match) setMatch(cached.match);
@@ -173,12 +177,13 @@ function ChatRoom() {
         }
       } catch (error) {
         console.error('Failed to load chat data', error);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [matchId]);
+  }, [matchId, reloadKey]);
 
   // Status changes (approved, handed over…) arrive live
   useEffect(() => {
@@ -377,6 +382,14 @@ function ChatRoom() {
   const foundationAvatar = useMemo(() => initialsAvatar(foundationName), [foundationName]);
 
   if (loading) return <ChatRoomSkeleton />;
+
+  if (!match && messages.length === 0 && loadError) {
+    return (
+      <div className="chat-room-container fcr fcr--empty">
+        <LoadError onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} />
+      </div>
+    );
+  }
 
   if (!match && messages.length === 0) {
     return (

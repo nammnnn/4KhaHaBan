@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ChevronDown, PawPrint } from 'lucide-react';
 import { api } from '../../services/api';
+import { LoadError } from '../ui';
 import './ProfileSections.css';
 import { useI18n } from '../../i18n';
 import { displayNames } from '../../lib/animal';
@@ -52,7 +53,7 @@ function RequestThumb({ src }) {
 }
 
 // Latest adoption requests with their status (newest first, as returned by the API).
-export function AdoptionRequests({ matches, limit = 3 }) {
+export function AdoptionRequests({ matches, limit = 3, error, onRetry }) {
   const { t, lang } = useI18n();
   const shown = (matches || []).slice(0, limit);
   const [animals, setAnimals] = useState({});
@@ -68,6 +69,8 @@ export function AdoptionRequests({ matches, limit = 3 }) {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown.map((m) => m.animalId).join(',')]);
+
+  if (shown.length === 0 && error) return <LoadError compact onRetry={onRetry} />;
 
   if (shown.length === 0) {
     return (

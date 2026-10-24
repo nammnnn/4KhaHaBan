@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationAnimalsSkeleton } from '../components/Skeletons';
-import { Button, Dialog, useToast } from '../components/ui';
+import { Button, Dialog, LoadError, useToast } from '../components/ui';
 import { useI18n, localizeAge } from '../i18n';
 import './FoundationAnimals.css';
 
@@ -174,9 +174,12 @@ const FoundationAnimals = () => {
   const chooseView = (v) => { setViewChoice(v); saveView(v); };
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!user || !supabase) { setLoading(false); return; }
+    let cancelled = false;
     (async () => {
       try {
         const [{ data, error }, { data: open }] = await Promise.all([
@@ -185,16 +188,19 @@ const FoundationAnimals = () => {
           supabase.from('matches').select('animal_id').in('status', ['pending', 'approved']),
         ]);
         if (error) throw error;
+        if (cancelled) return;
+        setLoadError(false);
         setAnimals(data || []);
         setRequests((open || []).reduce((acc, m) => ({ ...acc, [m.animal_id]: (acc[m.animal_id] || 0) + 1 }), {}));
       } catch (error) {
         console.error('[Animals] Error fetching animals:', error);
-        toast(t('fa.toast.loadFail'), { tone: 'error' });
+        if (!cancelled) setLoadError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
+  }, [user, reloadKey]);
 
   const handleStatusChange = async (id, newStatus) => {
     const before = animals;
@@ -244,12 +250,14 @@ const FoundationAnimals = () => {
       <header className="fa-header">
         <div>
           <h1 className="fa-header__title">{t('fa.title')}</h1>
-          <p className="fa-header__sub">{t('fa.sub', { total: animals.length, available: counts.available || 0 })}</p>
+          {!loadError && <p className="fa-header__sub">{t('fa.sub', { total: animals.length, available: counts.available || 0 })}</p>}
         </div>
         <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary fa-header__cta">
           <PlusCircle size={18} aria-hidden="true" /> {t('fnd.addAnimal')}
         </Link>
       </header>
+
+      {loadError && <LoadError onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} />}
 
       {animals.length > 0 && (
         <div className="fa-toolbar">
@@ -320,7 +328,7 @@ const FoundationAnimals = () => {
         </div>
       )}
 
-      {animals.length === 0 ? (
+      {loadError ? null : animals.length === 0 ? (
         <div className="fa-empty">
           <span className="fa-empty__icon" aria-hidden="true"><PawPrint size={32} /></span>
           <h2>{t('fa.empty.title')}</h2>

@@ -1,6 +1,20 @@
 // Foundation-side strings. Each row is [key, Thai, English] so the two languages stay side by side.
 // Merged into th.js / en.js by index.jsx.
 const ROWS = [
+  // Errors (shared by every page)
+  ['err.load.title', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load this"],
+  ['err.load.text', 'อาจเป็นที่อินเทอร์เน็ตหรือระบบขัดข้องชั่วคราว ลองอีกครั้งได้เลย', 'Your connection or our server may be having a moment. Please try again.'],
+  ['err.load.toast', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load the latest data"],
+  ['err.retry', 'ลองอีกครั้ง', 'Try again'],
+  ['err.nf.title', 'ไม่พบหน้านี้', "This page doesn't exist"],
+  ['err.nf.text', 'ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว', 'The link may be mistyped, or the page has moved.'],
+  ['err.home', 'กลับหน้าหลัก', 'Go to home'],
+  ['err.crash.title', 'หน้านี้แสดงผลไม่ได้', "This page couldn't be shown"],
+  ['err.crash.text', 'อาจมีแอปเวอร์ชันใหม่ หรือเกิดปัญหาชั่วคราว ลองโหลดหน้านี้ใหม่อีกครั้ง', 'There may be a new version of the app, or a temporary problem. Please reload the page.'],
+  ['err.crash.reload', 'โหลดหน้านี้ใหม่', 'Reload page'],
+  ['err.adoptionGone', 'ไม่พบข้อมูลการรับเลี้ยงนี้', "This adoption wasn't found"],
+  ['err.toChats', 'กลับไปหน้าแชท', 'Back to chats'],
+  ['err.toList', 'กลับไปรายการน้อง', 'Back to my animals'],
   // Shared
   ['fnd.addAnimal', 'เพิ่มสัตว์หาบ้าน', 'Add an animal'],
   ['fnd.unit.animals', 'ตัว', ''],
@@ -128,7 +142,6 @@ const ROWS = [
   ['fa.del.hint', 'ถ้าแค่ไม่อยากให้คนเห็นชั่วคราว เลือก "ซ่อนไว้" แทนได้ ข้อมูลยังอยู่ครบ', 'If you only want to keep them out of sight for now, choose "Hide instead". Nothing is lost.'],
   ['fa.del.hide', 'ซ่อนไว้แทน', 'Hide instead'],
   ['fa.del.confirm', 'ลบถาวร', 'Delete for good'],
-  ['fa.toast.loadFail', 'โหลดรายการน้องไม่สำเร็จ ลองรีเฟรชหน้า', "Couldn't load your animals. Try refreshing the page."],
   ['fa.toast.statusFail', 'เปลี่ยนสถานะไม่สำเร็จ กรุณาลองใหม่', "Couldn't change the status. Please try again."],
   ['fa.toast.delFail', 'ลบไม่สำเร็จ กรุณาลองใหม่', "Couldn't delete. Please try again."],
   ['fa.toast.deleted', 'ลบ{name}แล้ว', '{name} deleted'],
