@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../i18n';
 import AdminOverview from './AdminOverview';
 import AdminUsers from './AdminUsers';
+import AdminFoundations from './AdminFoundations';
 import { SUPPORT_READ_KEY, useAdminSummary } from './useAdminSummary';
 import '../FoundationNeeds.css';
 import './Admin.css';
@@ -23,7 +24,6 @@ const SECTIONS = [
 
 // Which old tabs each not-yet-rebuilt section shows
 const LEGACY_TABS = {
-  foundations: ['approvals'],
   inbox: ['support', 'reports'],
   records: ['incidents', 'donations', 'logs'],
 };
@@ -83,6 +83,7 @@ export default function AdminConsole() {
       </nav>
 
       {section === 'overview' && <AdminOverview summary={summary} go={go} />}
+      {section === 'foundations' && <AdminFoundations onChanged={summary.reload} />}
       {section === 'users' && <AdminUsers />}
       {legacyTabs && (
         <Suspense fallback={<span className="fd-sk" style={{ display: 'block', height: 240, borderRadius: 16 }} />}>
