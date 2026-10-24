@@ -447,22 +447,24 @@ export const api = {
       const applicantPhone = verification?.phone || profileData?.phone || '-';
       const applicantIdCard = verification?.id_card_no 
         ? `${verification.id_card_no.slice(0, 1)}-${verification.id_card_no.slice(1, 5)}-${verification.id_card_no.slice(5, 10)}-${verification.id_card_no.slice(10, 12)}-${verification.id_card_no.slice(12)}` 
-        : 'ยืนยันตัวตนแล้ว';
+        : '-';
+      const verifiedText = verification?.status === 'verified' ? 'ผ่านการยืนยันตัวตนแล้ว' : 'ยังไม่ได้ยืนยันตัวตน';
       const petName = animal?.name || 'สัตว์เลี้ยง';
 
+      // Never fill in answers the adopter didn't give
       const asm = verification?.assessment || {};
-      const q1 = asm.housing || 'มีบ้าน/คอนโดที่อนุญาตให้เลี้ยงสัตว์';
-      const q2 = asm.time || 'มาก (อย่างน้อยวันละ 2 ครั้ง)';
-      const q3 = asm.budget || 'มี (อย่างน้อย 1,000 บาท/เดือน)';
-      const q4 = asm.family || 'เห็นด้วยทั้งหมด';
-      const q5 = asm.longterm || 'พร้อม ดูแลตลอดชีวิต';
+      const q1 = asm.housing || 'ไม่ได้ตอบ';
+      const q2 = asm.time || 'ไม่ได้ตอบ';
+      const q3 = asm.budget || 'ไม่ได้ตอบ';
+      const q4 = asm.family || 'ไม่ได้ตอบ';
+      const q5 = asm.longterm || 'ไม่ได้ตอบ';
 
       const appMessageText = `[ใบสมัครขอรับเลี้ยงและผลประเมินความพร้อม]
 ━━━━━━━━━━━━━━━━━━
 ผู้ขอรับเลี้ยง: ${applicantName}
 เบอร์ติดต่อ: ${applicantPhone}
 เลขบัตรประชาชน: ${applicantIdCard}
-สถานะการยืนยันตัวตน: ผ่านการยืนยันตัวตนแล้ว (KYC Verified)
+สถานะการยืนยันตัวตน: ${verifiedText}
 
 ผลแบบประเมินความพร้อมก่อนรับเลี้ยง:
 1. ที่อยู่อาศัย: ${q1}

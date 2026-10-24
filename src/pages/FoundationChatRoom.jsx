@@ -1,61 +1,48 @@
+// Foundation side of one adoption chat: who is asking for which animal, their answers,
+// one clear next step for the request's stage, then the conversation.
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Send, Loader, CheckCircle, Check, XCircle, Image as ImageIcon, X, Info, User, Clock, MoreVertical, PlusCircle, MapPin, FileText, ShieldCheck, Home, DollarSign, Users, Heart, PawPrint, CheckCircle2 } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import {
+  AlertTriangle, Building2, CalendarCheck, Check, CheckCircle2, ChevronDown, ChevronLeft, Clock, FileText,
+  Flag, Heart, Image as ImageIcon, Info, Loader, MapPin, MoreVertical, Navigation, PawPrint, Phone,
+  PlusCircle, Send, ShieldCheck, X, XCircle,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
-import { MOTION } from '../lib/motion';
+import { Button, Dialog, useToast } from '../components/ui';
 import { initialsAvatar } from '../lib/avatar';
+import { readAssessment } from '../lib/assessment';
+import { useI18n } from '../i18n';
+import './FoundationChatRoom.css';
+
+// Reasons are sent to the adopter in Thai (the chat notice template is Thai); labels follow the app language
+const DECLINE_REASONS = [
+  { id: 'criteria', th: 'พูดคุยแล้วเงื่อนไขหรือความพร้อมไม่ตรงตามเกณฑ์ของมูลนิธิ' },
+  { id: 'withdrew', th: 'ผู้ขอรับเลี้ยงแจ้งขอยกเลิกหรือไม่สะดวกรับเลี้ยงแล้ว' },
+  { id: 'noContact', th: 'ไม่สามารถติดต่อผู้ขอรับเลี้ยงได้ / ขาดการติดต่อ' },
+  { id: 'home', th: 'ที่อยู่อาศัยหรือสภาพแวดล้อมยังไม่เหมาะสมกับสัตว์ตัวนี้' },
+  { id: 'taken', th: 'มีผู้ขอรับเลี้ยงสัตว์ตัวนี้ไปแล้ว หรือมีคิวรับเลี้ยงก่อนหน้า' },
+  { id: 'other', th: null },
+];
 
 const renderMessageContent = (text, isMe, isApplication = false) => {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div style={{ overflowWrap: 'break-word', wordBreak: 'normal', maxWidth: '100%' }}>
+    <div className="fcr-text">
       {lines.map((line, idx) => {
         const trimmed = line.trim();
-        // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
         if (/^[━─\-=_~]{3,}$/.test(trimmed)) {
-          return (
-            <div
-              key={idx}
-              style={{
-                height: '1px',
-                backgroundColor: isApplication ? '#fed7aa' : (isMe ? 'rgba(255,255,255,0.35)' : 'var(--gray-200, #E5E7EB)'),
-                margin: '10px 0',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box'
-              }}
-            />
-          );
+          return <div key={idx} className={`fcr-text__rule ${isApplication ? 'is-app' : ''} ${isMe ? 'is-me' : ''}`} />;
         }
-
         const parts = line.split(/(https?:\/\/[^\s]+)/g);
         return (
-          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', overflowWrap: 'break-word', wordBreak: 'normal', whiteSpace: 'pre-wrap' }}>
-            {parts.map((part, pIdx) => {
-              if (part.match(/^https?:\/\/[^\s]+$/)) {
-                return (
-                  <a
-                    key={pIdx}
-                    href={part}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: isMe ? '#ffffff' : '#2563eb',
-                      textDecoration: 'underline',
-                      wordBreak: 'break-all'
-                    }}
-                  >
-                    {part}
-                  </a>
-                );
-              }
-              return part;
-            })}
+          <div key={idx} className="fcr-text__line" style={{ minHeight: trimmed ? 'auto' : '0.6em' }}>
+            {parts.map((part, pIdx) => (part.match(/^https?:\/\/[^\s]+$/)
+              ? <a key={pIdx} href={part} target="_blank" rel="noopener noreferrer" className={isMe ? 'is-me' : ''}>{part}</a>
+              : part))}
           </div>
         );
       })}
@@ -63,274 +50,136 @@ const renderMessageContent = (text, isMe, isApplication = false) => {
   );
 };
 
-const OfficialNoticeCard = memo(function OfficialNoticeCard({ msg, timestamp }) {
+// Status notices the app posts into the chat (approved / declined / handed over)
+const OfficialNoticeCard = memo(function OfficialNoticeCard({ msg }) {
+  const { t } = useI18n();
   const text = msg.text || '';
   const isApproved = text.includes('ได้รับการอนุมัติแล้ว') || text.includes('อนุมัติคำขอ');
   const isHandover = text.includes('การส่งมอบ') && (text.includes('เสร็จสมบูรณ์') || text.includes('สำเร็จ'));
   const isCancelled = text.includes('ยกเลิก');
-  const isDeclined = !isApproved && !isHandover && (text.includes('ไม่สามารถอนุมัติ') || text.includes('ปฏิเสธ') || isCancelled);
+  const isDeclined = !isApproved && !isHandover && (text.includes('ไม่สามารถอนุมัติ') || text.includes('ปฏิเสธ') || isCancelled || text.includes('ปิดคำขอ'));
 
-  // Extract clean lines without raw brackets or line dividers
-  const cleanLines = text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && !/^[━─\-=_~]{3,}$/.test(l) && !/^\[.*\]$/.test(l));
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l && !/^[━─\-=_~]{3,}$/.test(l) && !/^\[.*\]$/.test(l));
 
-  // Determine theme styles and badges
-  let icon = <CheckCircle2 size={20} color="#16A34A" />;
-  let iconBg = '#DCFCE7';
-  let badgeText = 'อนุมัติแล้ว';
-  let badgeColor = '#15803D';
-  let badgeBg = '#DCFCE7';
-  let cardBorder = '#BBF7D0';
-  let headerTitle = 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
-
+  let tone = 'ok';
+  let Icon = CheckCircle2;
+  let badge = t('fcr.notice.approved');
+  let title = t('fcr.notice.resultTitle');
   if (isHandover) {
-    icon = <Heart size={20} color="#EA580C" />;
-    iconBg = '#FFEDD5';
-    badgeText = 'ส่งมอบสำเร็จ';
-    badgeColor = '#C2410C';
-    badgeBg = '#FFEDD5';
-    cardBorder = '#FED7AA';
-    headerTitle = 'ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ';
+    tone = 'home'; Icon = Heart; badge = t('fcr.notice.handedOver'); title = t('fcr.notice.handoverTitle');
   } else if (isDeclined) {
-    icon = <XCircle size={20} color="#DC2626" />;
-    iconBg = '#FEE2E2';
-    badgeText = isCancelled ? 'ยกเลิกแล้ว' : 'ไม่ผ่านการพิจารณา';
-    badgeColor = '#B91C1C';
-    badgeBg = '#FEE2E2';
-    cardBorder = '#FECDD3';
-    headerTitle = isCancelled ? 'แจ้งยกเลิกคำขอรับเลี้ยง' : 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
+    tone = 'no'; Icon = XCircle;
+    badge = isCancelled ? t('fcr.notice.cancelled') : t('fcr.notice.declined');
+    title = isCancelled ? t('fcr.notice.cancelTitle') : t('fcr.notice.resultTitle');
   }
 
   return (
-    <div style={{
-      width: '100%',
-      display: 'flex',
-      justifyContent: 'center',
-      margin: '18px 0',
-      padding: '0 8px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{
-        maxWidth: '460px',
-        width: '100%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: `1.5px solid ${cardBorder}`,
-        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        textAlign: 'left'
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderBottom: '1px solid #F3F4F6',
-          backgroundColor: '#FAFAFA'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              backgroundColor: iconBg,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              {icon}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>
-                {headerTitle}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: '#6B7280' }}>
-                ข้อความแจ้งเตือนอัตโนมัติจากระบบ
-              </div>
-            </div>
-          </div>
-
-          <span style={{
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            padding: '3px 10px',
-            borderRadius: '12px',
-            backgroundColor: badgeBg,
-            color: badgeColor,
-            flexShrink: 0
-          }}>
-            {badgeText}
-          </span>
+    <div className="fcr-notice-row">
+      <div className={`fcr-notice fcr-notice--${tone}`}>
+        <div className="fcr-notice__head">
+          <span className="fcr-notice__icon" aria-hidden="true"><Icon size={18} /></span>
+          <span className="fcr-notice__title">{title}<small>{t('fcr.notice.auto')}</small></span>
+          <span className="fcr-notice__badge">{badge}</span>
         </div>
-
-        {/* Content */}
-        <div style={{ padding: '14px 16px', fontSize: '0.86rem', lineHeight: 1.6, color: '#374151' }}>
-          {cleanLines.map((line, idx) => {
-            const isReason = line.startsWith('เหตุผล:') || line.startsWith('รายละเอียดเพิ่มเติม:');
-            if (isReason) {
-              return (
-                <div key={idx} style={{
-                  margin: '10px 0',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FEE2E2',
-                  color: '#991B1B',
-                  fontSize: '0.82rem'
-                }}>
-                  {line}
-                </div>
-              );
+        <div className="fcr-notice__body">
+          {lines.map((line, idx) => {
+            if (line.startsWith('เหตุผล:') || line.startsWith('รายละเอียดเพิ่มเติม:')) {
+              return <p key={idx} className="fcr-notice__reason">{line}</p>;
             }
-
-            const isHero = line.includes('ยินดีด้วย') || line.includes('ขอขอบคุณ');
-            return (
-              <p key={idx} style={{
-                margin: idx === 0 ? 0 : '8px 0 0',
-                fontWeight: isHero ? 600 : 400,
-                color: isHero ? '#111827' : '#4B5563'
-              }}>
-                {line}
-              </p>
-            );
+            return <p key={idx} className={line.includes('ยินดีด้วย') || line.includes('ขอบคุณ') ? 'is-lead' : ''}>{line}</p>;
           })}
         </div>
-
-        {/* Footer */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          borderTop: '1px solid #F3F4F6',
-          fontSize: '0.72rem',
-          color: '#9CA3AF',
-          backgroundColor: '#FCFCFD'
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={13} color="#16A34A" /> ระบบรับรอง 4 ขาหาบ้าน
-          </span>
-          <span>{msg.timestamp || timestamp}</span>
-        </div>
+        <div className="fcr-notice__foot">{msg.timestamp}</div>
       </div>
     </div>
   );
 });
 
-const FoundationMessageItem = memo(function FoundationMessageItem({
-  msg,
-  isMe,
-  adopterPic,
-  setAdopterImgErr,
-  handleOpenUserModal
-}) {
+const FoundationMessageItem = memo(function FoundationMessageItem({ msg, isMe, adopterPic, setAdopterImgErr, onOpenApplication }) {
+  const { t } = useI18n();
   if (msg.sender === 'system') {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
-        <div style={{ padding: '6px 12px', backgroundColor: 'var(--success-light)', color: 'var(--success-dark)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center', maxWidth: '90%', wordBreak: 'break-word' }}>
-          {msg.text}
-        </div>
-      </div>
-    );
+    return <div className="fcr-system"><span>{msg.text}</span></div>;
   }
 
-  // Official Adoption Status / Event Notice Card
   const isOfficialNotice = msg.text && (
-    msg.text.includes('[แจ้งผลการพิจารณาคำขอรับเลี้ยง]') ||
-    msg.text.includes('[แจ้งขอยกเลิกคำขอรับเลี้ยง]') ||
-    msg.text.includes('[ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ]') ||
-    (msg.text.includes('คำขอรับเลี้ยง') && (msg.text.includes('ได้รับการอนุมัติแล้ว') || msg.text.includes('ไม่สามารถอนุมัติคำขอรับเลี้ยง')))
+    msg.text.includes('[แจ้งผลการพิจารณาคำขอรับเลี้ยง]')
+    || msg.text.includes('[แจ้งขอยกเลิกคำขอรับเลี้ยง]')
+    || msg.text.includes('[แจ้งผลคำขอรับเลี้ยง]')
+    || msg.text.includes('[ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ]')
+    || (msg.text.includes('คำขอรับเลี้ยง') && (msg.text.includes('ได้รับการอนุมัติแล้ว') || msg.text.includes('ไม่สามารถอนุมัติคำขอรับเลี้ยง')))
   );
+  if (isOfficialNotice) return <OfficialNoticeCard msg={msg} />;
 
-  if (isOfficialNotice) {
-    return <OfficialNoticeCard msg={msg} timestamp={msg.timestamp} />;
-  }
-
-  const isApplication = msg.text && (msg.text.includes('ใบสมัครขอรับเลี้ยง') || msg.text.startsWith('\uD83D\uDCCB'));
+  const isApplication = msg.text && (msg.text.includes('ใบสมัครขอรับเลี้ยง') || msg.text.startsWith('📋'));
 
   return (
-    <div className={`message-row msg-${isMe ? 'user' : 'shelter'}`} style={{ marginBottom: '16px' }}>
+    <div className={`message-row msg-${isMe ? 'user' : 'shelter'} fcr-row`}>
       {!isMe && (
-        <img 
-          src={adopterPic} 
-          alt="avatar" 
-          className="message-avatar" 
-          onError={() => setAdopterImgErr(true)}
-          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} 
-        />
+        <img src={adopterPic} alt="" className="message-avatar" onError={() => setAdopterImgErr(true)} />
       )}
-      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`} style={{ maxWidth: '100%', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+      <div className={`message-wrapper msg-${isMe ? 'user' : 'shelter'}`}>
         {isApplication ? (
-          <div style={{
-            background: '#ffffff',
-            border: '1.5px solid #fed7aa',
-            borderRadius: '16px',
-            padding: '14px',
-            boxShadow: '0 4px 14px rgba(249, 115, 22, 0.08)',
-            maxWidth: '100%',
-            width: '100%',
-            boxSizing: 'border-box',
-            textAlign: 'left',
-            overflow: 'hidden'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #ffedd5', paddingBottom: '10px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText size={18} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#9a3412' }}>ใบสมัครขอรับเลี้ยง & แบบประเมิน</div>
-                  <div style={{ fontSize: '0.72rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                    <CheckCircle size={12} /> ยืนยันตัวตนแล้ว (KYC Verified)
-                  </div>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={handleOpenUserModal}
-                style={{ padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, color: 'white', background: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
-              >
-                ดูข้อมูลผู้สมัคร
-              </button>
+          <div className="fcr-app">
+            <div className="fcr-app__head">
+              <span className="fcr-app__icon" aria-hidden="true"><FileText size={18} /></span>
+              <span className="fcr-app__title">{t('fcr.app.title')}</span>
+              <button type="button" className="fcr-link" onClick={onOpenApplication}>{t('fcr.app.open')}</button>
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
-              {renderMessageContent(msg.text, isMe, true)}
-            </div>
+            <div className="fcr-app__body">{renderMessageContent(msg.text, isMe, true)}</div>
           </div>
         ) : (
-          <div className="message-bubble" style={{ overflowWrap: 'break-word', wordBreak: 'normal', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
-            {msg.imageUrl && (
-              <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px', display: 'block' }} />
-            )}
+          <div className="message-bubble">
+            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="fcr-bubble-img" />}
             {msg.text && msg.text.trim() && renderMessageContent(msg.text, isMe, false)}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', alignSelf: isMe ? 'flex-end' : 'flex-start', whiteSpace: 'nowrap' }}>
-          <span className="message-timestamp" style={{ fontSize: '11px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>{msg.timestamp}</span>
-          {isMe && <Check size={12} color="var(--primary)" />}
+        <div className={`fcr-meta ${isMe ? 'is-me' : ''}`}>
+          <span className="message-timestamp">{msg.timestamp}</span>
+          {isMe && <Check size={12} aria-hidden="true" />}
         </div>
       </div>
     </div>
   );
 });
 
-// Global in-memory cache for 0ms instant room switching
+// Readiness answers, with the ones worth a conversation flagged
+function Answers({ rows }) {
+  const { t } = useI18n();
+  return (
+    <ul className="fcr-answers">
+      {rows.map((r) => (
+        <li key={r.id} className={`fcr-answer ${r.concern ? 'is-concern' : ''} ${r.answer ? '' : 'is-missing'}`}>
+          <span className="fcr-answer__label">{r.label}</span>
+          <span className="fcr-answer__value">
+            {r.answer || t('fcr.notAnswered')}
+            {r.concern && r.answer && <span className="fcr-answer__flag"><AlertTriangle size={12} aria-hidden="true" /> {t('fcr.talkAbout')}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// "วันนี้" / "เมื่อวาน" / date, inserted where the day changes
+function dayLabel(iso, t, lang) {
+  const d = iso ? new Date(iso) : new Date();
+  const days = Math.floor((new Date(new Date().toDateString()) - new Date(d.toDateString())) / 86400000);
+  if (days <= 0) return t('fcr.today');
+  if (days === 1) return t('fmc.yesterday');
+  return d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'th-TH', { day: 'numeric', month: 'short', year: days > 300 ? 'numeric' : undefined });
+}
+
+// Global in-memory cache for instant room switching
 const foundationChatCache = new Map();
 
 function FoundationChatRoom() {
   const { matchId } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-  
-  // Instant Cache lookup
-  const initialCache = useMemo(() => {
-    return matchId ? foundationChatCache.get(matchId) : null;
-  }, [matchId]);
+  const { user } = useAuth();
+  const { t, lang } = useI18n();
+  const toast = useToast();
+
+  const initialCache = useMemo(() => (matchId ? foundationChatCache.get(matchId) : null), [matchId]);
 
   const [messages, setMessages] = useState(() => initialCache?.messages || []);
   const [inputText, setInputText] = useState('');
@@ -341,19 +190,55 @@ function FoundationChatRoom() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
-  
   const messagesEndRef = useRef(null);
   const [adopterImgErr, setAdopterImgErr] = useState(false);
 
-  // Adoption Handover states
+  // Answers open by default on wide screens, folded on phones so the chat keeps its room
+  const [showAnswers, setShowAnswers] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(min-width: 768px)').matches));
+
+  // Handover
   const [showHandoverModal, setShowHandoverModal] = useState(false);
   const [handoverDate, setHandoverDate] = useState(new Date().toISOString().split('T')[0]);
   const [handoverNotes, setHandoverNotes] = useState('');
   const [isSubmittingHandover, setIsSubmittingHandover] = useState(false);
 
+  // Dialogs and menus
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreRef = useRef(null);
+  const attachRef = useRef(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportImagePreview, setReportImagePreview] = useState(null);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const reportImageInputRef = useRef(null);
+  const docInputRef = useRef(null);
+
+  // Approve / decline
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState('criteria');
+  const [customDeclineReason, setCustomDeclineReason] = useState('');
+  const [sendDeclineMessage, setSendDeclineMessage] = useState(true);
+  const [isSubmittingDecline, setIsSubmittingDecline] = useState(false);
+  const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
+
+  useEffect(() => { setAdopterImgErr(false); }, [matchId, match?.user_id]);
+
+  // Close the ⋯ menu and the attach menu on an outside tap or Escape
   useEffect(() => {
-    setAdopterImgErr(false);
-  }, [matchId, match?.user_id]);
+    if (!showMoreMenu && !showAttachMenu) return undefined;
+    const close = (e) => {
+      if (showMoreMenu && !moreRef.current?.contains(e.target)) setShowMoreMenu(false);
+      if (showAttachMenu && !attachRef.current?.contains(e.target)) setShowAttachMenu(false);
+    };
+    const esc = (e) => { if (e.key === 'Escape') { setShowMoreMenu(false); setShowAttachMenu(false); } };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [showMoreMenu, showAttachMenu]);
 
   // Keep cache updated whenever state changes
   useEffect(() => {
@@ -363,7 +248,7 @@ function FoundationChatRoom() {
         ...prevCached,
         match: match || prevCached.match,
         animal: animal || prevCached.animal,
-        messages: messages.length > 0 ? messages : prevCached.messages || []
+        messages: messages.length > 0 ? messages : prevCached.messages || [],
       });
     }
   }, [matchId, messages, match, animal]);
@@ -372,7 +257,6 @@ function FoundationChatRoom() {
   useEffect(() => {
     let isMounted = true;
 
-    // Check cache immediately on matchId change
     if (foundationChatCache.has(matchId)) {
       const cached = foundationChatCache.get(matchId);
       if (cached.match) setMatch(cached.match);
@@ -389,7 +273,7 @@ function FoundationChatRoom() {
 
         if (user?.id) {
           const foundationMatches = await api.getFoundationMatches(user.id);
-          currentMatch = foundationMatches?.find(m => m.id === matchId) || null;
+          currentMatch = foundationMatches?.find((m) => m.id === matchId) || null;
         }
 
         // Direct fetch fallback if not found in list
@@ -400,14 +284,12 @@ function FoundationChatRoom() {
               .select('*, animal:animals(*)')
               .eq('id', matchId)
               .maybeSingle();
-
             if (!dmErr && directMatch) {
               currentMatch = {
                 ...directMatch,
                 animalId: directMatch.animal_id,
                 animal: directMatch.animal,
                 lastMessage: directMatch.last_message,
-                timestamp: directMatch.created_at ? new Date(directMatch.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
               };
             }
           } catch (dErr) {
@@ -416,7 +298,7 @@ function FoundationChatRoom() {
         }
 
         if (!isMounted) return;
-        
+
         if (currentMatch) {
           if (!currentMatch.userData?.avatar_url && currentMatch.user_id && supabase) {
             try {
@@ -430,7 +312,7 @@ function FoundationChatRoom() {
                   ...(currentMatch.userData || {}),
                   full_name: prof.full_name || currentMatch.userData?.full_name,
                   phone: prof.phone || currentMatch.userData?.phone,
-                  avatar_url: prof.avatar_url
+                  avatar_url: prof.avatar_url,
                 };
               }
             } catch (pErr) {
@@ -441,9 +323,7 @@ function FoundationChatRoom() {
           if (!currentMatch.userData || !currentMatch.userData.assessment) {
             try {
               const uData = await api.getUserVerification(currentMatch.user_id);
-              if (uData && isMounted) {
-                currentMatch.userData = { ...(currentMatch.userData || {}), ...uData };
-              }
+              if (uData && isMounted) currentMatch.userData = { ...(currentMatch.userData || {}), ...uData };
             } catch (e) {
               console.warn('Could not fetch user verification in loadChat:', e);
             }
@@ -471,74 +351,40 @@ function FoundationChatRoom() {
           console.error('Could not fetch messages in loadChat:', mErr);
         }
 
-        // Mark as read immediately for foundation
-        if (matchId && user?.id) {
-          api.markMatchAsRead(matchId, 'shelter', user.id);
-        }
+        if (matchId && user?.id) api.markMatchAsRead(matchId, 'shelter', user.id);
       } catch (error) {
-        console.error("Failed to load chat data", error);
+        console.error('Failed to load chat data', error);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
     loadChat();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [matchId, user?.id]);
 
-  // Subscribe to Supabase Realtime for incoming messages
+  // Incoming messages arrive live
   useEffect(() => {
-    if (!matchId) return;
-
-    let channel = null;
-    if (supabase) {
-      channel = supabase
-        .channel(`foundation_chat_messages_${matchId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `match_id=eq.${matchId}`
-          },
-          (payload) => {
-            const newMsg = payload.new;
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              const filtered = prev.filter(
-                (m) => !(m.id.startsWith('temp_') && m.sender === newMsg.sender && m.text === newMsg.text)
-              );
-              return [
-                ...filtered,
-                {
-                  ...newMsg,
-                  imageUrl: newMsg.image_url,
-                  timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }
-              ];
-            });
-
-            // If incoming message from user, immediately mark as read since user is looking at this screen
-            if (newMsg.sender === 'user' && user?.id) {
-              api.markMatchAsRead(matchId, 'shelter', user.id);
-            }
-          }
-        )
-        .subscribe();
-    }
-
-    return () => {
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
+    if (!matchId || !supabase) return undefined;
+    const channel = supabase
+      .channel(`foundation_chat_messages_${matchId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` }, (payload) => {
+        const newMsg = payload.new;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          const filtered = prev.filter((m) => !(String(m.id).startsWith('temp_') && m.sender === newMsg.sender && m.text === newMsg.text));
+          return [...filtered, {
+            ...newMsg,
+            imageUrl: newMsg.image_url,
+            timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }];
+        });
+        if (newMsg.sender === 'user' && user?.id) api.markMatchAsRead(matchId, 'shelter', user.id);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [matchId, user?.id]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -565,7 +411,6 @@ function FoundationChatRoom() {
       const fileName = `chat_${matchId}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const { error } = await supabase.storage.from('chat_images').upload(fileName, file);
       if (error) throw error;
-
       const { data } = supabase.storage.from('chat_images').getPublicUrl(fileName);
       return data.publicUrl;
     } catch (err) {
@@ -590,18 +435,18 @@ function FoundationChatRoom() {
       }
 
       const tempId = `temp_${Date.now()}`;
-      const tempMsg = {
+      setMessages((prev) => [...prev, {
         id: tempId,
         sender: 'shelter',
         text: textToSend,
         imageUrl,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, tempMsg]);
+        created_at: new Date().toISOString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
 
       const sent = await api.sendMessage(matchId, textToSend, 'shelter', imageUrl);
       if (sent && sent.id) {
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...sent, imageUrl: sent.image_url || sent.imageUrl } : m));
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, imageUrl: sent.image_url || sent.imageUrl } : m)));
       }
 
       if (user?.id) {
@@ -610,43 +455,16 @@ function FoundationChatRoom() {
           readChats[matchId] = Date.now();
           localStorage.setItem(`read_chats_foundation_${user.id}`, JSON.stringify(readChats));
           window.dispatchEvent(new Event('chatReadUpdated'));
-        } catch (e) {}
+        } catch (err) { /* storage blocked */ }
       }
     } catch (error) {
-      console.error("Failed to send message", error);
+      console.error('Failed to send message', error);
+      setInputText(textToSend);
+      toast(t('fcr.sendFail'), { tone: 'error' });
     } finally {
       setIsSending(false);
     }
   };
-
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportImagePreview, setReportImagePreview] = useState(null);
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  const reportImageInputRef = useRef(null);
-  const docInputRef = useRef(null);
-
-  // Adoption Approval & Decline States
-  const [showDeclineModal, setShowDeclineModal] = useState(false);
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [declineReason, setDeclineReason] = useState('พูดคุยแล้วเงื่อนไขหรือความพร้อมไม่ตรงตามเกณฑ์ของมูลนิธิ');
-  const [customDeclineReason, setCustomDeclineReason] = useState('');
-  const [sendDeclineMessage, setSendDeclineMessage] = useState(true);
-  const [isSubmittingDecline, setIsSubmittingDecline] = useState(false);
-  const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
-
-  const DECLINE_REASONS = [
-    'พูดคุยแล้วเงื่อนไขหรือความพร้อมไม่ตรงตามเกณฑ์ของมูลนิธิ',
-    'ผู้ขอรับเลี้ยงแจ้งขอยกเลิกหรือไม่สะดวกรับเลี้ยงแล้ว',
-    'ไม่สามารถติดต่อผู้ขอรับเลี้ยงได้ / ขาดการติดต่อ',
-    'ที่อยู่อาศัยหรือสภาพแวดล้อมยังไม่เหมาะสมกับสัตว์ตัวนี้',
-    'มีผู้ขอรับเลี้ยงสัตว์ตัวนี้ไปแล้ว หรือมีคิวรับเลี้ยงก่อนหน้า',
-    'อื่นๆ (ระบุเพิ่มเติม)'
-  ];
 
   const handleReportImageSelect = (e) => {
     const file = e.target.files[0];
@@ -665,9 +483,11 @@ function FoundationChatRoom() {
       setShowReportModal(false);
       setReportReason('');
       setReportImagePreview(null);
+      toast(t('fcr.report.sent'), { tone: 'success' });
       setShowBlockModal(true);
     } catch (error) {
       console.error(error);
+      toast(t('fcr.report.fail'), { tone: 'error' });
     } finally {
       setIsSubmittingReport(false);
     }
@@ -679,57 +499,47 @@ function FoundationChatRoom() {
       navigate('/foundation/matches');
     } catch (error) {
       console.error(error);
+      toast(t('fcr.block.fail'), { tone: 'error' });
     }
   };
 
-  const handleApprove = () => {
-    setShowApproveModal(true);
-  };
-
-  const handleDecline = () => {
-    setShowDeclineModal(true);
-  };
+  const handleApprove = () => setShowApproveModal(true);
+  const handleDecline = () => setShowDeclineModal(true);
 
   const handleConfirmDecline = async () => {
     setIsSubmittingDecline(true);
     try {
-      const finalReason = declineReason === 'อื่นๆ (ระบุเพิ่มเติม)' 
+      const reason = DECLINE_REASONS.find((r) => r.id === declineReason) || DECLINE_REASONS[0];
+      const finalReason = reason.id === 'other'
         ? (customDeclineReason.trim() || 'เหตุผลอื่นๆ ตามความเหมาะสมของมูลนิธิ')
-        : (declineReason || 'คุณสมบัติยังไม่ตรงตามเกณฑ์ของมูลนิธิ');
-
+        : reason.th;
       const isPreviouslyApproved = match?.status === 'approved';
 
-      // 1. Update match status in database
       await api.updateMatchStatus(matchId, 'rejected');
-      setMatch(prev => ({ ...prev, status: 'rejected' }));
+      setMatch((prev) => ({ ...prev, status: 'rejected' }));
+      // Declining one person never changes the animal's status (it used to reset it to
+      // 'available', which put adopted or hidden animals back in the swipe feed).
 
-      // 1.1 Declining one person never changes the animal's status. It used to reset it to
-      //     'available', which put adopted or hidden animals back in the swipe feed.
-
-      // 2. Send official notification message if enabled
       if (sendDeclineMessage) {
         const petName = animal?.name || 'สัตว์เลี้ยง';
         const declineMsgText = isPreviouslyApproved
-          ? `[แจ้งขอยกเลิกคำขอรับเลี้ยง]\n━━━━━━━━━━━━━━━━━━\nทางมูลนิธิขอแจ้งยกเลิกคำขอรับเลี้ยง ${petName}\n\nจากการพูดคุยรายละเอียดเพิ่มเติม ทางมูลนิธิต้องขออภัยที่ไม่สามารถดำเนินการส่งมอบสัตว์เลี้ยงต่อได้ในครั้งนี้\n\nเหตุผล: ${finalReason}${customDeclineReason && declineReason !== 'อื่นๆ (ระบุเพิ่มเติม)' ? `\nรายละเอียดเพิ่มเติม: ${customDeclineReason}` : ''}\n━━━━━━━━━━━━━━━━━━\nขอขอบคุณในความเมตตาที่มีต่อน้องๆ ท่านสามารถติดตามและเลือกดูสัตว์ตัวอื่นๆ ในระบบได้เสมอครับ/ค่ะ`
-          : `[แจ้งผลการพิจารณาคำขอรับเลี้ยง]\n━━━━━━━━━━━━━━━━━━\nทางมูลนิธิขอขอบคุณที่ให้ความสนใจรับเลี้ยง ${petName}\n\nจากการพิจารณาข้อมูลและแบบประเมินความพร้อม ทางมูลนิธิขออภัยที่ไม่สามารถอนุมัติคำขอรับเลี้ยงในครั้งนี้ได้\n\nเหตุผล: ${finalReason}${customDeclineReason && declineReason !== 'อื่นๆ (ระบุเพิ่มเติม)' ? `\nรายละเอียดเพิ่มเติม: ${customDeclineReason}` : ''}\n━━━━━━━━━━━━━━━━━━\nขอขอบคุณในความเมตตาที่มีต่อน้องๆ ท่านสามารถติดตามและเลือกดูสัตว์ตัวอื่นๆ ในระบบได้เสมอครับ/ค่ะ`;
-
+          ? `[แจ้งขอยกเลิกคำขอรับเลี้ยง]\n━━━━━━━━━━━━━━━━━━\nทางมูลนิธิขอแจ้งยกเลิกคำขอรับเลี้ยง ${petName}\n\nจากการพูดคุยรายละเอียดเพิ่มเติม ทางมูลนิธิต้องขออภัยที่ไม่สามารถดำเนินการส่งมอบสัตว์เลี้ยงต่อได้ในครั้งนี้\n\nเหตุผล: ${finalReason}\n━━━━━━━━━━━━━━━━━━\nขอขอบคุณในความเมตตาที่มีต่อน้องๆ ท่านสามารถติดตามและเลือกดูสัตว์ตัวอื่นๆ ในระบบได้เสมอครับ/ค่ะ`
+          : `[แจ้งผลการพิจารณาคำขอรับเลี้ยง]\n━━━━━━━━━━━━━━━━━━\nทางมูลนิธิขอขอบคุณที่ให้ความสนใจรับเลี้ยง ${petName}\n\nจากการพิจารณาข้อมูลและแบบประเมินความพร้อม ทางมูลนิธิขออภัยที่ไม่สามารถอนุมัติคำขอรับเลี้ยงในครั้งนี้ได้\n\nเหตุผล: ${finalReason}\n━━━━━━━━━━━━━━━━━━\nขอขอบคุณในความเมตตาที่มีต่อน้องๆ ท่านสามารถติดตามและเลือกดูสัตว์ตัวอื่นๆ ในระบบได้เสมอครับ/ค่ะ`;
         await api.sendMessage(matchId, declineMsgText, 'shelter');
       }
 
-      // 3. Optimistic system message
-      const sysMsg = {
+      setMessages((prev) => [...prev, {
         id: `sys_${Date.now()}`,
         sender: 'system',
-        text: isPreviouslyApproved ? 'คุณได้ยกเลิกคำขอรับเลี้ยงนี้แล้ว' : 'คุณได้ปฏิเสธคำขอรับเลี้ยงนี้แล้ว',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, sysMsg]);
-
+        text: isPreviouslyApproved ? t('fcr.sys.cancelled') : t('fcr.sys.declined'),
+        created_at: new Date().toISOString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
       setShowDeclineModal(false);
       setShowUserModal(false);
     } catch (error) {
       console.error('Failed to decline/cancel adoption request:', error);
-      alert('เกิดข้อผิดพลาดในการดำเนินการ กรุณาลองใหม่อีกครั้ง');
+      toast(t('fcr.actionFail'), { tone: 'error' });
     } finally {
       setIsSubmittingDecline(false);
     }
@@ -738,33 +548,26 @@ function FoundationChatRoom() {
   const handleConfirmApprove = async () => {
     setIsSubmittingApprove(true);
     try {
-      // 1. Update match status in database
       await api.updateMatchStatus(matchId, 'approved');
-      setMatch(prev => ({ ...prev, status: 'approved' }));
+      setMatch((prev) => ({ ...prev, status: 'approved' }));
 
-      // 2. Send official congratulatory message into chat
       const petName = animal?.name || 'สัตว์เลี้ยง';
       const approveMsgText = `[แจ้งผลการพิจารณาคำขอรับเลี้ยง]\n━━━━━━━━━━━━━━━━━━\nยินดีด้วยครับ/ค่ะ! คำขอรับเลี้ยง ${petName} ของท่านได้รับการอนุมัติแล้ว\n\nเจ้าหน้าที่จะประสานงานและพูดคุยรายละเอียดขั้นตอนการส่งมอบ รวมถึงการเตรียมความพร้อมในแชทนี้ได้เลยครับ/ค่ะ\n━━━━━━━━━━━━━━━━━━`;
-
       await api.sendMessage(matchId, approveMsgText, 'shelter');
 
-      // 3. Optimistic system message
-      const sysMsg = {
+      setMessages((prev) => [...prev, {
         id: `sys_${Date.now()}`,
         sender: 'system',
-        text: 'คุณได้อนุมัติการรับเลี้ยงแล้ว!',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, sysMsg]);
-
+        text: t('fcr.sys.approved'),
+        created_at: new Date().toISOString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
       setShowApproveModal(false);
       setShowUserModal(false);
-      if (user?.id) {
-        api.markMatchAsRead(matchId, 'shelter', user.id);
-      }
+      if (user?.id) api.markMatchAsRead(matchId, 'shelter', user.id);
     } catch (error) {
       console.error('Failed to approve adoption request:', error);
-      alert('เกิดข้อผิดพลาดในการอนุมัติคำขอ กรุณาลองใหม่อีกครั้ง');
+      toast(t('fcr.approveFail'), { tone: 'error' });
     } finally {
       setIsSubmittingApprove(false);
     }
@@ -773,43 +576,46 @@ function FoundationChatRoom() {
   const handleConfirmHandover = async () => {
     try {
       setIsSubmittingHandover(true);
-      await api.confirmAdoptionHandover(matchId, handoverDate, handoverNotes);
-      if (user?.id) {
-        api.markMatchAsRead(matchId, 'shelter', user.id);
-      }
-      setMatch(prev => ({ ...prev, status: 'adopted', handover_date: handoverDate }));
+      const res = await api.confirmAdoptionHandover(matchId, handoverDate, handoverNotes);
+      if (user?.id) api.markMatchAsRead(matchId, 'shelter', user.id);
+      setMatch((prev) => ({ ...prev, status: 'adopted', handover_date: handoverDate }));
+      setAnimal((prev) => (prev ? { ...prev, status: 'adopted' } : prev));
       setShowHandoverModal(false);
-      const updatedMessages = await api.getMessages(matchId);
-      setMessages(updatedMessages);
+      toast(res?.closedOthers ? t('fcr.handover.doneOthers', { n: res.closedOthers }) : t('fcr.handover.done'), { tone: 'success' });
+      setMessages(await api.getMessages(matchId));
     } catch (err) {
       console.error('Failed to confirm handover:', err);
-      alert('เกิดข้อผิดพลาดในการบันทึกการส่งมอบ กรุณาลองใหม่อีกครั้ง');
+      toast(t('fcr.handover.fail'), { tone: 'error' });
     } finally {
       setIsSubmittingHandover(false);
     }
   };
 
-  const handleShareLocation = () => {
+  // Pinned centre location from the foundation profile (never a made-up point)
+  const handleShareCentre = async () => {
     setShowAttachMenu(false);
-    if (!navigator.geolocation) {
-      const locationText = `ตำแหน่งที่ตั้งมูลนิธิ / จุดนัดหมาย:\nhttps://www.google.com/maps/search/?api=1&query=13.7563,100.5018`;
-      api.sendMessage(matchId, locationText, 'shelter');
-      return;
+    try {
+      const { data } = await supabase.from('foundation_profiles').select('latitude, longitude').eq('id', user.id).maybeSingle();
+      if (data?.latitude != null && data?.longitude != null) {
+        await api.sendMessage(matchId, `ตำแหน่งที่ตั้งมูลนิธิ / จุดนัดหมาย:\nhttps://www.google.com/maps/search/?api=1&query=${data.latitude},${data.longitude}`, 'shelter');
+        return;
+      }
+      toast(t('fcr.loc.noPin'), { tone: 'error' });
+    } catch (err) {
+      console.warn('Could not share centre location:', err);
+      toast(t('fcr.loc.fail'), { tone: 'error' });
     }
+  };
 
+  const handleShareCurrent = () => {
+    setShowAttachMenu(false);
+    if (!navigator.geolocation) { toast(t('fcr.loc.noGps'), { tone: 'error' }); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        const locationText = `แชร์ตำแหน่งที่ตั้ง / จุดนัดหมาย:\n${mapUrl}`;
-        api.sendMessage(matchId, locationText, 'shelter');
+      ({ coords }) => {
+        api.sendMessage(matchId, `แชร์ตำแหน่งที่ตั้ง / จุดนัดหมาย:\nhttps://www.google.com/maps?q=${coords.latitude},${coords.longitude}`, 'shelter');
       },
-      (err) => {
-        console.warn('Geolocation error, fallback to general maps:', err);
-        const locationText = `ตำแหน่งที่ตั้งมูลนิธิ / จุดนัดหมาย:\nhttps://www.google.com/maps/search/?api=1&query=13.7563,100.5018`;
-        api.sendMessage(matchId, locationText, 'shelter');
-      },
-      { timeout: 10000 }
+      () => toast(t('fcr.loc.gpsFail'), { tone: 'error' }),
+      { timeout: 10000 },
     );
   };
 
@@ -817,7 +623,6 @@ function FoundationChatRoom() {
     const file = e.target.files[0];
     if (!file) return;
     setShowAttachMenu(false);
-
     try {
       setIsSending(true);
       let docUrl = null;
@@ -825,16 +630,12 @@ function FoundationChatRoom() {
         const fileExt = file.name.split('.').pop();
         const fileName = `doc_${matchId}_${Date.now()}.${fileExt}`;
         const { error } = await supabase.storage.from('chat_images').upload(fileName, file);
-        if (!error) {
-          const { data } = supabase.storage.from('chat_images').getPublicUrl(fileName);
-          docUrl = data?.publicUrl;
-        }
+        if (!error) docUrl = supabase.storage.from('chat_images').getPublicUrl(fileName).data?.publicUrl;
       }
-      
-      const docMsgText = `แนบเอกสาร: ${file.name}${docUrl ? `\nดาวน์โหลด/เปิดดู: ${docUrl}` : ''}`;
-      await api.sendMessage(matchId, docMsgText, 'shelter');
+      await api.sendMessage(matchId, `แนบเอกสาร: ${file.name}${docUrl ? `\nดาวน์โหลด/เปิดดู: ${docUrl}` : ''}`, 'shelter');
     } catch (err) {
       console.error('Failed to send document:', err);
+      toast(t('fcr.sendFail'), { tone: 'error' });
     } finally {
       setIsSending(false);
       if (docInputRef.current) docInputRef.current.value = '';
@@ -844,10 +645,7 @@ function FoundationChatRoom() {
   const formatIdCard = (id) => {
     if (!id) return '-';
     const clean = id.replace(/\D/g, '');
-    if (clean.length === 13) {
-      return `${clean.slice(0, 1)}-${clean.slice(1, 5)}-${clean.slice(5, 10)}-${clean.slice(10, 12)}-${clean.slice(12)}`;
-    }
-    return id;
+    return clean.length === 13 ? `${clean.slice(0, 1)}-${clean.slice(1, 5)}-${clean.slice(5, 10)}-${clean.slice(10, 12)}-${clean.slice(12)}` : id;
   };
 
   const handleOpenUserModal = useCallback(async () => {
@@ -855,863 +653,358 @@ function FoundationChatRoom() {
     if (match?.user_id && (!match?.userData || !match?.userData?.assessment || !match?.userData?.avatar_url)) {
       try {
         const uData = await api.getUserVerification(match.user_id);
-        if (uData) {
-          setMatch(prev => ({
-            ...prev,
-            userData: { ...(prev?.userData || {}), ...uData }
-          }));
-        }
+        if (uData) setMatch((prev) => ({ ...prev, userData: { ...(prev?.userData || {}), ...uData } }));
       } catch (e) {
         console.warn('Could not fetch user verification on open modal:', e);
       }
     }
   }, [match?.user_id, match?.userData]);
 
-  const adopterName = match?.userData?.full_name || 'ผู้ใช้งานทั่วไป';
+  const adopterName = match?.userData?.full_name || t('fcr.adopter');
   const defaultAdopterAvatar = useMemo(() => initialsAvatar(adopterName), [adopterName]);
   const adopterAvatar = (!adopterImgErr && match?.userData?.avatar_url) ? match.userData.avatar_url : defaultAdopterAvatar;
+  const answers = useMemo(() => readAssessment(match?.userData?.assessment, lang), [match?.userData?.assessment, lang]);
 
-  if (loading) {
-    return <ChatRoomSkeleton />;
-  }
+  if (loading) return <ChatRoomSkeleton />;
 
-  // กรณีโหลดเสร็จแล้วแต่ไม่พบ match เลย
-  if (!loading && !match && messages.length === 0) {
+  if (!match && messages.length === 0) {
     return (
-      <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', padding: '24px', textAlign: 'center', backgroundColor: '#FAF8F5' }}>
-        <div style={{ padding: '20px', backgroundColor: '#F3F4F6', borderRadius: '50%', marginBottom: '16px', color: '#9CA3AF' }}>
-          <Info size={40} />
-        </div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>ไม่พบข้อมูลห้องแชทนี้</h3>
-        <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0 0 20px', maxWidth: '320px', lineHeight: 1.5 }}>
-          คำขอนี้อาจถูกลบไปแล้ว หรือคุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้
-        </p>
-        <button
-          onClick={() => navigate('/foundation/matches')}
-          style={{ padding: '10px 20px', backgroundColor: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}
-        >
-          กลับไปยังรายการแชท
-        </button>
+      <div className="chat-room-container fcr fcr--empty">
+        <span className="fcr-empty__icon" aria-hidden="true"><Info size={32} /></span>
+        <h2>{t('fcr.notFound.title')}</h2>
+        <p>{t('fcr.notFound.text')}</p>
+        <Button onClick={() => navigate('/foundation/matches')}>{t('fcr.notFound.back')}</Button>
       </div>
     );
   }
 
-  return (
-    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
-      {/* Header */}
-      <div className="chat-header" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--gray-200, #E5E7EB)',
-        backgroundColor: '#FFFFFF',
-        flexShrink: 0,
-        zIndex: 10,
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-          <button 
-            className="chat-back-btn" 
-            onClick={() => navigate('/foundation/matches')} 
-            aria-label="ย้อนกลับไปหน้ารายการแชท"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, margin: 0, flex: 1 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img 
-                src={adopterAvatar} 
-                alt={adopterName} 
-                className="chat-avatar" 
-                onError={() => setAdopterImgErr(true)}
-                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
-              />
-            </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {adopterName}
-              </h2>
-              <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                ผู้ขอรับเลี้ยง
-              </p>
-            </div>
-          </div>
-        </div>
+  const status = match?.status;
+  const petName = animal?.name || t('fmc.pet');
+  const verified = match?.userData?.status === 'verified';
+  const concerns = answers.filter((a) => a.concern && a.answer).length;
+  const unanswered = answers.filter((a) => !a.answer).length;
+  const answersLine = unanswered === answers.length
+    ? t('fcr.ans.none')
+    : [
+      concerns ? t('fcr.ans.concerns', { n: concerns }) : t('fcr.ans.allReady'),
+      unanswered ? t('fcr.ans.missing', { n: unanswered }) : null,
+    ].filter(Boolean).join(' · ');
+  const petAdoptedElsewhere = animal?.status === 'adopted' && status !== 'adopted' && status !== 'completed';
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative', flexShrink: 0 }}>
-          <button 
-            onClick={handleOpenUserModal} 
-            title="ข้อมูลผู้ขอรับเลี้ยง" 
-            style={{ 
-              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5E7EB', 
-              background: '#F9FAFB', cursor: 'pointer', color: '#4B5563',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background-color 0.15s' 
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-          >
-            <Info size={18} />
+  // Day separators: one pill wherever the date changes
+  let lastDay = null;
+
+  return (
+    <div className="chat-room-container fcr">
+      <header className="fcr-head">
+        <button type="button" className="fcr-icon-btn fcr-back chat-back-btn" onClick={() => navigate('/foundation/matches')} aria-label={t('fcr.backToList')}>
+          <ChevronLeft size={22} />
+        </button>
+        <button type="button" className="fcr-who" onClick={handleOpenUserModal} aria-label={t('fcr.openApplicant', { name: adopterName })}>
+          <img src={adopterAvatar} alt="" className="fcr-who__avatar" onError={() => setAdopterImgErr(true)} />
+          <span className="fcr-who__text">
+            <span className="fcr-who__name">
+              {adopterName}
+              {verified && <ShieldCheck size={15} className="fcr-verified" aria-label={t('fmc.verified')} />}
+            </span>
+            <span className="fcr-who__sub">{t('fmc.asks')} <strong>{petName}</strong></span>
+          </span>
+        </button>
+        {animal && (
+          <Link to={`/animal/${animal.id}`} className="fcr-pet" aria-label={t('fcr.viewPet', { name: petName })} title={t('fcr.viewPet', { name: petName })}>
+            {animal.images?.[0] ? <img src={animal.images[0]} alt="" /> : <PawPrint size={18} aria-hidden="true" />}
+          </Link>
+        )}
+        <div className="fcr-pop" ref={moreRef}>
+          <button type="button" className="fcr-icon-btn" aria-label={t('fcr.more')} aria-haspopup="menu" aria-expanded={showMoreMenu} onClick={() => setShowMoreMenu((v) => !v)}>
+            <MoreVertical size={20} />
           </button>
-          <button 
-            onClick={() => setShowMoreMenu(!showMoreMenu)} 
-            title="ตัวเลือกเพิ่มเติม"
-            style={{ 
-              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5E7EB', 
-              background: '#F9FAFB', cursor: 'pointer', color: '#4B5563',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background-color 0.15s' 
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-          >
-            <MoreVertical size={18} />
-          </button>
-          
           {showMoreMenu && (
-            <div style={{ position: 'absolute', top: '100%', right: '0', background: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 100, border: '1px solid #E5E7EB', minWidth: '190px', marginTop: '6px' }}>
-              {match && (match.status === 'approved' || match.status === 'pending') && (
-                <button 
-                  style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid #F3F4F6', textAlign: 'left', cursor: 'pointer', color: '#DC2626', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }} 
-                  onClick={() => { setShowMoreMenu(false); handleDecline(); }}
-                >
-                  <XCircle size={15} /> {match.status === 'approved' ? 'ยกเลิกคำขอรับเลี้ยงนี้' : 'ปฏิเสธคำขอรับเลี้ยง'}
+            <div className="fcr-menu" role="menu">
+              <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => { setShowMoreMenu(false); handleOpenUserModal(); }}>
+                <FileText size={16} aria-hidden="true" /> {t('fcr.menu.application')}
+              </button>
+              {match?.userData?.phone && (
+                <a role="menuitem" className="fcr-menu__item" href={`tel:${match.userData.phone}`}>
+                  <Phone size={16} aria-hidden="true" /> {t('fcr.menu.call', { phone: match.userData.phone })}
+                </a>
+              )}
+              {(status === 'approved' || status === 'pending') && (
+                <button type="button" role="menuitem" className="fcr-menu__item fcr-menu__item--danger" onClick={() => { setShowMoreMenu(false); handleDecline(); }}>
+                  <XCircle size={16} aria-hidden="true" /> {status === 'approved' ? t('fcr.menu.cancel') : t('fcr.menu.decline')}
                 </button>
               )}
-              <button style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#6B7280', fontSize: '0.85rem', fontWeight: 500 }} onClick={() => { setShowMoreMenu(false); setShowReportModal(true); }}>
-                รายงานผู้ใช้ / บล็อก
+              <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => { setShowMoreMenu(false); setShowReportModal(true); }}>
+                <Flag size={16} aria-hidden="true" /> {t('fcr.menu.report')}
               </button>
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Action Bar for Pending / Approved / Rejected Matches */}
-      {match && match.status === 'pending' && (
-        <div className="pending-approval-card" style={{ margin: '8px 12px', padding: '12px', borderRadius: '12px', boxSizing: 'border-box', flexShrink: 0 }}>
-          <div className="pending-card-content" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <div className="pending-icon" style={{ width: '32px', height: '32px', minWidth: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Clock size={16} />
-            </div>
-            <div className="pending-text" style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700 }}>รอการพิจารณาอนุมัติ</h4>
-              <p style={{ margin: '1px 0 0', fontSize: '0.75rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>ตรวจสอบข้อมูลก่อนอนุมัติให้เริ่มสนทนา</p>
-            </div>
-          </div>
-          <div className="pending-actions" style={{ display: 'flex', gap: '6px' }}>
-            <button className="pending-btn" style={{ flex: 1, padding: '6px 10px', fontSize: '0.78rem', background: 'var(--gray-100)', color: 'var(--text-dark)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }} onClick={handleOpenUserModal}>
-              <Info size={14} /> ดูข้อมูลผู้ขอ
-            </button>
-            <button className="pending-btn decline" style={{ padding: '6px 10px', fontSize: '0.78rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleDecline}>
-              <XCircle size={14} /> ปฏิเสธ
-            </button>
-            <button className="pending-btn approve" style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleApprove}>
-              <CheckCircle size={14} /> อนุมัติ
+      {/* One card for where this request stands and what to do next */}
+      {status === 'pending' && (
+        <section className="fcr-status fcr-status--pending" aria-label={t('fcr.pending.title', { pet: petName })}>
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><Clock size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('fcr.pending.title', { pet: petName })}</strong>
+              <span className={concerns ? 'is-warn' : ''}>{answersLine}</span>
+            </span>
+            <button type="button" className="fcr-link fcr-toggle" aria-expanded={showAnswers} onClick={() => setShowAnswers((v) => !v)}>
+              {showAnswers ? t('fcr.ans.hide') : t('fcr.ans.show')} <ChevronDown size={15} aria-hidden="true" />
             </button>
           </div>
-        </div>
+          {showAnswers && <Answers rows={answers} />}
+          {petAdoptedElsewhere && <p className="fcr-status__note"><Info size={15} aria-hidden="true" /> {t('fcr.petAdopted', { pet: petName })}</p>}
+          <div className="fcr-status__actions">
+            <Button variant="secondary" size="sm" onClick={handleDecline}><XCircle size={16} aria-hidden="true" /> {t('fcr.decline')}</Button>
+            {!petAdoptedElsewhere && <Button size="sm" onClick={handleApprove}><CheckCircle2 size={16} aria-hidden="true" /> {t('fcr.approve')}</Button>}
+          </div>
+        </section>
       )}
 
-      {match && match.status === 'approved' && (
-        <div style={{
-          padding: '8px 14px',
-          backgroundColor: '#ECFDF5',
-          borderBottom: '1px solid #A7F3D0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          flexWrap: 'wrap',
-          boxSizing: 'border-box',
-          flexShrink: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#047857', fontSize: '0.8rem', fontWeight: 600, minWidth: 0, flex: '1 1 auto' }}>
-            <CheckCircle size={16} color="#059669" style={{ flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              อนุมัติแล้ว • นัดหมายส่งมอบในแชทนี้
+      {status === 'approved' && (
+        <section className="fcr-status fcr-status--approved">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><CalendarCheck size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('fcr.approved.title')}</strong>
+              <span>{t('fcr.approved.text', { pet: petName })}</span>
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <button 
-              type="button"
-              onClick={handleDecline}
-              title="ยกเลิกคำขอรับเลี้ยง"
-              style={{ 
-                padding: '5px 10px', fontSize: '0.78rem', fontWeight: 600, 
-                color: '#DC2626', backgroundColor: '#FFFFFF', border: '1px solid #FCA5A5', 
-                borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-                alignItems: 'center', gap: '4px', transition: 'all 0.15s ease' 
-              }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-            >
-              <XCircle size={14} />
-              <span>ยกเลิก</span>
-            </button>
-            <button 
-              type="button"
-              onClick={() => setShowHandoverModal(true)}
-              style={{ 
-                padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, 
-                color: '#FFFFFF', backgroundColor: '#15803D', border: 'none', 
-                borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-                alignItems: 'center', gap: '5px', boxShadow: '0 1px 3px rgba(21,128,61,0.2)' 
-              }}
-            >
-              <Check size={15} />
-              <span>ยืนยันการส่งมอบ</span>
-            </button>
+          <div className="fcr-status__actions">
+            <Button size="sm" onClick={() => setShowHandoverModal(true)}><Check size={16} aria-hidden="true" /> {t('fcr.handover')}</Button>
           </div>
-        </div>
+        </section>
       )}
 
-      {match && (match.status === 'adopted' || match.status === 'completed') && (
-        <div style={{ padding: '8px 14px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', fontSize: '0.8rem', fontWeight: 600 }}>
-            <CheckCircle2 size={16} color="#16A34A" style={{ flexShrink: 0 }} />
-            <span>ส่งมอบสำเร็จแล้ว • ติดตามสถานะสุขภาวะ</span>
-          </div>
-          <button 
-            type="button"
-            onClick={() => navigate(`/adoption/timeline/${matchId}`)}
-            style={{ 
-              padding: '5px 10px', fontSize: '0.78rem', fontWeight: 700, 
-              color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #BBF7D0', 
-              borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', 
-              alignItems: 'center', gap: '4px' 
-            }}
-          >
-            <Clock size={14} />
-            <span>ประวัติติดตาม</span>
-          </button>
-        </div>
-      )}
-
-      {match && match.status === 'rejected' && (
-        <div style={{ padding: '8px 14px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#B91C1C', fontSize: '0.8rem', fontWeight: 600 }}>
-            <XCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
-            <span>ปฏิเสธคำขอรับเลี้ยงแล้ว</span>
-          </div>
-          <button 
-            onClick={handleApprove}
-            style={{ padding: '5px 10px', fontSize: '0.78rem', fontWeight: 600, color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            เปลี่ยนใจอนุมัติ
-          </button>
-        </div>
-      )}
-
-      {/* User Review Modal */}
-      <AnimatePresence>
-        {showUserModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowUserModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '480px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              {/* Modal Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShieldCheck size={22} />
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.12rem', color: 'var(--text-dark)', fontWeight: 700 }}>
-                      ข้อมูลและผลประเมินผู้ขอรับเลี้ยง
-                    </h3>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-medium)' }}>
-                      ตรวจสอบความพร้อมก่อนพิจารณาอนุมัติ
-                    </span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowUserModal(false)}
-                  style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium)', borderRadius: '50%' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Personal Info Box */}
-              <div style={{ background: '#fffaf5', border: '1.5px solid #fed7aa', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-                  <img 
-                    src={adopterAvatar} 
-                    alt={adopterName} 
-                    onError={() => setAdopterImgErr(true)}
-                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} 
-                  />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-dark)' }}>{adopterName}</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: '6px', marginTop: '3px' }}>
-                      <CheckCircle size={12} /> ผ่านการยืนยันตัวตนแล้ว (KYC Verified)
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.88rem', borderTop: '1px solid #ffedd5', paddingTop: '12px' }}>
-                  <div>
-                    <span style={{ color: '#78716c', fontSize: '0.78rem', display: 'block' }}>เบอร์โทรศัพท์</span>
-                    <strong style={{ color: 'var(--text-dark)' }}>{match?.userData?.phone || '-'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#78716c', fontSize: '0.78rem', display: 'block' }}>เลขบัตรประชาชน</span>
-                    <strong style={{ color: 'var(--text-dark)' }}>{formatIdCard(match?.userData?.id_card_no)}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Assessment Section */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <PawPrint size={18} color="#ea580c" />
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-dark)' }}>
-                    ผลแบบประเมินความพร้อมก่อนรับเลี้ยง (5 ข้อ)
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {/* Question 1: Housing */}
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                      <Home size={14} color="#ea580c" /> 1. ที่อยู่อาศัย
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                      {match?.userData?.assessment?.housing || 'มีบ้าน/คอนโดที่อนุญาตให้เลี้ยงสัตว์'}
-                    </div>
-                  </div>
-
-                  {/* Question 2: Time */}
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                      <Clock size={14} color="#ea580c" /> 2. เวลาในการดูแลน้อง
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                      {match?.userData?.assessment?.time || 'มาก (อย่างน้อยวันละ 2 ครั้ง)'}
-                    </div>
-                  </div>
-
-                  {/* Question 3: Budget */}
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                      <DollarSign size={14} color="#ea580c" /> 3. งบประมาณค่าอาหารและรักษาพยาบาล
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                      {match?.userData?.assessment?.budget || 'มี (อย่างน้อย 1,000 บาท/เดือน)'}
-                    </div>
-                  </div>
-
-                  {/* Question 4: Family */}
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                      <Users size={14} color="#ea580c" /> 4. ความเห็นชอบของคนรอบข้าง/ครอบครัว
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                      {match?.userData?.assessment?.family || 'เห็นด้วยทั้งหมด'}
-                    </div>
-                  </div>
-
-                  {/* Question 5: Longterm */}
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                      <Heart size={14} color="#ea580c" /> 5. ความพร้อมดูแลในระยะยาว
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                      {match?.userData?.assessment?.longterm || 'พร้อม ดูแลตลอดชีวิต'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {match?.status === 'pending' && (
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                  <button 
-                    type="button"
-                    className="btn btn-outline" 
-                    style={{ flex: 1, borderColor: '#EF4444', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 600, padding: '10px' }}
-                    onClick={() => { setShowUserModal(false); setShowDeclineModal(true); }}
-                  >
-                    <XCircle size={18} /> ปฏิเสธคำขอ
-                  </button>
-                  <button 
-                    type="button"
-                    className="btn btn-primary" 
-                    style={{ flex: 1.2, backgroundColor: '#059669', borderColor: '#059669', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 600, padding: '10px' }}
-                    onClick={() => { setShowUserModal(false); setShowApproveModal(true); }}
-                  >
-                    <CheckCircle size={18} /> อนุมัติการรับเลี้ยง
-                  </button>
-                </div>
-              )}
-
-              <button className="btn btn-primary btn-full" style={{ width: '100%', padding: '12px', borderRadius: '12px', fontWeight: 600, backgroundColor: 'var(--gray-100)', color: 'var(--text-dark)', border: '1px solid var(--gray-200)' }} onClick={() => setShowUserModal(false)}>ปิดหน้าต่าง</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Report Modal */}
-      <AnimatePresence>
-        {showReportModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowReportModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.2rem', color: 'var(--text-dark)' }}>รายงานปัญหา</h3>
-              <form onSubmit={handleReport}>
-                <textarea 
-                  placeholder="โปรดระบุเหตุผลในการรายงาน..." 
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '12px', border: '1px solid var(--gray-200)', marginBottom: '16px', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem' }}
-                  required
-                />
-                <div style={{ marginBottom: '16px' }}>
-                  <input type="file" accept="image/*" ref={reportImageInputRef} onChange={handleReportImageSelect} style={{ display: 'none' }} />
-                  <button type="button" onClick={() => reportImageInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-medium)', fontSize: '0.9rem' }}>
-                    <ImageIcon size={18} /> แนบรูปภาพหลักฐาน
-                  </button>
-                  {reportImagePreview && (
-                    <div style={{ position: 'relative', marginTop: '12px', display: 'inline-block' }}>
-                      <img src={reportImagePreview} alt="Proof preview" style={{ height: '80px', borderRadius: '8px', border: '1px solid var(--gray-200)', objectFit: 'cover' }} />
-                      <button type="button" onClick={() => setReportImagePreview(null)} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowReportModal(false)}>ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={!reportReason.trim() || isSubmittingReport}>
-                    {isSubmittingReport ? <Loader size={20} className="spin" /> : 'รายงาน'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Block Confirmation Modal */}
-      <AnimatePresence>
-        {showBlockModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowBlockModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', textAlign: 'center' }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.2rem', color: 'var(--text-dark)' }}>ต้องการบล็อกผู้ใช้นี้ด้วยหรือไม่?</h3>
-              <p style={{ color: 'var(--text-medium)', marginBottom: '24px' }}>หากบล็อก คุณจะไม่ได้รับข้อความจากผู้ใช้นี้อีก</p>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowBlockModal(false)}>ไม่บล็อก</button>
-                <button className="btn btn-primary" style={{ flex: 1, backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBlock}>บล็อกผู้ใช้</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Decline Adoption Modal */}
-      <AnimatePresence>
-        {showDeclineModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => !isSubmittingDecline && setShowDeclineModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <XCircle size={24} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#111827', fontWeight: 700 }}>
-                    {match?.status === 'approved' ? 'ยกเลิกคำขอรับเลี้ยง' : 'ปฏิเสธคำขอรับเลี้ยง'}
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
-                    สำหรับผู้ขอรับเลี้ยง: <strong>{adopterName}</strong>
-                  </p>
-                </div>
-              </div>
-
-              <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0 0 12px', fontWeight: 600 }}>
-                {match?.status === 'approved' ? 'เลือกเหตุผลในการยกเลิกคำขอรับเลี้ยง:' : 'เลือกเหตุผลในการปฏิเสธคำขอ:'}
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                {DECLINE_REASONS.map((reason, idx) => (
-                  <label 
-                    key={idx}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', 
-                      borderRadius: '10px', border: declineReason === reason ? '1.5px solid #DC2626' : '1px solid #E5E7EB',
-                      backgroundColor: declineReason === reason ? '#FEF2F2' : '#F9FAFB',
-                      cursor: 'pointer', fontSize: '0.85rem', color: '#1F2937', transition: 'all 0.15s'
-                    }}
-                  >
-                    <input 
-                      type="radio" 
-                      name="declineReason" 
-                      value={reason} 
-                      checked={declineReason === reason} 
-                      onChange={() => setDeclineReason(reason)}
-                      style={{ accentColor: '#DC2626' }}
-                    />
-                    <span>{reason}</span>
-                  </label>
-                ))}
-              </div>
-
-              {declineReason === 'อื่นๆ (ระบุเพิ่มเติม)' && (
-                <textarea 
-                  placeholder="โปรดระบุเหตุผลเพื่อแจ้งให้ผู้สมัครทราบ..." 
-                  value={customDeclineReason}
-                  onChange={(e) => setCustomDeclineReason(e.target.value)}
-                  style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '10px', border: '1px solid #E5E7EB', marginBottom: '14px', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                  required
-                />
-              )}
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#4B5563', marginBottom: '20px', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={sendDeclineMessage} 
-                  onChange={(e) => setSendDeclineMessage(e.target.checked)}
-                  style={{ accentColor: '#DC2626' }}
-                />
-                <span>ส่งข้อความแจ้งเหตุผลให้ผู้ขอรับเลี้ยงในแชทอัตโนมัติ</span>
-              </label>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: 600 }} 
-                  onClick={() => setShowDeclineModal(false)}
-                  disabled={isSubmittingDecline}
-                >
-                  ปิด
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  style={{ flex: 1.3, padding: '10px', borderRadius: '10px', fontWeight: 600, backgroundColor: '#DC2626', borderColor: '#DC2626', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  onClick={handleConfirmDecline}
-                  disabled={isSubmittingDecline || (declineReason === 'อื่นๆ (ระบุเพิ่มเติม)' && !customDeclineReason.trim())}
-                >
-                  {isSubmittingDecline ? <Loader size={18} className="spin" /> : (match?.status === 'approved' ? 'ยืนยันยกเลิกคำขอ' : 'ยืนยันปฏิเสธคำขอ')}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Approve Adoption Modal */}
-      <AnimatePresence>
-        {showApproveModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => !isSubmittingApprove && setShowApproveModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', textAlign: 'center' }}
-            >
-              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle size={28} />
-              </div>
-
-              <h3 style={{ margin: '0 0 8px', fontSize: '1.2rem', color: '#111827', fontWeight: 700 }}>
-                ยืนยันการอนุมัติคำขอรับเลี้ยง
-              </h3>
-              <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: '#4B5563', lineHeight: 1.5 }}>
-                คุณต้องการอนุมัติให้ <strong>{adopterName}</strong> รับเลี้ยง <strong>{animal?.name || 'สัตว์เลี้ยง'}</strong> ใช่หรือไม่?
-              </p>
-
-              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px', textAlign: 'left', marginBottom: '20px', fontSize: '0.8rem', color: '#166534', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Info size={14} /> สิ่งที่จะเกิดขึ้นหลังการอนุมัติ:
-                </div>
-                • สถานะคำขอจะเปลี่ยนเป็น "อนุมัติแล้ว"<br />
-                • ระบบจะส่งข้อความแจ้งผลเข้าห้องแชทอัตโนมัติ<br />
-                • สามารถเริ่มพูดคุยและนัดหมายวันส่งมอบได้ทันที
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: 600 }} 
-                  onClick={() => setShowApproveModal(false)}
-                  disabled={isSubmittingApprove}
-                >
-                  ยกเลิก
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  style={{ flex: 1.2, padding: '10px', borderRadius: '10px', fontWeight: 600, backgroundColor: '#059669', borderColor: '#059669', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  onClick={handleConfirmApprove}
-                  disabled={isSubmittingApprove}
-                >
-                  {isSubmittingApprove ? <Loader size={18} className="spin" /> : <>ยืนยันอนุมัติ</>}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Handover Confirmation Modal */}
-      <AnimatePresence>
-        {showHandoverModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowHandoverModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 48px rgba(0,0,0,0.14)' }}
-            >
-              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle2 size={28} />
-              </div>
-
-              <h3 style={{ margin: '0 0 8px', fontSize: '1.2rem', color: '#111827', fontWeight: 700, textAlign: 'center' }}>
-                ยืนยันการส่งมอบสัตว์เลี้ยง
-              </h3>
-              <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: '#4B5563', lineHeight: 1.5, textAlign: 'center' }}>
-                ยืนยันว่า <strong>{adopterName}</strong> ได้รับตัว <strong>{animal?.name || 'สัตว์เลี้ยง'}</strong> ไปดูแลเรียบร้อยแล้ว
-              </p>
-
-              <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px', marginBottom: '16px', fontSize: '0.8rem', color: '#166534', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Info size={14} /> สิ่งที่จะเกิดขึ้นหลังยืนยันการส่งมอบ:
-                </div>
-                • สถานะสัตว์เลี้ยงจะเปลี่ยนเป็น "ได้บ้านแล้ว"<br />
-                • ระบบจะเริ่มกำหนดการติดตามสถานะสุขภาวะทุก 2 เดือนโดยอัตโนมัติ<br />
-                • ผู้รับเลี้ยงและมูลนิธิสามารถตรวจสอบประวัติและส่งอัปเดตได้ตลอดเวลา
-              </div>
-
-              <div style={{ marginBottom: '14px', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
-                  วันที่ส่งมอบสัตว์เลี้ยง
-                </label>
-                <input
-                  type="date"
-                  value={handoverDate}
-                  onChange={e => setHandoverDate(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none' }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
-                  บันทึกเพิ่มเติม (ถ้ามี)
-                </label>
-                <textarea
-                  value={handoverNotes}
-                  onChange={e => setHandoverNotes(e.target.value)}
-                  placeholder="เช่น มอบสมุดวัคซีนเรียบร้อยแล้ว นัดหมายสอบถามอีกครั้งใน 2 เดือน..."
-                  style={{ width: '100%', height: '60px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.82rem', boxSizing: 'border-box', outline: 'none', resize: 'none', fontFamily: 'inherit' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: 600 }} 
-                  onClick={() => setShowHandoverModal(false)}
-                  disabled={isSubmittingHandover}
-                >
-                  ยกเลิก
-                </button>
-                <button 
-                  type="button" 
-                  style={{ flex: 1.3, padding: '10px', borderRadius: '10px', fontWeight: 700, backgroundColor: '#15803D', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: isSubmittingHandover ? 'not-allowed' : 'pointer' }}
-                  onClick={handleConfirmHandover}
-                  disabled={isSubmittingHandover}
-                >
-                  {isSubmittingHandover ? <Loader size={18} className="spin" /> : <><Check size={16} /> ยืนยันการส่งมอบ</>}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Messages */}
-      <div className="chat-messages" style={{ padding: '14px 14px', flex: 1, overflowY: 'auto' }}>
-        {messages.length === 0 && (
-          <div className="chat-empty-state">
-            <p>เริ่มบทสนทนากับผู้สนใจรับเลี้ยง</p>
-          </div>
-        )}
-
-        {/* Date Separator */}
-        {messages.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-            <span style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--gray-200)', color: 'var(--text-medium)', fontSize: '0.75rem', padding: '4px 12px', borderRadius: '9999px' }}>
-              วันนี้
+      {(status === 'adopted' || status === 'completed') && (
+        <section className="fcr-status fcr-status--adopted">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><Heart size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('fcr.adopted.title', { pet: petName })}</strong>
+              <span>{t('fcr.adopted.text')}</span>
             </span>
+            <Link to={`/adoption/timeline/${matchId}`} className="fcr-link">{t('fcr.adopted.timeline')}</Link>
           </div>
-        )}
-        
-        {messages.map((msg) => (
-          <FoundationMessageItem
-            key={msg.id}
-            msg={msg}
-            isMe={msg.sender === 'shelter'}
-            adopterPic={adopterAvatar}
-            setAdopterImgErr={setAdopterImgErr}
-            handleOpenUserModal={handleOpenUserModal}
-          />
-        ))}
+        </section>
+      )}
+
+      {status === 'rejected' && (
+        <section className="fcr-status fcr-status--rejected">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><XCircle size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('fcr.rejected.title')}</strong>
+              {petAdoptedElsewhere && <span>{t('fcr.petAdopted', { pet: petName })}</span>}
+            </span>
+            {!petAdoptedElsewhere && <button type="button" className="fcr-link" onClick={handleApprove}>{t('fcr.rejected.undo')}</button>}
+          </div>
+        </section>
+      )}
+
+      <div className="chat-messages fcr-messages">
+        {messages.length === 0 && <p className="fcr-messages__empty">{t('fcr.noMessages')}</p>}
+        {messages.map((msg) => {
+          const day = dayLabel(msg.created_at, t, lang);
+          const showDay = day !== lastDay;
+          lastDay = day;
+          return (
+            <React.Fragment key={msg.id}>
+              {showDay && <div className="fcr-day"><span>{day}</span></div>}
+              <FoundationMessageItem
+                msg={msg}
+                isMe={msg.sender === 'shelter'}
+                adopterPic={adopterAvatar}
+                setAdopterImgErr={setAdopterImgErr}
+                onOpenApplication={handleOpenUserModal}
+              />
+            </React.Fragment>
+          );
+        })}
         <div ref={messagesEndRef} />
-        {isSending && (
-          <div className="message-row msg-user" style={{ marginBottom: '16px' }}>
-            <div className="message-wrapper msg-user" style={{ maxWidth: '100%', alignItems: 'flex-end' }}>
-              <div className="message-bubble" style={{ opacity: 0.7, width: 'fit-content' }}>
-                กำลังส่ง...
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Input */}
-      <div className="chat-input-wrapper" style={{ position: 'relative', padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF', flexShrink: 0, boxSizing: 'border-box', zIndex: 10 }}>
-        {showAttachMenu && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '14px 18px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid #E5E7EB' }}>
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--success-light, #ECFDF5)', color: 'var(--success, #059669)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={22} />
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>เอกสาร</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={handleShareLocation}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <MapPin size={22} />
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ตำแหน่ง</span>
-            </div>
-          </div>
-        )}
-
+      <div className="fcr-compose chat-input-wrapper">
         {imagePreview && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB' }}>
-            <img src={imagePreview} alt="preview" style={{ height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
-            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger, #DC2626)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-              <X size={13} />
-            </button>
+          <div className="fcr-compose__preview">
+            <img src={imagePreview} alt="" />
+            <button type="button" onClick={removeImage} aria-label={t('fcr.removeImage')}><X size={14} /></button>
           </div>
         )}
-        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, padding: '4px 6px', backgroundColor: 'var(--surface-container-low, #F9FAFB)', border: '1px solid var(--gray-200, #E5E7EB)', borderRadius: '24px' }}>
-          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PlusCircle size={22} />
-          </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <form className="fcr-compose__bar" onSubmit={handleSend}>
+          <div className="fcr-pop" ref={attachRef}>
+            <button type="button" className={`fcr-icon-btn fcr-attach ${showAttachMenu ? 'is-open' : ''}`} aria-label={t('fcr.attach')} aria-haspopup="menu" aria-expanded={showAttachMenu} onClick={() => setShowAttachMenu((v) => !v)}>
+              <PlusCircle size={22} />
+            </button>
+            {showAttachMenu && (
+              <div className="fcr-menu fcr-menu--up" role="menu">
+                <button type="button" role="menuitem" className="fcr-menu__item" onClick={handleShareCentre}><Building2 size={16} aria-hidden="true" /> {t('fcr.attach.centre')}</button>
+                <button type="button" role="menuitem" className="fcr-menu__item" onClick={handleShareCurrent}><Navigation size={16} aria-hidden="true" /> {t('fcr.attach.current')}</button>
+                <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => docInputRef.current?.click()}><FileText size={16} aria-hidden="true" /> {t('fcr.attach.doc')}</button>
+              </div>
+            )}
+          </div>
+          <button type="button" className="fcr-icon-btn" aria-label={t('fcr.attach.photo')} onClick={() => fileInputRef.current?.click()}>
             <ImageIcon size={22} />
           </button>
-          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} />
-          <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} style={{ display: 'none' }} />
-
-          <input 
-            type="text" 
-            placeholder="พิมพ์ข้อความตอบกลับ..."
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} hidden />
+          <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} hidden />
+          <input
+            type="text"
+            className="fcr-compose__input"
+            placeholder={t('fcr.placeholder')}
+            aria-label={t('fcr.placeholder')}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={isSending}
-            style={{ flex: 1, padding: '6px 8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark, #111827)', fontSize: '16px', fontFamily: 'inherit' }}
           />
-          <button 
-            type="submit" 
-            className="btn-send"
-            disabled={(!inputText.trim() && !imageFile) || isSending}
-            style={{ background: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', minWidth: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(217,119,6,0.25)', opacity: (!inputText.trim() && !imageFile) || isSending ? 0.5 : 1 }}
-          >
-            {isSending ? <Loader className="spin" size={18} /> : <Send size={16} />}
+          <button type="submit" className="fcr-send" disabled={(!inputText.trim() && !imageFile) || isSending} aria-label={t('fcr.send')}>
+            {isSending ? <Loader className="ui-spin" size={18} /> : <Send size={17} />}
           </button>
         </form>
       </div>
+
+      {/* Applicant */}
+      <Dialog open={showUserModal} onClose={() => setShowUserModal(false)} title={t('fcr.applicant.title')} className="fcr-dialog">
+        <div className="fcr-person">
+          <img src={adopterAvatar} alt="" onError={() => setAdopterImgErr(true)} />
+          <div>
+            <div className="fcr-person__name">{adopterName}</div>
+            {verified
+              ? <span className="fcr-badge fcr-badge--ok"><ShieldCheck size={13} aria-hidden="true" /> {t('fmc.verified')}</span>
+              : <span className="fcr-badge fcr-badge--warn"><AlertTriangle size={13} aria-hidden="true" /> {t('fcr.applicant.notVerified')}</span>}
+          </div>
+        </div>
+        <dl className="fcr-facts">
+          <div><dt>{t('fcr.applicant.wants')}</dt><dd>{petName}</dd></div>
+          <div><dt>{t('fcr.applicant.phone')}</dt><dd>{match?.userData?.phone ? <a href={`tel:${match.userData.phone}`}>{match.userData.phone}</a> : '-'}</dd></div>
+          <div><dt>{t('fcr.applicant.id')}</dt><dd>{formatIdCard(match?.userData?.id_card_no)}</dd></div>
+        </dl>
+        <h3 className="fcr-subhead">{t('fcr.applicant.answers')}</h3>
+        <Answers rows={answers} />
+        {status === 'pending' && (
+          <div className="ui-dialog__actions">
+            <Button variant="secondary" onClick={() => { setShowUserModal(false); setShowDeclineModal(true); }}>{t('fcr.decline')}</Button>
+            {!petAdoptedElsewhere && <Button onClick={() => { setShowUserModal(false); setShowApproveModal(true); }}>{t('fcr.approve')}</Button>}
+          </div>
+        )}
+      </Dialog>
+
+      {/* Approve */}
+      <Dialog open={showApproveModal} onClose={() => !isSubmittingApprove && setShowApproveModal(false)} title={t('fcr.approveQ', { name: adopterName, pet: petName })}>
+        {concerns > 0 && <p className="fcr-callout fcr-callout--warn"><AlertTriangle size={16} aria-hidden="true" /> {t('fcr.approveConcerns', { n: concerns })}</p>}
+        <ul className="fcr-steps">
+          <li>{t('fcr.approveStep1')}</li>
+          <li>{t('fcr.approveStep2')}</li>
+        </ul>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowApproveModal(false)} disabled={isSubmittingApprove}>{t('fnd.back')}</Button>
+          <Button onClick={handleConfirmApprove} loading={isSubmittingApprove}>{t('fcr.approveConfirm')}</Button>
+        </div>
+      </Dialog>
+
+      {/* Decline / cancel */}
+      <Dialog
+        open={showDeclineModal}
+        onClose={() => !isSubmittingDecline && setShowDeclineModal(false)}
+        title={status === 'approved' ? t('fcr.cancelQ', { name: adopterName }) : t('fcr.declineQ', { name: adopterName })}
+      >
+        <fieldset className="fcr-reasons">
+          <legend>{t('fcr.reason')}</legend>
+          {DECLINE_REASONS.map((r) => (
+            <label key={r.id} className={`fcr-reason ${declineReason === r.id ? 'is-on' : ''}`}>
+              <input type="radio" name="fcr-reason" value={r.id} checked={declineReason === r.id} onChange={() => setDeclineReason(r.id)} />
+              <span>{t(`fcr.reason.${r.id}`)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {declineReason === 'other' && (
+          <textarea
+            className="fcr-textarea"
+            placeholder={t('fcr.reason.otherPh')}
+            aria-label={t('fcr.reason.otherPh')}
+            value={customDeclineReason}
+            onChange={(e) => setCustomDeclineReason(e.target.value)}
+          />
+        )}
+        <label className="fcr-check">
+          <input type="checkbox" checked={sendDeclineMessage} onChange={(e) => setSendDeclineMessage(e.target.checked)} />
+          <span>{t('fcr.reason.send')}</span>
+        </label>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowDeclineModal(false)} disabled={isSubmittingDecline}>{t('fnd.back')}</Button>
+          <Button
+            variant="danger"
+            onClick={handleConfirmDecline}
+            loading={isSubmittingDecline}
+            disabled={declineReason === 'other' && !customDeclineReason.trim()}
+          >
+            {status === 'approved' ? t('fcr.cancelConfirm') : t('fcr.declineConfirm')}
+          </Button>
+        </div>
+      </Dialog>
+
+      {/* Handover */}
+      <Dialog open={showHandoverModal} onClose={() => !isSubmittingHandover && setShowHandoverModal(false)} title={t('fcr.handoverQ', { name: adopterName, pet: petName })}>
+        <ul className="fcr-steps">
+          <li>{t('fcr.handoverStep1', { pet: petName })}</li>
+          <li>{t('fcr.handoverStep2', { pet: petName })}</li>
+          <li>{t('fcr.handoverStep3')}</li>
+        </ul>
+        <label className="fcr-field">
+          <span>{t('fcr.handoverDate')}</span>
+          <input type="date" className="fcr-input" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} />
+        </label>
+        <label className="fcr-field">
+          <span>{t('fcr.handoverNotes')}</span>
+          <textarea className="fcr-textarea" value={handoverNotes} onChange={(e) => setHandoverNotes(e.target.value)} placeholder={t('fcr.handoverNotesPh')} />
+        </label>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowHandoverModal(false)} disabled={isSubmittingHandover}>{t('fnd.back')}</Button>
+          <Button onClick={handleConfirmHandover} loading={isSubmittingHandover}>{t('fcr.handoverConfirm')}</Button>
+        </div>
+      </Dialog>
+
+      {/* Report */}
+      <Dialog open={showReportModal} onClose={() => !isSubmittingReport && setShowReportModal(false)} title={t('fcr.report.title', { name: adopterName })}>
+        <form onSubmit={handleReport}>
+          <textarea
+            className="fcr-textarea"
+            placeholder={t('fcr.report.ph')}
+            aria-label={t('fcr.report.ph')}
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            required
+          />
+          <input type="file" accept="image/*" ref={reportImageInputRef} onChange={handleReportImageSelect} hidden />
+          {reportImagePreview ? (
+            <div className="fcr-compose__preview fcr-report-img">
+              <img src={reportImagePreview} alt="" />
+              <button type="button" onClick={() => setReportImagePreview(null)} aria-label={t('fcr.removeImage')}><X size={14} /></button>
+            </div>
+          ) : (
+            <button type="button" className="fcr-link fcr-report-attach" onClick={() => reportImageInputRef.current?.click()}>
+              <ImageIcon size={16} aria-hidden="true" /> {t('fcr.report.attach')}
+            </button>
+          )}
+          <div className="ui-dialog__actions">
+            <Button type="button" variant="secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>{t('fnd.back')}</Button>
+            <Button type="submit" variant="danger" loading={isSubmittingReport} disabled={!reportReason.trim()}>{t('fcr.report.send')}</Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Block, offered after a report */}
+      <Dialog open={showBlockModal} onClose={() => setShowBlockModal(false)} title={t('fcr.block.title')}>
+        <p>{t('fcr.block.text')}</p>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowBlockModal(false)}>{t('fcr.block.no')}</Button>
+          <Button variant="danger" onClick={handleBlock}>{t('fcr.block.yes')}</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
