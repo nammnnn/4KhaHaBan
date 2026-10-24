@@ -29,7 +29,7 @@ import { useI18n } from '../i18n';
 const URGENCY_BASE = [
   { id: 'critical', bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
   { id: 'high', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
-  { id: 'normal', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
+  { id: 'normal', bg: 'var(--success-soft)', color: 'var(--success-fill)', border: 'var(--success-line)' },
   { id: 'sufficient', bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' }
 ];
 

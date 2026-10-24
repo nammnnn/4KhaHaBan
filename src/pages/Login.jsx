@@ -256,13 +256,13 @@ const Login = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 style={{
-                  backgroundColor: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
+                  backgroundColor: 'var(--success-soft)',
+                  border: '1px solid var(--success-line)',
                   padding: '12px 14px',
                   borderRadius: '10px',
                   marginBottom: '16px',
                   fontSize: '0.85rem',
-                  color: '#059669',
+                  color: 'var(--success-fill)',
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
@@ -273,7 +273,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setSuccessMsg('')}
-                  style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--success-fill)', cursor: 'pointer', padding: 0 }}
                   title={t('common.close')}
                 >
                   <X size={16} />
@@ -489,7 +489,7 @@ const Login = () => {
                   type="checkbox"
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#059669' }}
+                  style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--success-fill)' }}
                 />
                 <span>{t('login.acceptPrefix')} <strong style={{ color: '#111827' }}>{t('login.terms')}</strong> {t('login.and')} <strong style={{ color: '#111827' }}>{t('login.privacy')}</strong></span>
               </label>

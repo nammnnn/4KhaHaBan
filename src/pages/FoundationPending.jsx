@@ -161,7 +161,7 @@ const FoundationPending = () => {
                       width: '24px',
                       height: '24px',
                       borderRadius: '6px',
-                      backgroundColor: item.done ? '#059669' : item.active ? '#D97706' : '#F3F4F6',
+                      backgroundColor: item.done ? 'var(--success-fill)' : item.active ? '#D97706' : '#F3F4F6',
                       color: item.done || item.active ? '#FFFFFF' : '#9CA3AF',
                       display: 'flex',
                       justifyContent: 'center',
@@ -182,7 +182,7 @@ const FoundationPending = () => {
                       <div style={{
                         width: '2px',
                         height: '22px',
-                        backgroundColor: item.done ? '#059669' : '#E5E7EB'
+                        backgroundColor: item.done ? 'var(--success-fill)' : '#E5E7EB'
                       }} />
                     )}
                   </div>
@@ -190,7 +190,7 @@ const FoundationPending = () => {
                     fontSize: '0.85rem',
                     paddingTop: '2px',
                     fontWeight: item.active ? 600 : 500,
-                    color: item.done ? '#059669' : item.active ? '#111827' : '#9CA3AF',
+                    color: item.done ? 'var(--success-fill)' : item.active ? '#111827' : '#9CA3AF',
                   }}>
                     {item.label}
                   </span>

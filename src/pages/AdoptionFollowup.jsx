@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ui';
+import { PET_PLACEHOLDER } from '../lib/avatar';
 import { supabase } from '../services/supabaseClient';
 import { AdoptionFollowupSkeleton } from '../components/Skeletons';
 
@@ -27,6 +29,7 @@ export default function AdoptionFollowup() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -80,7 +83,7 @@ export default function AdoptionFollowup() {
     if (!files.length) return;
 
     if (photos.length + files.length > 5) {
-      alert('สามารถอัปโหลดได้สูงสุด 5 รูปภาพ');
+      toast('สามารถอัปโหลดได้สูงสุด 5 รูปภาพ', { tone: 'error' });
       return;
     }
 
@@ -100,7 +103,7 @@ export default function AdoptionFollowup() {
     if (submitting) return;
 
     if (photos.length === 0) {
-      alert('กรุณาอัปโหลดรูปภาพน้องอย่างน้อย 1 รูป เพื่อยืนยันสุขภาวะ');
+      toast('กรุณาอัปโหลดรูปภาพน้องอย่างน้อย 1 รูป เพื่อยืนยันสุขภาวะ', { tone: 'error' });
       return;
     }
 
@@ -145,7 +148,7 @@ export default function AdoptionFollowup() {
 
     } catch (err) {
       console.error('Failed to submit followup:', err);
-      alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
+      toast('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง', { tone: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -169,11 +172,14 @@ export default function AdoptionFollowup() {
   const isOverdue = nextDue?.isOverdue;
   const daysInfo = isOverdue ? `(เกินกำหนด ${nextDue.daysOverdue} วัน)` : `(อีก ${nextDue?.daysRemaining || 0} วัน)`;
 
-  const petImage = animal?.images?.[0] || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=600';
-  const petName = animal?.name || 'น้องสัตว์เลี้ยง';
-  const petSpecies = animal?.species === 'cat' ? 'แมว' : 'สุนัข';
-  const petAge = animal?.age ? `${animal.age} ปี` : 'อายุ 2 ปี';
-  const petGender = animal?.gender === 'female' ? 'เพศเมีย' : 'เพศผู้';
+  // Facts come from the animal record (type/age/gender); nothing is filled in when missing
+  const petImage = animal?.images?.[0] || PET_PLACEHOLDER;
+  const petName = animal?.name || 'น้อง';
+  const petFacts = [
+    { dog: 'สุนัข', cat: 'แมว' }[animal?.type || animal?.species],
+    animal?.age ? `อายุ ${animal.age}` : null,
+    { male: 'เพศผู้', female: 'เพศเมีย' }[animal?.gender],
+  ].filter(Boolean).join(' | ');
 
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', fontFamily: 'Prompt, sans-serif', padding: '24px 16px 80px', boxSizing: 'border-box' }}>
@@ -253,14 +259,14 @@ export default function AdoptionFollowup() {
               {petName}
             </h2>
             <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#6B7280' }}>
-              {petSpecies} | อายุ {petAge} | {petGender}
+              {petFacts}
             </p>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              backgroundColor: '#DCFCE7',
-              color: '#15803D',
+              backgroundColor: 'var(--success-soft)',
+              color: 'var(--success)',
               fontSize: '0.75rem',
               fontWeight: 600,
               padding: '2px 8px',
@@ -277,7 +283,7 @@ export default function AdoptionFollowup() {
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',
             padding: '36px 20px',
-            border: '1px solid #BBF7D0',
+            border: '1px solid var(--success-line)',
             textAlign: 'center',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             marginBottom: '24px'
@@ -286,8 +292,8 @@ export default function AdoptionFollowup() {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: '#DCFCE7',
-              color: '#15803D',
+              backgroundColor: 'var(--success-soft)',
+              color: 'var(--success)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -308,7 +314,7 @@ export default function AdoptionFollowup() {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '10px 20px',
-                backgroundColor: '#15803D',
+                backgroundColor: 'var(--success)',
                 color: '#FFFFFF',
                 borderRadius: '10px',
                 fontWeight: 600,
@@ -383,7 +389,7 @@ export default function AdoptionFollowup() {
                   justifyContent: 'center',
                   gap: '8px',
                   padding: '10px 16px',
-                  backgroundColor: '#15803D',
+                  backgroundColor: 'var(--primary-strong)',
                   color: '#FFFFFF',
                   borderRadius: '10px',
                   fontWeight: 600,
@@ -394,6 +400,8 @@ export default function AdoptionFollowup() {
                 <History size={16} /> ดูประวัติและกำหนดการไทม์ไลน์
               </Link>
 
+              {/* Testing shortcut: skips the 2-month wait. Dev builds only, never shown to adopters. */}
+              {import.meta.env.DEV && (
               <button
                 type="button"
                 onClick={() => setBypassWait(true)}
@@ -409,14 +417,15 @@ export default function AdoptionFollowup() {
               >
                 ส่งล่วงหน้า (สำหรับทดสอบระบบ)
               </button>
+              )}
             </div>
           </div>
         ) : (
           <>
             {/* Schedule Box */}
             <div style={{
-              backgroundColor: isOverdue ? '#FEF2F2' : '#F0FDF4',
-              border: `1.5px solid ${isOverdue ? '#FECACA' : '#BBF7D0'}`,
+              backgroundColor: isOverdue ? '#FEF2F2' : 'var(--success-soft)',
+              border: `1.5px solid ${isOverdue ? '#FECACA' : 'var(--success-line)'}`,
               borderRadius: '16px',
               padding: '16px',
               display: 'flex',
@@ -429,8 +438,8 @@ export default function AdoptionFollowup() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  backgroundColor: isOverdue ? '#FEE2E2' : '#DCFCE7',
-                  color: isOverdue ? '#DC2626' : '#16A34A',
+                  backgroundColor: isOverdue ? '#FEE2E2' : 'var(--success-soft)',
+                  color: isOverdue ? '#DC2626' : 'var(--success-fill)',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -439,13 +448,13 @@ export default function AdoptionFollowup() {
                   {isOverdue ? <AlertTriangle size={22} /> : <Calendar size={22} />}
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.78rem', color: isOverdue ? '#991B1B' : '#166534', fontWeight: 600, display: 'block' }}>
+                  <span style={{ fontSize: '0.78rem', color: isOverdue ? '#991B1B' : 'var(--success)', fontWeight: 600, display: 'block' }}>
                     กำหนดส่งอัปเดตครั้งถัดไป ({nextDue?.milestoneLabel || 'รอบถัดไป'})
                   </span>
                   <strong style={{ fontSize: '1rem', color: '#111827', display: 'block', marginTop: '2px' }}>
                     {formatThaiDate(nextDue?.dueDate)}
                   </strong>
-                  <span style={{ fontSize: '0.75rem', color: isOverdue ? '#DC2626' : '#15803D', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.75rem', color: isOverdue ? '#DC2626' : 'var(--success)', fontWeight: 600 }}>
                     {daysInfo}
                   </span>
                 </div>
@@ -455,8 +464,8 @@ export default function AdoptionFollowup() {
                 width: '34px',
                 height: '34px',
                 borderRadius: '50%',
-                backgroundColor: isOverdue ? '#FEE2E2' : '#DCFCE7',
-                color: isOverdue ? '#DC2626' : '#16A34A',
+                backgroundColor: isOverdue ? '#FEE2E2' : 'var(--success-soft)',
+                color: isOverdue ? '#DC2626' : 'var(--success-fill)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -522,7 +531,7 @@ export default function AdoptionFollowup() {
                   transition: 'border-color 0.15s, background-color 0.15s'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#16A34A';
+                  e.currentTarget.style.borderColor = 'var(--success-fill)';
                   e.currentTarget.style.backgroundColor = '#F9FAFB';
                 }}
                 onMouseLeave={e => {
@@ -581,15 +590,15 @@ export default function AdoptionFollowup() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Activity size={16} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>สุขภาพทั่วไป</div>
-                      <div style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 500 }}>{healthStatus}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{healthStatus}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#16A34A" />
+                  <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['แข็งแรงดี', 'ป่วยเล็กน้อย/กำลังรักษา', 'ต้องพบสัตวแพทย์'].map(opt => (
@@ -601,9 +610,9 @@ export default function AdoptionFollowup() {
                         padding: '4px 10px',
                         fontSize: '0.75rem',
                         borderRadius: '6px',
-                        border: healthStatus === opt ? '1.5px solid #16A34A' : '1px solid #E5E7EB',
-                        backgroundColor: healthStatus === opt ? '#F0FDF4' : '#FFFFFF',
-                        color: healthStatus === opt ? '#166534' : '#4B5563',
+                        border: healthStatus === opt ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                        backgroundColor: healthStatus === opt ? 'var(--success-soft)' : '#FFFFFF',
+                        color: healthStatus === opt ? 'var(--success)' : '#4B5563',
                         fontWeight: healthStatus === opt ? 600 : 400,
                         cursor: 'pointer'
                       }}
@@ -618,15 +627,15 @@ export default function AdoptionFollowup() {
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Syringe size={16} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>วัคซีน</div>
-                      <div style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 500 }}>{vaccineStatus}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{vaccineStatus}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#16A34A" />
+                  <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['ครบแล้ว', 'รอตามนัดเข็มถัดไป', 'ยังไม่ได้รับ'].map(opt => (
@@ -638,9 +647,9 @@ export default function AdoptionFollowup() {
                         padding: '4px 10px',
                         fontSize: '0.75rem',
                         borderRadius: '6px',
-                        border: vaccineStatus === opt ? '1.5px solid #16A34A' : '1px solid #E5E7EB',
-                        backgroundColor: vaccineStatus === opt ? '#F0FDF4' : '#FFFFFF',
-                        color: vaccineStatus === opt ? '#166534' : '#4B5563',
+                        border: vaccineStatus === opt ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                        backgroundColor: vaccineStatus === opt ? 'var(--success-soft)' : '#FFFFFF',
+                        color: vaccineStatus === opt ? 'var(--success)' : '#4B5563',
                         fontWeight: vaccineStatus === opt ? 600 : 400,
                         cursor: 'pointer'
                       }}
@@ -655,15 +664,15 @@ export default function AdoptionFollowup() {
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Scissors size={16} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>ทำหมัน</div>
-                      <div style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 500 }}>{neuteredStatus}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{neuteredStatus}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#16A34A" />
+                  <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['แล้ว', 'ยังไม่ถึงเกณฑ์วัย', 'ยังไม่ได้ทำ'].map(opt => (
@@ -675,9 +684,9 @@ export default function AdoptionFollowup() {
                         padding: '4px 10px',
                         fontSize: '0.75rem',
                         borderRadius: '6px',
-                        border: neuteredStatus === opt ? '1.5px solid #16A34A' : '1px solid #E5E7EB',
-                        backgroundColor: neuteredStatus === opt ? '#F0FDF4' : '#FFFFFF',
-                        color: neuteredStatus === opt ? '#166534' : '#4B5563',
+                        border: neuteredStatus === opt ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                        backgroundColor: neuteredStatus === opt ? 'var(--success-soft)' : '#FFFFFF',
+                        color: neuteredStatus === opt ? 'var(--success)' : '#4B5563',
                         fontWeight: neuteredStatus === opt ? 600 : 400,
                         cursor: 'pointer'
                       }}
@@ -692,15 +701,15 @@ export default function AdoptionFollowup() {
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Utensils size={16} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>อาหาร</div>
-                      <div style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 500 }}>{foodStatus}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{foodStatus}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#16A34A" />
+                  <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['กินอาหารเม็ด + อาหารเปียก', 'กินอาหารเม็ดอย่างเดียว', 'ปรุงเอง/บาร์ฟ', 'กินได้ปกติ'].map(opt => (
@@ -712,9 +721,9 @@ export default function AdoptionFollowup() {
                         padding: '4px 10px',
                         fontSize: '0.75rem',
                         borderRadius: '6px',
-                        border: foodStatus === opt ? '1.5px solid #16A34A' : '1px solid #E5E7EB',
-                        backgroundColor: foodStatus === opt ? '#F0FDF4' : '#FFFFFF',
-                        color: foodStatus === opt ? '#166534' : '#4B5563',
+                        border: foodStatus === opt ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                        backgroundColor: foodStatus === opt ? 'var(--success-soft)' : '#FFFFFF',
+                        color: foodStatus === opt ? 'var(--success)' : '#4B5563',
                         fontWeight: foodStatus === opt ? 600 : 400,
                         cursor: 'pointer'
                       }}
@@ -729,15 +738,15 @@ export default function AdoptionFollowup() {
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Sparkles size={16} />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>พฤติกรรม</div>
-                      <div style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 500 }}>{behaviorStatus}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{behaviorStatus}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#16A34A" />
+                  <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['ปรับตัวได้ดี ร่าเริง', 'ขี้อ้อน คุ้นเคยแล้ว', 'ยังตื่นกลัวเล็กน้อย', 'ต้องปรับพฤติกรรม'].map(opt => (
@@ -749,9 +758,9 @@ export default function AdoptionFollowup() {
                         padding: '4px 10px',
                         fontSize: '0.75rem',
                         borderRadius: '6px',
-                        border: behaviorStatus === opt ? '1.5px solid #16A34A' : '1px solid #E5E7EB',
-                        backgroundColor: behaviorStatus === opt ? '#F0FDF4' : '#FFFFFF',
-                        color: behaviorStatus === opt ? '#166534' : '#4B5563',
+                        border: behaviorStatus === opt ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                        backgroundColor: behaviorStatus === opt ? 'var(--success-soft)' : '#FFFFFF',
+                        color: behaviorStatus === opt ? 'var(--success)' : '#4B5563',
                         fontWeight: behaviorStatus === opt ? 600 : 400,
                         cursor: 'pointer'
                       }}
@@ -796,7 +805,7 @@ export default function AdoptionFollowup() {
             style={{
               width: '100%',
               height: '48px',
-              backgroundColor: '#15803D',
+              backgroundColor: 'var(--success)',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
@@ -811,8 +820,8 @@ export default function AdoptionFollowup() {
               transition: 'background-color 0.15s',
               marginBottom: '16px'
             }}
-            onMouseEnter={e => { if (!submitting) e.currentTarget.style.backgroundColor = '#166534'; }}
-            onMouseLeave={e => { if (!submitting) e.currentTarget.style.backgroundColor = '#15803D'; }}
+            onMouseEnter={e => { if (!submitting) e.currentTarget.style.backgroundColor = 'var(--success)'; }}
+            onMouseLeave={e => { if (!submitting) e.currentTarget.style.backgroundColor = 'var(--success)'; }}
           >
             {submitting ? (
               <>
@@ -854,7 +863,7 @@ export default function AdoptionFollowup() {
             bottom: '24px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: '#15803D',
+            backgroundColor: 'var(--success)',
             color: '#FFFFFF',
             padding: '12px 20px',
             borderRadius: '10px',

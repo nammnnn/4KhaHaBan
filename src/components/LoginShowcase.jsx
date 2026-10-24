@@ -32,8 +32,8 @@ export function LoginShowcase() {
     ? {}
     : {
         animate: {
-          backgroundColor: ['#FFFFFF', '#FFFFFF', '#059669', '#059669', '#FFFFFF'],
-          color: ['#059669', '#059669', '#FFFFFF', '#FFFFFF', '#059669'],
+          backgroundColor: ['#FFFFFF', '#FFFFFF', 'var(--success-fill)', 'var(--success-fill)', '#FFFFFF'],
+          color: ['var(--success-fill)', 'var(--success-fill)', '#FFFFFF', '#FFFFFF', 'var(--success-fill)'],
           scale: [1, 1, 0.9, 1, 1, 1],
         },
         transition: {

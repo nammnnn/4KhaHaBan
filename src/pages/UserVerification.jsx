@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { Button } from '../components/ui';
 import { MOTION } from '../lib/motion';
 
 // Thai national ID check digit — same rule the database enforces (migration 023)
@@ -322,8 +323,8 @@ export default function UserVerification() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '14px',
-                backgroundColor: '#ECFDF5',
-                color: '#059669',
+                backgroundColor: 'var(--success-soft)',
+                color: 'var(--success-fill)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -367,51 +368,20 @@ export default function UserVerification() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#6B7280' }}>แบบประเมินความพร้อม:</span>
-                <span style={{ color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ color: 'var(--success-fill)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <CheckCircle2 size={15} /> ตอบครบ 5 ข้อ
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                style={{
-                  flex: 1,
-                  height: '44px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#D97706',
-                  border: '1px solid #FCD34D',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Edit3 size={16} /> แก้ไขข้อมูล / แบบประเมิน
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(returnUrl)}
-                style={{
-                  flex: 1,
-                  height: '44px',
-                  backgroundColor: '#D97706',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                {returnUrl === '/' ? 'ไปค้นหาสัตว์เลี้ยง (Feed)' : 'กลับสู่หน้าเดิม'}
-              </button>
+            {/* Shared buttons: stacked on phones (main action on top), side by side on wide screens */}
+            <div className="ui-dialog__actions">
+              <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                <Edit3 size={16} aria-hidden="true" /> แก้ไขข้อมูล
+              </Button>
+              <Button onClick={() => navigate(returnUrl)}>
+                {returnUrl === '/' ? 'ไปดูน้องๆ' : 'กลับสู่หน้าเดิม'}
+              </Button>
             </div>
           </div>
         </div>
@@ -530,13 +500,13 @@ export default function UserVerification() {
 
           {success && (
             <div style={{
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
+              backgroundColor: 'var(--success-soft)',
+              border: '1px solid var(--success-line)',
               padding: '12px 14px',
               borderRadius: '8px',
               marginBottom: '20px',
               fontSize: '0.85rem',
-              color: '#059669',
+              color: 'var(--success-fill)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -724,12 +694,12 @@ export default function UserVerification() {
                     <div style={{
                       width: `${(answeredCount / 5) * 100}%`,
                       height: '100%',
-                      backgroundColor: '#059669',
+                      backgroundColor: 'var(--success-fill)',
                       borderRadius: '9999px',
                       transition: 'width 0.3s ease'
                     }} />
                   </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669', minWidth: '32px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success-fill)', minWidth: '32px' }}>
                     {answeredCount}/5
                   </span>
                 </div>
@@ -737,21 +707,21 @@ export default function UserVerification() {
 
               {/* Paw Banner */}
               <div style={{
-                backgroundColor: '#ECFDF5',
+                backgroundColor: 'var(--success-soft)',
                 borderRadius: '12px',
                 padding: '14px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 marginBottom: '24px',
-                border: '1px solid #A7F3D0'
+                border: '1px solid var(--success-line)'
               }}>
                 <div style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  backgroundColor: '#D1FAE5',
-                  color: '#059669',
+                  backgroundColor: 'var(--success-soft)',
+                  color: 'var(--success-fill)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -759,7 +729,7 @@ export default function UserVerification() {
                 }}>
                   <PawPrint size={22} />
                 </div>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#065F46', lineHeight: 1.4 }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)', lineHeight: 1.4 }}>
                   เพื่อให้น้องได้รับการดูแลที่ดีที่สุด<br />กรุณาตอบคำถามให้ครบถ้วน
                 </span>
               </div>
@@ -787,8 +757,8 @@ export default function UserVerification() {
                           width: '28px',
                           height: '28px',
                           borderRadius: '8px',
-                          backgroundColor: '#ECFDF5',
-                          color: '#059669',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success-fill)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -826,7 +796,7 @@ export default function UserVerification() {
                                 gap: '10px',
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
-                                color: isChecked ? '#065F46' : '#4B5563',
+                                color: isChecked ? 'var(--success)' : '#4B5563',
                                 fontWeight: isChecked ? 600 : 400,
                                 userSelect: 'none'
                               }}
@@ -836,7 +806,7 @@ export default function UserVerification() {
                                 width: '20px',
                                 height: '20px',
                                 borderRadius: '50%',
-                                border: isChecked ? '6px solid #059669' : '2px solid #D1D5DB',
+                                border: isChecked ? '6px solid var(--success-fill)' : '2px solid #D1D5DB',
                                 backgroundColor: '#FFFFFF',
                                 boxSizing: 'border-box',
                                 transition: 'all 0.15s ease',
@@ -878,7 +848,7 @@ export default function UserVerification() {
                   style={{
                     flex: 1,
                     height: '46px',
-                    backgroundColor: isAssessmentComplete ? '#059669' : '#9CA3AF',
+                    backgroundColor: isAssessmentComplete ? 'var(--success-fill)' : '#9CA3AF',
                     color: '#FFFFFF',
                     borderRadius: '8px',
                     border: 'none',
@@ -892,8 +862,8 @@ export default function UserVerification() {
                     boxShadow: isAssessmentComplete ? '0 2px 6px rgba(5, 150, 105, 0.25)' : 'none',
                     transition: 'background-color 0.15s'
                   }}
-                  onMouseEnter={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = '#047857'; }}
-                  onMouseLeave={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = '#059669'; }}
+                  onMouseEnter={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success)'; }}
+                  onMouseLeave={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success-fill)'; }}
                 >
                   {isSubmitting ? (
                     <>

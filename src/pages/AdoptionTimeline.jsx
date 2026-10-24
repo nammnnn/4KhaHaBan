@@ -16,12 +16,15 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ui';
+import { PET_PLACEHOLDER } from '../lib/avatar';
 import { AdoptionTimelineSkeleton } from '../components/Skeletons';
 
 export default function AdoptionTimeline() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [matchData, setMatchData] = useState(null);
@@ -72,7 +75,7 @@ export default function AdoptionTimeline() {
       fetchData();
     } catch (err) {
       console.error('Error reviewing followup:', err);
-      alert('เกิดข้อผิดพลาดในการตรวจสอบ');
+      toast('เกิดข้อผิดพลาดในการตรวจสอบ', { tone: 'error' });
     }
   };
 
@@ -83,7 +86,7 @@ export default function AdoptionTimeline() {
       setToastMessage('ส่งข้อความแจ้งเตือนผู้รับเลี้ยงผ่านห้องแชทแล้ว');
     } catch (err) {
       console.error('Error sending reminder:', err);
-      alert('เกิดข้อผิดพลาดในการส่งแจ้งเตือน');
+      toast('เกิดข้อผิดพลาดในการส่งแจ้งเตือน', { tone: 'error' });
     } finally {
       setSendingReminder(null);
     }
@@ -103,11 +106,14 @@ export default function AdoptionTimeline() {
     return <AdoptionTimelineSkeleton />;
   }
 
-  const petImage = animal?.images?.[0] || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=600';
-  const petName = animal?.name || 'น้องสัตว์เลี้ยง';
-  const petSpecies = animal?.species === 'cat' ? 'แมว' : 'สุนัข';
-  const petAge = animal?.age ? `${animal.age} ปี` : 'อายุ 2 ปี';
-  const petGender = animal?.gender === 'female' ? 'เพศเมีย' : 'เพศผู้';
+  // Facts come from the animal record (type/age/gender); nothing is filled in when missing
+  const petImage = animal?.images?.[0] || PET_PLACEHOLDER;
+  const petName = animal?.name || 'น้อง';
+  const petFacts = [
+    { dog: 'สุนัข', cat: 'แมว' }[animal?.type || animal?.species],
+    animal?.age ? `อายุ ${animal.age}` : null,
+    { male: 'เพศผู้', female: 'เพศเมีย' }[animal?.gender],
+  ].filter(Boolean).join(' | ');
 
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', fontFamily: 'Prompt, sans-serif', padding: '24px 16px 80px', boxSizing: 'border-box' }}>
@@ -151,12 +157,12 @@ export default function AdoptionTimeline() {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 12px',
-                backgroundColor: '#DCFCE7',
-                color: '#15803D',
+                backgroundColor: 'var(--success-soft)',
+                color: 'var(--success)',
                 borderRadius: '8px',
                 fontSize: '0.82rem',
                 fontWeight: 600,
-                border: '1px solid #BBF7D0'
+                border: '1px solid var(--success-line)'
               }}
             >
               <CheckCircle2 size={15} /> ครบทุกรอบแล้ว
@@ -169,7 +175,7 @@ export default function AdoptionTimeline() {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 12px',
-                backgroundColor: '#15803D',
+                backgroundColor: 'var(--success)',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '0.82rem',
@@ -234,14 +240,14 @@ export default function AdoptionTimeline() {
               {petName}
             </h2>
             <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#6B7280' }}>
-              {petSpecies} | อายุ {petAge} | {petGender}
+              {petFacts}
             </p>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              backgroundColor: '#DCFCE7',
-              color: '#15803D',
+              backgroundColor: 'var(--success-soft)',
+              color: 'var(--success)',
               fontSize: '0.75rem',
               fontWeight: 600,
               padding: '2px 8px',
@@ -284,7 +290,7 @@ export default function AdoptionTimeline() {
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',
-                    backgroundColor: isSubmitted ? '#16A34A' : isOverdue ? '#DC2626' : '#9CA3AF',
+                    backgroundColor: isSubmitted ? 'var(--success-fill)' : isOverdue ? '#DC2626' : '#9CA3AF',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
@@ -326,8 +332,8 @@ export default function AdoptionTimeline() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          backgroundColor: '#DCFCE7',
-                          color: '#15803D',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success)',
                           fontSize: '0.72rem',
                           fontWeight: 600,
                           padding: '3px 8px',
@@ -355,8 +361,8 @@ export default function AdoptionTimeline() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          backgroundColor: '#DCFCE7',
-                          color: '#15803D',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success)',
                           fontSize: '0.72rem',
                           fontWeight: 600,
                           padding: '3px 8px',
@@ -435,7 +441,7 @@ export default function AdoptionTimeline() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                backgroundColor: '#15803D',
+                                backgroundColor: 'var(--success)',
                                 color: '#FFFFFF',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -492,7 +498,7 @@ export default function AdoptionTimeline() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                backgroundColor: '#15803D',
+                                backgroundColor: 'var(--success)',
                                 color: '#FFFFFF',
                                 borderRadius: '8px',
                                 padding: '6px 12px',
@@ -513,7 +519,7 @@ export default function AdoptionTimeline() {
                       <div style={{ marginTop: '8px' }}>
                         {m.isOpenForSubmission ? (
                           <div>
-                            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>
+                            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--success)', fontWeight: 600 }}>
                               เปิดให้ส่งรายงานแล้ว (ถึงกำหนด {formatThaiDate(m.dueDate)})
                             </p>
                             {!isFoundation && (
@@ -523,7 +529,7 @@ export default function AdoptionTimeline() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '6px',
-                                  backgroundColor: '#15803D',
+                                  backgroundColor: 'var(--success)',
                                   color: '#FFFFFF',
                                   borderRadius: '8px',
                                   padding: '6px 12px',
@@ -626,7 +632,7 @@ export default function AdoptionTimeline() {
             fontWeight: 500,
             zIndex: 9999
           }}>
-            <Check size={16} color="#10B981" /> {toastMessage}
+            <Check size={16} color="#059669" /> {toastMessage}
             <button
               type="button"
               onClick={() => setToastMessage(null)}
