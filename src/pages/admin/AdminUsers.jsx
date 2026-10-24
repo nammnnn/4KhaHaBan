@@ -8,18 +8,11 @@ import { Button, Dialog, EmptyState, LoadError, useToast } from '../../component
 import { initialsAvatar } from '../../lib/avatar';
 import { formatThaiPhone } from '../../lib/phone';
 import { useI18n } from '../../i18n';
+import { setRole as applyRole, suspend as applySuspend, unsuspend as applyUnsuspend } from './adminApi';
 
 const ROLES = ['user', 'foundation', 'super_admin'];
 const FILTERS = ['all', 'user', 'foundation', 'super_admin', 'banned'];
 const roleOf = (p) => (ROLES.includes(p?.role) ? p.role : 'user');
-
-async function logAction(adminId, action, targetId, detail) {
-  try {
-    await supabase.from('admin_audit_log').insert({ admin_id: adminId, action, target_id: targetId, detail });
-  } catch (err) {
-    console.warn('[Admin] audit log failed', err);
-  }
-}
 
 function Avatar({ p, size = 40 }) {
   const [ok, setOk] = useState(true);
@@ -73,41 +66,45 @@ function UserDetail({ person, onClose, onChanged }) {
   const saveRole = async () => {
     if (role === roleOf(person) || !typedOk) return;
     setBusy('role');
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', person.id);
-    setBusy('');
-    if (error) { toast(t('adm.user.roleFail'), { tone: 'error' }); return; }
-    await logAction(me.id, 'UPDATE_ROLE', person.id, `${person.email || person.full_name}: ${roleOf(person)} → ${role}`);
-    toast(t('adm.user.roleDone'), { tone: 'success' });
-    onChanged({ ...person, role });
+    try {
+      await applyRole(me.id, person, role);
+      toast(t('adm.user.roleDone'), { tone: 'success' });
+      onChanged({ ...person, role });
+    } catch (err) {
+      console.error('[Admin] role change failed', err);
+      toast(t('adm.user.roleFail'), { tone: 'error' });
+    } finally {
+      setBusy('');
+    }
   };
 
   const suspend = async () => {
     if (!reason.trim()) { setReasonError(true); return; }
     setBusy('ban');
-    const at = new Date().toISOString();
-    let res = await supabase.from('profiles').update({ is_banned: true, banned_reason: reason.trim(), banned_at: at }).eq('id', person.id);
-    // Before migration 029 the reason / time columns don't exist yet: suspend anyway
-    if (res.error && /banned_reason|banned_at|column/i.test(res.error.message || '')) {
-      res = await supabase.from('profiles').update({ is_banned: true }).eq('id', person.id);
+    try {
+      const patch = await applySuspend(me.id, person, reason.trim());
+      toast(t('adm.user.banDone'), { tone: 'success' });
+      onChanged({ ...person, ...patch });
+    } catch (err) {
+      console.error('[Admin] suspend failed', err);
+      toast(t('adm.user.banFail'), { tone: 'error' });
+    } finally {
+      setBusy('');
     }
-    setBusy('');
-    if (res.error) { toast(t('adm.user.banFail'), { tone: 'error' }); return; }
-    await logAction(me.id, 'BAN_USER', person.id, `${person.email || person.full_name}: ${reason.trim()}`);
-    toast(t('adm.user.banDone'), { tone: 'success' });
-    onChanged({ ...person, is_banned: true, banned_reason: reason.trim(), banned_at: at });
   };
 
   const unsuspend = async () => {
     setBusy('unban');
-    let res = await supabase.from('profiles').update({ is_banned: false, banned_reason: null, banned_at: null }).eq('id', person.id);
-    if (res.error && /banned_reason|banned_at|column/i.test(res.error.message || '')) {
-      res = await supabase.from('profiles').update({ is_banned: false }).eq('id', person.id);
+    try {
+      const patch = await applyUnsuspend(me.id, person);
+      toast(t('adm.user.unbanDone'), { tone: 'success' });
+      onChanged({ ...person, ...patch });
+    } catch (err) {
+      console.error('[Admin] unsuspend failed', err);
+      toast(t('adm.user.unbanFail'), { tone: 'error' });
+    } finally {
+      setBusy('');
     }
-    setBusy('');
-    if (res.error) { toast(t('adm.user.unbanFail'), { tone: 'error' }); return; }
-    await logAction(me.id, 'UNBAN_USER', person.id, person.email || person.full_name || '');
-    toast(t('adm.user.unbanDone'), { tone: 'success' });
-    onChanged({ ...person, is_banned: false, banned_reason: null, banned_at: null });
   };
 
   const fact = (label, value) => (
