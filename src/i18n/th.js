@@ -346,10 +346,7 @@ export default {
   'login.haveAccount': 'มีบัญชีอยู่แล้ว?',
   'login.signInHere': 'เข้าสู่ระบบที่นี่',
   'login.err.generic': 'เกิดข้อผิดพลาด: {message}',
-  'login.err.missing': 'กรุณากรอกอีเมลและรหัสผ่าน',
   'login.err.invalid': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
-  'login.err.required': 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน',
-  'login.err.foundationPhone': 'มูลนิธิจำเป็นต้องระบุเบอร์โทรศัพท์',
   'login.checkEmail': 'กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน',
   'login.err.signup': 'เกิดข้อผิดพลาดในการลงทะเบียน: {message}',
 

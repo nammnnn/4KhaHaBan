@@ -21,6 +21,8 @@ export const checkAccountVerified = (u, p) => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  // True after opening a "reset password" email link, until a new password is saved
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null); // ข้อมูล profile จากตาราง profiles
   const [role, setRole] = useState(null); // 'user' | 'foundation' | 'super_admin'
   const [foundationStatus, setFoundationStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected' | 'none'
@@ -64,7 +66,8 @@ export const AuthProvider = ({ children }) => {
     getSession();
 
     // ติดตามการเปลี่ยนแปลงสถานะล็อกอิน
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
       if (session) {
         setUser(session.user);
         if (checkAccountVerified(session.user, null)) {
@@ -427,6 +430,19 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  // "Forgot password": Supabase emails a link that signs the person in and opens /reset-password
+  const sendPasswordReset = async (email) => {
+    if (!supabase) return { error: new Error('Supabase not initialized') };
+    return await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+  };
+
+  const updatePassword = async (password) => {
+    if (!supabase) return { error: new Error('Supabase not initialized') };
+    const result = await supabase.auth.updateUser({ password });
+    if (!result.error) setPasswordRecovery(false);
+    return result;
+  };
+
   // Email/password accounts only: Supabase emails a link and switches the address once it's confirmed
   const changeEmail = async (newEmail) => {
     if (!supabase) return { error: new Error('Supabase not initialized') };
@@ -521,6 +537,9 @@ export const AuthProvider = ({ children }) => {
     registerWithEmail,
     resendConfirmation,
     changeEmail,
+    sendPasswordReset,
+    updatePassword,
+    passwordRecovery,
     logout,
     refreshProfile,
     verifyUser,
@@ -534,7 +553,8 @@ export const AuthProvider = ({ children }) => {
     effectiveVerificationStatus,
     isUserActuallyVerified,
     loading,
-    refreshProfile
+    refreshProfile,
+    passwordRecovery
   ]);
 
   return (

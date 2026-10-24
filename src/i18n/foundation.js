@@ -1,6 +1,36 @@
 // Foundation-side strings. Each row is [key, Thai, English] so the two languages stay side by side.
 // Merged into th.js / en.js by index.jsx.
 const ROWS = [
+  // Forgot / reset password
+  ['login.forgot', 'ลืมรหัสผ่าน?', 'Forgot password?'],
+  ['login.forgot.title', 'ลืมรหัสผ่าน', 'Forgot your password?'],
+  ['login.forgot.text', 'กรอกอีเมลที่ใช้สมัคร แล้วเราจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้', "Enter the email you signed up with and we'll send you a link to set a new password."],
+  ['login.forgot.send', 'ส่งลิงก์', 'Send link'],
+  ['login.forgot.sent', 'ถ้ามีบัญชีของ {email} เราส่งลิงก์ไปแล้ว ลองเช็กกล่องจดหมาย (และโฟลเดอร์สแปม)', "If {email} has an account, we've sent a link. Check your inbox (and spam folder)."],
+  ['login.forgot.fail', 'ส่งลิงก์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', "Couldn't send the link. Please try again."],
+  ['login.forgot.wait', 'ขอลิงก์บ่อยเกินไป รอสักครู่แล้วลองใหม่', 'Too many requests. Wait a moment and try again.'],
+  ['rp.title', 'ตั้งรหัสผ่านใหม่', 'Set a new password'],
+  ['rp.sub', 'สำหรับบัญชี {email}', 'For {email}'],
+  ['rp.new', 'รหัสผ่านใหม่', 'New password'],
+  ['rp.confirm', 'ยืนยันรหัสผ่านใหม่', 'Confirm new password'],
+  ['rp.mismatch', 'รหัสผ่านทั้งสองช่องไม่ตรงกัน', "The passwords don't match"],
+  ['rp.same', 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม', 'Use a password different from your old one'],
+  ['rp.fail', 'บันทึกรหัสผ่านไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', "Couldn't save the password. Please try again."],
+  ['rp.save', 'บันทึกรหัสผ่านใหม่', 'Save new password'],
+  ['rp.saving', 'กำลังบันทึก…', 'Saving…'],
+  ['rp.done', 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว', 'Your new password is set'],
+  ['rp.expired.title', 'ลิงก์นี้ใช้ไม่ได้แล้ว', 'This link no longer works'],
+  ['rp.expired.text', 'ลิงก์อาจหมดอายุหรือถูกใช้ไปแล้ว ขอลิงก์ใหม่ได้จากหน้าเข้าสู่ระบบ', 'It may have expired or been used already. Ask for a new one on the login page.'],
+  ['rp.toLogin', 'ไปหน้าเข้าสู่ระบบ', 'Go to login'],
+  // Login / sign-up field messages
+  ['login.fe.email', 'กรอกอีเมล', 'Enter your email'],
+  ['login.fe.emailFormat', 'รูปแบบอีเมลไม่ถูกต้อง เช่น name@example.com', 'That email doesn\'t look right, e.g. name@example.com'],
+  ['login.fe.password', 'กรอกรหัสผ่าน', 'Enter your password'],
+  ['login.fe.passwordShort', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'Use at least 6 characters'],
+  ['login.fe.name', 'กรอกชื่อ-นามสกุล', 'Enter your full name'],
+  ['login.fe.foundationName', 'กรอกชื่อมูลนิธิ', 'Enter the foundation name'],
+  ['login.fe.phone', 'กรอกเบอร์โทรติดต่อ', 'Enter a contact phone number'],
+  ['login.fe.phoneFormat', 'เบอร์โทรไม่ครบ', 'That phone number is too short'],
   // Errors (shared by every page)
   ['err.load.title', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load this"],
   ['err.load.text', 'อาจเป็นที่อินเทอร์เน็ตหรือระบบขัดข้องชั่วคราว ลองอีกครั้งได้เลย', 'Your connection or our server may be having a moment. Please try again.'],

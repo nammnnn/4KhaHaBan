@@ -1,19 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield
+  X, Shield, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
+import { Button, Dialog } from '../components/ui';
 import BrandMark from '../components/BrandMark';
 import './Login.css';
 import { useI18n, LanguageSwitch } from '../i18n';
 import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
 
+// "Forgot password" needs the app's own email sender (SMTP) set up in Supabase; Supabase's built-in
+// sender only mails the project's team. Turned on together with email confirmation.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_READY = import.meta.env.VITE_EMAIL_CONFIRMATION === 'true';
+
 const Login = () => {
-  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, loading: authLoading } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, sendPasswordReset, loading: authLoading } = useAuth();
 
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
@@ -29,6 +35,25 @@ const Login = () => {
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  // Per-field messages shown under each input (the forms use noValidate, so the browser's own
+  // "Please fill out this field" bubble never shows and messages follow the app language)
+  const [fieldErrors, setFieldErrors] = useState({});
+  const formRef = useRef(null);
+  const [forgot, setForgot] = useState(null); // null | { email, state: 'idle'|'sending'|'sent', error }
+
+  const openForgot = () => setForgot({ email: email.trim(), state: 'idle', error: '' });
+  const sendForgot = async (e) => {
+    e?.preventDefault();
+    const addr = forgot.email.trim();
+    if (!EMAIL_RE.test(addr)) { setForgot((f) => ({ ...f, error: t(addr ? 'login.fe.emailFormat' : 'login.fe.email') })); return; }
+    setForgot((f) => ({ ...f, state: 'sending', error: '' }));
+    const { error } = await sendPasswordReset(addr);
+    if (error) {
+      setForgot((f) => ({ ...f, state: 'idle', error: t(error.status === 429 || /rate|seconds/i.test(error.message || '') ? 'login.forgot.wait' : 'login.forgot.fail') }));
+      return;
+    }
+    setForgot((f) => ({ ...f, state: 'sent' }));
+  };
   // Email waiting for its confirmation link (after sign-up, or a login refused for that reason)
   const [pendingEmail, setPendingEmail] = useState('');
   const [resendState, setResendState] = useState('idle'); // idle | sending | sent | error
@@ -93,12 +118,38 @@ const Login = () => {
     }
   };
 
+  const validate = (mode) => {
+    const errs = {};
+    if (mode === 'register' && !fullName.trim()) errs.fullName = t(role === 'user' ? 'login.fe.name' : 'login.fe.foundationName');
+    if (!email.trim()) errs.email = t('login.fe.email');
+    else if (!EMAIL_RE.test(email.trim())) errs.email = t('login.fe.emailFormat');
+    if (!password) errs.password = t('login.fe.password');
+    else if (mode === 'register' && password.length < 6) errs.password = t('login.fe.passwordShort');
+    if (mode === 'register' && role === 'foundation') {
+      const digits = phone.replace(/\D/g, '');
+      if (!digits) errs.phone = t('login.fe.phone');
+      else if (digits.length < 9) errs.phone = t('login.fe.phoneFormat');
+    }
+    setFieldErrors(errs);
+    const first = Object.keys(errs)[0];
+    if (first) formRef.current?.querySelector(`[name="${first}"]`)?.focus();
+    return !first;
+  };
+  // Typing in a field clears its message
+  const clearField = (name) => setFieldErrors((f) => (f[name] ? { ...f, [name]: undefined } : f));
+  const fieldError = (name) => fieldErrors[name] && (
+    <span className="login-field-error" id={`login-err-${name}`} role="alert">
+      <AlertCircle size={14} aria-hidden="true" /> {fieldErrors[name]}
+    </span>
+  );
+  const invalid = (name) => (fieldErrors[name]
+    ? { 'aria-invalid': true, 'aria-describedby': `login-err-${name}`, className: 'login-input-control is-invalid' }
+    : { className: 'login-input-control' });
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg(t('login.err.missing'));
-      return;
-    }
+    setErrorMsg('');
+    if (!validate('login')) return;
 
     setIsSubmitting(true);
     setErrorMsg('');
@@ -124,15 +175,7 @@ const Login = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!email || !password || !fullName) {
-      setErrorMsg(t('login.err.required'));
-      return;
-    }
-
-    if (role === 'foundation' && !phone) {
-      setErrorMsg(t('login.err.foundationPhone'));
-      return;
-    }
+    if (!validate('register')) return;
 
     setIsSubmitting(true);
 
@@ -353,32 +396,39 @@ const Login = () => {
 
           {/* Forms */}
           {activeTab === 'login' ? (
-            <form onSubmit={handleEmailLogin} className="login-field-group">
+            <form ref={formRef} onSubmit={handleEmailLogin} className="login-field-group" noValidate>
               <div className="login-input-wrapper">
                 <label className="login-input-label">{t('login.email')}</label>
                 <input
                   type="email"
-                  className="login-input-control"
+                  name="email"
+                  {...invalid('email')}
                   placeholder="name@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearField('email'); }}
                   required
                   autoComplete="email"
                 />
+                {fieldError('email')}
               </div>
 
               <div className="login-input-wrapper">
                 <label className="login-input-label">{t('login.password')}</label>
                 <input
                   type="password"
-                  className="login-input-control"
+                  name="password"
+                  {...invalid('password')}
                   placeholder={t('login.passwordPh')}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearField('password'); }}
                   required
                   autoComplete="current-password"
                 />
+                {fieldError('password')}
               </div>
+              {EMAIL_READY && (
+                <button type="button" className="login-forgot" onClick={openForgot}>{t('login.forgot')}</button>
+              )}
 
               <button
                 type="submit"
@@ -394,7 +444,7 @@ const Login = () => {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="login-field-group">
+            <form ref={formRef} onSubmit={handleRegister} className="login-field-group" noValidate>
               <div className="login-input-wrapper">
                 <label className="login-input-label">
                   <span>{role === 'user' ? t('login.fullName') : t('login.foundationName')}</span>
@@ -402,12 +452,14 @@ const Login = () => {
                 </label>
                 <input
                   type="text"
-                  className="login-input-control"
+                  name="fullName"
+                  {...invalid('fullName')}
                   placeholder={role === 'user' ? t('login.fullNamePh') : t('login.foundationNamePh')}
                   value={fullName}
-                  onChange={e => setFullName(e.target.value)}
+                  onChange={e => { setFullName(e.target.value); clearField('fullName'); }}
                   required
                 />
+                {fieldError('fullName')}
               </div>
 
               <div className="login-input-wrapper">
@@ -417,13 +469,15 @@ const Login = () => {
                 </label>
                 <input
                   type="email"
-                  className="login-input-control"
+                  name="email"
+                  {...invalid('email')}
                   placeholder="name@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearField('email'); }}
                   required
                   autoComplete="email"
                 />
+                {fieldError('email')}
               </div>
 
               <div className="login-input-wrapper">
@@ -433,14 +487,16 @@ const Login = () => {
                 </label>
                 <input
                   type="password"
-                  className="login-input-control"
+                  name="password"
+                  {...invalid('password')}
                   placeholder={t('login.newPasswordPh')}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearField('password'); }}
                   required
                   minLength={6}
                   autoComplete="new-password"
                 />
+                {fieldError('password')}
               </div>
 
               {role === 'foundation' && (
@@ -452,12 +508,14 @@ const Login = () => {
                     </label>
                     <input
                       type="tel"
-                      className="login-input-control"
+                      name="phone"
+                      {...invalid('phone')}
                       placeholder={t('login.phonePh')}
                       value={phone}
-                      onChange={e => setPhone(formatPhoneNumber(e.target.value))}
+                      onChange={e => { setPhone(formatPhoneNumber(e.target.value)); clearField('phone'); }}
                       required
                     />
+                    {fieldError('phone')}
                   </div>
 
                   <div className="login-input-wrapper">
@@ -520,6 +578,7 @@ const Login = () => {
                   onClick={() => {
                     setActiveTab('register');
                     setRole('user');
+                    setFieldErrors({});
                     setErrorMsg('');
                     setSuccessMsg('');
                   }}
@@ -535,6 +594,7 @@ const Login = () => {
                   className="login-footer-link"
                   onClick={() => {
                     setActiveTab('login');
+                    setFieldErrors({});
                     setErrorMsg('');
                     setSuccessMsg('');
                   }}
@@ -547,6 +607,40 @@ const Login = () => {
 
         </motion.div>
       </div>
+      <Dialog
+        open={!!forgot}
+        onClose={() => setForgot(null)}
+        title={t('login.forgot.title')}
+        actions={forgot?.state === 'sent' ? (
+          <Button onClick={() => setForgot(null)}>{t('common.close')}</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => setForgot(null)}>{t('common.cancel')}</Button>
+            <Button onClick={sendForgot} loading={forgot?.state === 'sending'}>{t('login.forgot.send')}</Button>
+          </>
+        )}
+      >
+        {forgot?.state === 'sent' ? (
+          <p className="login-forgot-sent" role="status"><CheckCircle2 size={16} aria-hidden="true" /> {t('login.forgot.sent', { email: forgot.email.trim() })}</p>
+        ) : forgot && (
+          <form className="login-forgot-form" onSubmit={sendForgot} noValidate>
+            <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--ink-600, #57534E)' }}>{t('login.forgot.text')}</p>
+            <input
+              type="email"
+              name="forgotEmail"
+              className={`login-input-control ${forgot.error ? 'is-invalid' : ''}`}
+              placeholder="name@example.com"
+              value={forgot.email}
+              onChange={(e) => setForgot((f) => ({ ...f, email: e.target.value, error: '' }))}
+              autoComplete="email"
+              aria-label={t('login.email')}
+              aria-invalid={forgot.error ? true : undefined}
+              autoFocus
+            />
+            {forgot.error && <span className="login-field-error" role="alert"><AlertCircle size={14} aria-hidden="true" /> {forgot.error}</span>}
+          </form>
+        )}
+      </Dialog>
     </div>
   );
 };

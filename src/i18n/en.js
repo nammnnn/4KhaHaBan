@@ -346,10 +346,7 @@ export default {
   'login.haveAccount': 'Already have an account?',
   'login.signInHere': 'Log in here',
   'login.err.generic': 'Something went wrong: {message}',
-  'login.err.missing': 'Please enter your email and password',
   'login.err.invalid': 'Incorrect email or password',
-  'login.err.required': 'Please fill in all required fields',
-  'login.err.foundationPhone': 'Foundations must provide a phone number',
   'login.checkEmail': 'Check your email to confirm your account',
   'login.err.signup': 'Sign-up failed: {message}',
 
