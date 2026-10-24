@@ -261,7 +261,7 @@ export function Navigation() {
   const isDesktop = useIsDesktop();
 
   // Hide navbar on login, onboarding
-  const hiddenPaths = ['/login', '/foundation/onboarding'];
+  const hiddenPaths = ['/login', '/reset-password', '/foundation/onboarding'];
   if (hiddenPaths.some(p => location.pathname.startsWith(p))) {
     return null;
   }

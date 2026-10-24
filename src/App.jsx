@@ -18,6 +18,7 @@ const Donation = React.lazy(() => import('./pages/Donation'));
 const IncidentReport = React.lazy(() => import('./pages/IncidentReport'));
 const AnimalProfile = React.lazy(() => import('./pages/AnimalProfile'));
 const Login = React.lazy(() => import('./pages/Login'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const FoundationOnboarding = React.lazy(() => import('./pages/FoundationOnboarding'));
 const FoundationPending = React.lazy(() => import('./pages/FoundationPending'));
@@ -42,15 +43,20 @@ const PageLoader = () => <RouteSkeleton />;
 // - foundation ที่ยังไม่ approved → redirect ไป /foundation/pending
 // - foundation ที่ approved แล้ว → ให้เข้าหน้าปกติได้
 const RoleEnforcer = ({ children }) => {
-  const { user, role, foundationStatus, loading } = useAuth();
+  const { user, role, foundationStatus, loading, passwordRecovery } = useAuth();
   const location = useLocation();
+
+  // Opened a "reset password" link (Supabase may land it on the home page): finish that first
+  if (passwordRecovery && location.pathname !== '/reset-password') {
+    return <Navigate to="/reset-password" replace />;
+  }
 
   // ไม่ทำอะไรถ้ายังโหลดไม่เสร็จ หรือไม่ได้ล็อกอิน
   if (loading || !user) return children;
 
   // Foundation ที่ยังไม่ approved
   if (role === 'foundation' && foundationStatus !== 'approved') {
-    const allowedPaths = ['/foundation/pending', '/foundation/onboarding', '/profile', '/login'];
+    const allowedPaths = ['/foundation/pending', '/foundation/onboarding', '/profile', '/login', '/reset-password'];
     const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
 
     if (!isAllowed) {
@@ -117,6 +123,7 @@ function App() {
                     <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={<Login />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     
                     {/* Protected Routes */}
                     <Route element={<ProtectedRoute />}>

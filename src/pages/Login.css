@@ -561,3 +561,13 @@
   cursor: pointer;
 }
 .login-resend__btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Forgot password link + reset page */
+.login-forgot { align-self: flex-end; margin-top: -4px; padding: 4px 0; border: 0; background: none; font: inherit; font-size: 0.8125rem; font-weight: 500; color: var(--primary-strong, #B45309); cursor: pointer; }
+.login-forgot:hover { text-decoration: underline; }
+.rp-brand { margin-bottom: 20px; }
+.rp-error { margin-bottom: 12px; }
+.rp-expired { padding: 8px 0 4px; }
+.login-forgot-form { display: flex; flex-direction: column; gap: 12px; }
+.login-forgot-sent { display: flex; gap: 8px; align-items: flex-start; padding: 12px; border-radius: 10px; background: var(--success-soft, #ECFDF5); color: var(--success, #047857); font-size: 0.875rem; line-height: 1.6; }
+.login-forgot-sent svg { flex-shrink: 0; margin-top: 3px; }

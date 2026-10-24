@@ -3,17 +3,23 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield, AlertCircle
+  X, Shield, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
+import { Button, Dialog } from '../components/ui';
 import BrandMark from '../components/BrandMark';
 import './Login.css';
 import { useI18n, LanguageSwitch } from '../i18n';
 import { LoginShowcase, MOBILE_FACES } from '../components/LoginShowcase';
 
+// "Forgot password" needs the app's own email sender (SMTP) set up in Supabase; Supabase's built-in
+// sender only mails the project's team. Turned on together with email confirmation.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_READY = import.meta.env.VITE_EMAIL_CONFIRMATION === 'true';
+
 const Login = () => {
-  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, loading: authLoading } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, registerWithEmail, resendConfirmation, sendPasswordReset, loading: authLoading } = useAuth();
 
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('login'); // 'login' or 'register'
@@ -33,6 +39,21 @@ const Login = () => {
   // "Please fill out this field" bubble never shows and messages follow the app language)
   const [fieldErrors, setFieldErrors] = useState({});
   const formRef = useRef(null);
+  const [forgot, setForgot] = useState(null); // null | { email, state: 'idle'|'sending'|'sent', error }
+
+  const openForgot = () => setForgot({ email: email.trim(), state: 'idle', error: '' });
+  const sendForgot = async (e) => {
+    e?.preventDefault();
+    const addr = forgot.email.trim();
+    if (!EMAIL_RE.test(addr)) { setForgot((f) => ({ ...f, error: t(addr ? 'login.fe.emailFormat' : 'login.fe.email') })); return; }
+    setForgot((f) => ({ ...f, state: 'sending', error: '' }));
+    const { error } = await sendPasswordReset(addr);
+    if (error) {
+      setForgot((f) => ({ ...f, state: 'idle', error: t(error.status === 429 || /rate|seconds/i.test(error.message || '') ? 'login.forgot.wait' : 'login.forgot.fail') }));
+      return;
+    }
+    setForgot((f) => ({ ...f, state: 'sent' }));
+  };
   // Email waiting for its confirmation link (after sign-up, or a login refused for that reason)
   const [pendingEmail, setPendingEmail] = useState('');
   const [resendState, setResendState] = useState('idle'); // idle | sending | sent | error
@@ -97,7 +118,6 @@ const Login = () => {
     }
   };
 
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const validate = (mode) => {
     const errs = {};
     if (mode === 'register' && !fullName.trim()) errs.fullName = t(role === 'user' ? 'login.fe.name' : 'login.fe.foundationName');
@@ -406,6 +426,9 @@ const Login = () => {
                 />
                 {fieldError('password')}
               </div>
+              {EMAIL_READY && (
+                <button type="button" className="login-forgot" onClick={openForgot}>{t('login.forgot')}</button>
+              )}
 
               <button
                 type="submit"
@@ -584,6 +607,40 @@ const Login = () => {
 
         </motion.div>
       </div>
+      <Dialog
+        open={!!forgot}
+        onClose={() => setForgot(null)}
+        title={t('login.forgot.title')}
+        actions={forgot?.state === 'sent' ? (
+          <Button onClick={() => setForgot(null)}>{t('common.close')}</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => setForgot(null)}>{t('common.cancel')}</Button>
+            <Button onClick={sendForgot} loading={forgot?.state === 'sending'}>{t('login.forgot.send')}</Button>
+          </>
+        )}
+      >
+        {forgot?.state === 'sent' ? (
+          <p className="login-forgot-sent" role="status"><CheckCircle2 size={16} aria-hidden="true" /> {t('login.forgot.sent', { email: forgot.email.trim() })}</p>
+        ) : forgot && (
+          <form className="login-forgot-form" onSubmit={sendForgot} noValidate>
+            <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--ink-600, #57534E)' }}>{t('login.forgot.text')}</p>
+            <input
+              type="email"
+              name="forgotEmail"
+              className={`login-input-control ${forgot.error ? 'is-invalid' : ''}`}
+              placeholder="name@example.com"
+              value={forgot.email}
+              onChange={(e) => setForgot((f) => ({ ...f, email: e.target.value, error: '' }))}
+              autoComplete="email"
+              aria-label={t('login.email')}
+              aria-invalid={forgot.error ? true : undefined}
+              autoFocus
+            />
+            {forgot.error && <span className="login-field-error" role="alert"><AlertCircle size={14} aria-hidden="true" /> {forgot.error}</span>}
+          </form>
+        )}
+      </Dialog>
     </div>
   );
 };

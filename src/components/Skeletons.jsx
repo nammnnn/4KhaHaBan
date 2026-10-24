@@ -798,7 +798,7 @@ export const LoginSkeleton = () => (
 export const RouteSkeleton = () => {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
   if (path === '/' || path.startsWith('/feed')) return <FeedPageSkeleton />;
-  if (path.startsWith('/login')) return <LoginSkeleton />;
+  if (path.startsWith('/login') || path.startsWith('/reset-password')) return <LoginSkeleton />;
   if (path.startsWith('/animal/')) return <div className="animal-profile-page"><AnimalProfileSkeleton /></div>;
   if (/^\/foundation\/animals\/(new|[^/]+\/edit)/.test(path)) return <AnimalFormSkeleton />;
   if (path.startsWith('/foundation/animals')) return <FoundationAnimalsSkeleton />;
@@ -827,7 +827,7 @@ export const RouteSkeleton = () => {
 export function BootSkeleton() {
   const { t } = useI18n();
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const noNav = path.startsWith('/login') || path.startsWith('/foundation/onboarding');
+  const noNav = path.startsWith('/login') || path.startsWith('/reset-password') || path.startsWith('/foundation/onboarding');
   if (noNav) return <div className="app-container"><main className="main-content"><RouteSkeleton /></main></div>;
   const tabs = path.startsWith('/admin') || path.startsWith('/foundation/pending') ? 1 : 4;
   return (
