@@ -554,7 +554,8 @@ const AnimalForm = () => {
           <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
           <div className="af-field">
             <label htmlFor="af-story" className="af-label">{t('af.story')}</label>
-            <textarea id="af-story" className="af-input af-textarea" value={formData.story}
+            <p id="af-story-hint" className="af-hint">{t('af.story.hint')}</p>
+            <textarea id="af-story" className="af-input af-textarea" value={formData.story} aria-describedby="af-story-hint"
               onChange={(e) => handleFieldChange('story', e.target.value)}
               placeholder={t('af.storyPh')} />
           </div>
