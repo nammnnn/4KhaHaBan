@@ -9,6 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationDashboardSkeleton } from '../components/Skeletons';
 import { LoadError } from '../components/ui';
+import FoundationInfoDialog from '../components/foundation/FoundationInfoDialog';
+import { formatThaiPhone } from '../lib/phone';
 import { useI18n } from '../i18n';
 import './FoundationDashboard.css';
 
@@ -18,16 +20,18 @@ const NEED_URGENCY = {
   high: { labelKey: 'fd.urg.high', tone: 'warn' },
 };
 
-function TodoRow({ to, tone = 'default', icon: Icon, title, text }) {
+function TodoRow({ to, onClick, tone = 'default', icon: Icon, title, text }) {
+  // A link to another page, or a button that opens a window on this page
+  const Tag = onClick ? 'button' : Link;
   return (
-    <Link to={to} className={`fd-todo__row fd-todo__row--${tone}`}>
+    <Tag {...(onClick ? { type: 'button', onClick } : { to })} className={`fd-todo__row fd-todo__row--${tone}`}>
       <span className="fd-todo__icon" aria-hidden="true"><Icon size={20} /></span>
       <span className="fd-todo__text">
         <span className="fd-todo__title">{title}</span>
         {text && <span className="fd-todo__sub">{text}</span>}
       </span>
       <ChevronRight size={18} className="fd-todo__chev" aria-hidden="true" />
-    </Link>
+    </Tag>
   );
 }
 
@@ -41,8 +45,6 @@ function Stat({ to, icon: Icon, tone, value, unit, label }) {
   );
 }
 
-const EDIT_INFO = '/profile?modal=foundation&from=dashboard';
-
 const FoundationDashboard = () => {
   const { user, profile } = useAuth();
   const { t } = useI18n();
@@ -52,6 +54,7 @@ const FoundationDashboard = () => {
   const [newRequests, setNewRequests] = useState([]);
   const [needs, setNeeds] = useState([]);
   const [loadError, setLoadError] = useState(false);
+  const [infoDialog, setInfoDialog] = useState(null); // 'promptpay' | 'location' | 'phone'
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -124,9 +127,9 @@ const FoundationDashboard = () => {
   const hasLocation = fp?.latitude != null && fp?.longitude != null;
   // What people see, and where. Each row opens the edit window, which comes back here when closed.
   const infoRows = [
-    { key: 'pp', icon: QrCode, label: t('fd.info.promptpay'), value: fp?.promptpay_number || null, missing: t('fd.info.notSet'), hint: t('fd.info.promptpayHint') },
-    { key: 'pin', icon: MapPin, label: t('fd.info.location'), value: hasLocation ? t('fd.info.pinned') : null, missing: t('fd.info.notPinned'), hint: t('fd.info.locationHint') },
-    { key: 'phone', icon: Phone, label: t('fd.info.phone'), value: fp?.contact_phone || null, missing: t('fd.info.notSet'), hint: t('fd.info.phoneHint') },
+    { key: 'promptpay', icon: QrCode, label: t('fd.info.promptpay'), value: fp?.promptpay_number || null, missing: t('fd.info.notSet'), hint: t('fd.info.promptpayHint') },
+    { key: 'location', icon: MapPin, label: t('fd.info.location'), value: hasLocation ? t('fd.info.pinned') : null, missing: t('fd.info.notPinned'), hint: t('fd.info.locationHint') },
+    { key: 'phone', icon: Phone, label: t('fd.info.phone'), value: fp?.contact_phone ? formatThaiPhone(fp.contact_phone) : null, missing: t('fd.info.notSet'), hint: t('fd.info.phoneHint') },
   ];
   const otherIncidents = stats.pendingIncidents - stats.criticalIncidents;
 
@@ -149,11 +152,11 @@ const FoundationDashboard = () => {
         title={t('fd.todo.inc', { n: otherIncidents })} text={t('fd.todo.incText')} />
     ),
     !hasPromptPay && (
-      <TodoRow key="pp" to={EDIT_INFO} icon={QrCode}
+      <TodoRow key="pp" onClick={() => setInfoDialog('promptpay')} icon={QrCode}
         title={t('fd.todo.pp')} text={t('fd.todo.ppText')} />
     ),
     !hasLocation && (
-      <TodoRow key="gps" to="/profile?editLocation=true&from=dashboard" icon={MapPin}
+      <TodoRow key="gps" onClick={() => setInfoDialog('location')} icon={MapPin}
         title={t('fd.todo.gps')} text={t('fd.todo.gpsText')} />
     ),
     stats.available + stats.adopted === 0 && (
@@ -234,7 +237,7 @@ const FoundationDashboard = () => {
           <ul className="fd-list">
             {infoRows.map((r) => (
               <li key={r.key}>
-                <Link to={EDIT_INFO} className="fd-info-row">
+                <button type="button" className="fd-info-row" onClick={() => setInfoDialog(r.key)}>
                   <span className="fd-info-row__icon" aria-hidden="true"><r.icon size={18} /></span>
                   <span className="fd-list__text">
                     <span className="fd-list__label">{r.label}</span>
@@ -244,13 +247,15 @@ const FoundationDashboard = () => {
                   {r.value
                     ? <ChevronRight size={18} className="fd-info-row__go" aria-hidden="true" />
                     : <span className="fd-info-row__set">{t('fd.info.set')}</span>}
-                </Link>
+                </button>
               </li>
             ))}
           </ul>
         </section>
       </div>
 
+      <FoundationInfoDialog kind={infoDialog} info={fp} onClose={() => setInfoDialog(null)}
+        onSaved={(patch) => setFp((cur) => ({ ...(cur || {}), ...patch }))} />
     </div>
   );
 };

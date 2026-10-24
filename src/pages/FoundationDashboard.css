@@ -36,6 +36,7 @@
 
 /* To-do today */
 .fd-todo__list { display: flex; flex-direction: column; gap: var(--space-2); }
+button.fd-todo__row { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
 .fd-todo__row {
   display: flex; align-items: center; gap: var(--space-3);
   min-height: 64px; padding: var(--space-3) var(--space-4);
@@ -115,6 +116,7 @@
 
 /* "What people see": each row opens the edit window */
 .fd-info-row {
+  width: calc(100% + var(--space-4)); border: 0; background: none; font: inherit; text-align: left; cursor: pointer;
   display: flex; align-items: center; gap: var(--space-3);
   min-height: 64px; padding: var(--space-3) var(--space-2); margin: 0 calc(var(--space-2) * -1);
   border-radius: var(--radius-md, 10px); color: inherit;

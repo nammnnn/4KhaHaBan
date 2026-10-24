@@ -1,0 +1,43 @@
+/* Small "set up one thing" windows (FoundationInfoDialog.jsx), inside the shared ui Dialog */
+.fi-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.fi-lead { font-size: var(--text-label); line-height: 1.6; color: var(--ink-600); }
+.fi-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.fi-label { font-size: var(--text-label); font-weight: 600; color: var(--ink-800, #292524); }
+.fi-input {
+  width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line-300); border-radius: var(--radius-md);
+  background: var(--surface); font: inherit; font-size: var(--text-body); color: var(--ink-900); box-sizing: border-box;
+}
+.fi-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12); }
+.fi-input.is-invalid { border-color: var(--danger); }
+.fi-textarea { height: auto; min-height: 84px; padding: 12px 14px; line-height: 1.6; resize: vertical; }
+.fi-hint { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; line-height: 1.5; color: var(--ink-500); }
+.fi-hint--ok { color: var(--success); font-weight: 600; }
+.fi-error { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; line-height: 1.5; color: var(--danger); }
+
+/* What people will see */
+.fi-preview {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 96px; padding: var(--space-4); border-radius: var(--radius-md);
+  background: var(--surface-sunken); border: 1px dashed var(--line-300); text-align: center;
+}
+.fi-preview.is-ready { background: var(--surface); border-style: solid; }
+.fi-preview svg { display: block; }
+.fi-preview__text { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--ink-500); }
+.fi-preview.is-ready .fi-preview__text { color: var(--success); font-weight: 600; }
+.fi-preview--phone { min-height: 0; flex-direction: row; justify-content: space-between; text-align: left; }
+.fi-preview__label { font-size: 0.8125rem; color: var(--ink-500); }
+.fi-call {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: var(--radius-full);
+  background: var(--success-soft); color: var(--success); font-size: var(--text-label); font-weight: 600;
+}
+.fi-call.is-off { background: var(--surface); color: var(--ink-400); }
+
+/* Location */
+.fi-search { display: flex; gap: var(--space-2); }
+.fi-search .ui-btn { flex-shrink: 0; width: 48px; padding: 0; }
+.fi-map { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--line-200); }
+.fi-suggest {
+  align-self: flex-start; padding: 8px 12px; border: 0; border-radius: var(--radius-md); background: var(--primary-wash);
+  font: inherit; font-size: 0.8125rem; line-height: 1.5; color: var(--primary-deep); text-align: left; cursor: pointer;
+}
+.fi-suggest:hover { background: var(--primary-soft); }

@@ -333,13 +333,7 @@ export default function UserProfile() {
     }
   }, [role, user, searchParams]);
 
-  // Opened from another foundation page (?from=dashboard / needs): closing the window goes back there
-  const RETURN_TO = { dashboard: '/foundation', needs: '/foundation/needs' };
-  const closeLocationModal = () => {
-    setIsLocationModalOpen(false);
-    const back = RETURN_TO[searchParams.get('from')];
-    if (back) navigate(back);
-  };
+  const closeLocationModal = () => setIsLocationModalOpen(false);
 
   const fetchFoundationDocuments = async () => {
     if (!user || !supabase) return [];

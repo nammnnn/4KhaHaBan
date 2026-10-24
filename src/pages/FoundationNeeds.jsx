@@ -10,6 +10,8 @@ import { supabase } from '../services/supabaseClient';
 import { FoundationNeedsPageSkeleton } from '../components/Skeletons';
 import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
+import FoundationInfoDialog from '../components/foundation/FoundationInfoDialog';
+import { formatThaiPhone } from '../lib/phone';
 import './FoundationNeeds.css';
 
 // Labels: fn.urg.<id>, fn.cat.<id>, fn.preset.<index>.name / .note
@@ -26,7 +28,6 @@ const PRESET_BASE = [
 ];
 // Older rows may hold other values (e.g. 'medium'): treat them as "welcome"
 const urgencyOf = (u) => (URGENCY_IDS.includes(u) ? u : 'normal');
-const EDIT_ADDRESS = '/profile?modal=foundation&from=needs';
 const EMPTY_FORM = { id: null, name: '', category: 'food', urgency: 'high', note: '' };
 
 export default function FoundationNeeds() {
@@ -43,6 +44,7 @@ export default function FoundationNeeds() {
   const [nameError, setNameError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toDelete, setToDelete] = useState(null);
+  const [editAddress, setEditAddress] = useState(false);
 
   const presets = PRESET_BASE.map((p, i) => ({ ...p, name: t(`fn.preset.${i}.name`), note: t(`fn.preset.${i}.note`) }));
 
@@ -53,7 +55,7 @@ export default function FoundationNeeds() {
         if (supabase) {
           const { data: fp, error: fpError } = await supabase
             .from('foundation_profiles')
-            .select('foundation_name, address, contact_phone, contact_person')
+            .select('foundation_name, address, contact_phone, contact_person, latitude, longitude, promptpay_number')
             .eq('id', user.id)
             .maybeSingle();
           if (fpError) throw fpError;
@@ -170,7 +172,7 @@ export default function FoundationNeeds() {
       </header>
 
       {/* Where donated items are sent */}
-      <Link to={EDIT_ADDRESS} className={`fn-ship ${foundationInfo?.address ? '' : 'is-missing'}`}>
+      <button type="button" onClick={() => setEditAddress(true)} className={`fn-ship ${foundationInfo?.address ? '' : 'is-missing'}`}>
         <span className="fn-ship__icon" aria-hidden="true">{foundationInfo?.address ? <MapPin size={18} /> : <AlertCircle size={18} />}</span>
         <span className="fn-ship__text">
           <span className="fn-ship__label">{t('fn.ship.label')}</span>
@@ -179,7 +181,7 @@ export default function FoundationNeeds() {
               <span className="fn-ship__address">{foundationInfo.address}</span>
               {(recipient || foundationInfo?.contact_phone) && (
                 <span className="fn-ship__meta">
-                  {[recipient && t('fn.ship.to', { name: recipient }), foundationInfo?.contact_phone].filter(Boolean).join(' · ')}
+                  {[recipient && t('fn.ship.to', { name: recipient }), foundationInfo?.contact_phone && formatThaiPhone(foundationInfo.contact_phone)].filter(Boolean).join(' · ')}
                 </span>
               )}
             </>
@@ -188,7 +190,7 @@ export default function FoundationNeeds() {
           )}
         </span>
         <span className="fn-ship__edit">{foundationInfo?.address ? t('fn.ship.edit2') : t('fd.info.set')}</span>
-      </Link>
+      </button>
 
       {needs.length === 0 ? (
         <section className="fn-card fn-start">
@@ -330,6 +332,8 @@ export default function FoundationNeeds() {
       >
         <p>{t('fn.del.text')}</p>
       </Dialog>
+      <FoundationInfoDialog kind={editAddress ? 'location' : null} info={foundationInfo} onClose={() => setEditAddress(false)}
+        onSaved={(patch) => setFoundationInfo((cur) => ({ ...(cur || {}), ...patch }))} />
     </div>
   );
 }
