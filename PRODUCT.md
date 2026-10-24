@@ -4,62 +4,75 @@
 
 ## Platform
 
-web
+web (mobile-first, responsive; deployed on Vercel)
 
 ## Users
 
-1. **Pet Adopters:** Everyday citizens looking for a dog or cat to adopt. They want an engaging, friendly, and transparent Tinder-style swipe interface (Swipe & Match) that makes connecting with shelters straightforward and exciting.
-2. **Shelter Operators & Volunteers:** Busy shelter staff and volunteers managing pet profiles, reviewing adoption applications, and handling adoption requests (pending, approved, rejected).
-3. **Donors & Sponsors:** Animal lovers who want to sponsor shelter operations or financially contribute to medical treatments and care for specific animals through simple, secure donation channels.
+1. **ผู้รับเลี้ยง (Adopters):** คนทั่วไปที่อยากรับเลี้ยงหมาหรือแมว ปัดการ์ดดูน้อง ส่งคำขอรับเลี้ยง คุยกับมูลนิธิ และติดตามน้องหลังรับเลี้ยง ต้องยืนยันตัวตน (ชื่อ เบอร์ บัตรประชาชน) ก่อนส่งคำขอ
+2. **ผู้บริจาคและผู้แจ้งเหตุ:** บริจาคเงินผ่านพร้อมเพย์ (แนบสลิป) หรือส่งของที่มูลนิธิต้องการ และแจ้งเหตุสัตว์ที่ต้องการความช่วยเหลือพร้อมพิกัด
+3. **มูลนิธิ (Foundations):** สมัครพร้อมเอกสารให้แอดมินตรวจ จากนั้นลงประกาศน้อง ตอบคำขอรับเลี้ยง แชทกับผู้รับเลี้ยง รับเคสแจ้งเหตุ และตั้งค่าพร้อมเพย์ ที่ตั้ง และรายการของที่ต้องการ
+4. **แอดมิน:** อนุมัติมูลนิธิ ดูแลงานค้าง (แจ้งเหตุ รายงาน แชทช่วยเหลือ การเปลี่ยนเลขพร้อมเพย์ คำขอที่ไม่มีคนตอบ) จัดการผู้ใช้ (บทบาท ระงับบัญชี) และดูบันทึกต่าง ๆ
 
 ## Product Purpose
 
-4 ขาหาบ้าน (4KhaHaBan) simplifies and accelerates stray animal adoption in Thailand by combining a Tinder-style Swipe & Match discovery feed with direct shelter communication, transparent donation tracking, and shelter management tools.
+4 ขาหาบ้าน (4KhaHaBan) ช่วยให้หมาแมวจรจัดในประเทศไทยได้บ้านเร็วขึ้น โดยรวมการค้นหาแบบปัดการ์ด (Swipe & Match) เข้ากับการคุยตรงกับมูลนิธิ การบริจาคที่ตรวจสอบได้ การแจ้งเหตุ และเครื่องมือจัดการสำหรับมูลนิธิไว้ในแอปเดียว
 
 ## Positioning
 
-An engaging, trustworthy, and human-centric adoption matching platform in Thailand that transforms stray animal rescue into an interactive, Tinder-inspired "Swipe & Match" companion discovery experience.
+แพลตฟอร์มหาบ้านให้สัตว์จรที่อบอุ่นและน่าเชื่อถือ — สนุกแบบแอปปัดการ์ด แต่ข้อมูลมูลนิธิ เงิน และสถานะคำขอต้องจริงและตรวจสอบได้เสมอ
 
 ## Operating Context
 
-- **Environment:** Mobile-first responsive web application optimized for mobile viewports while remaining fully usable on tablet and desktop screens.
-- **Interactions:** Touch-gestures (swipe left/right/up) and accessible button controls for swiping, direct real-time chat between adopters and shelters, interactive donation progress indicators, and an admin dashboard for shelter staff.
-- **Localization:** Primary language is Thai, tailored for local shelters and adopters in Thailand.
+- **อุปกรณ์:** มือถือเป็นหลัก (อ้างอิง 390px) ใช้ได้เต็มที่บนแท็บเล็ตและเดสก์ท็อป (sidebar, แผงข้อมูลน้องข้างการ์ดที่ ≥1200px)
+- **การโต้ตอบ:** ปัดการ์ด (มีปุ่มและคีย์ลัดแทนได้ทุกอย่าง), แชทแบบ realtime, QR พร้อมเพย์, แผนที่ปักหมุด (OpenStreetMap)
+- **ภาษา:** ไทยเป็นหลัก สลับเป็นอังกฤษได้ (ฝั่งผู้ใช้แปลครบ ฝั่งมูลนิธิ/แอดมินแปลเกือบครบ)
+- **Backend:** Supabase (Auth, Postgres + RLS, Storage, Realtime) — ไม่มีข้อมูลตัวอย่างสำรอง ถ้าโหลดไม่ได้ แอปจะบอกว่าโหลดไม่ได้
 
 ## Capabilities and Constraints
 
 ### Capabilities
-- **Tinder-Style Swipe Feed:** Edge-to-edge card deck supporting Like (right), Nope (left), and Super Like (up) actions with smooth micro-animations.
-- **Detailed Pet Profiles:** Modal view displaying pet bio, personality tags, medical history, vaccination status, and shelter distance.
-- **Match & Direct Chat:** Instant match notification triggering a dedicated chat channel between adopter and shelter operator.
-- **Donation & Sponsorship Hub:** Campaign-based and pet-specific donation progress tracking with QR/PromptPay and bank transfer payment options.
-- **Shelter Admin Dashboard:** Management view for adding/editing animal profiles, managing adoption requests, and updating shelter metrics.
+- **Feed ปัดการ์ด:** ถูกใจ / ข้าม / ย้อนกลับ, ตัวกรอง (ชนิด เพศ ระยะทาง การใช้ชีวิต), ตำแหน่งจาก GPS หรือเลือกพื้นที่เอง
+- **โปรไฟล์น้อง:** รูปหลายรูป เรื่องราว 2 ภาษา แท็กมาตรฐาน สุขภาพ ระยะทาง และปุ่มรายงานประกาศ
+- **คำขอรับเลี้ยง + แชท:** ส่งคำขอ → มูลนิธิอนุมัติ/ปฏิเสธ → แชท → ติดตามหลังรับเลี้ยง (timeline + แบบฟอร์มติดตาม)
+- **บริจาค:** เงินผ่าน QR พร้อมเพย์ของมูลนิธิ (สร้างเฉพาะเมื่อมีเลขจริง) + แนบสลิป, หรือส่งของตามรายการที่มูลนิธิต้องการ
+- **แจ้งเหตุ:** ฟอร์มสั้น ปักหมุด GPS ที่แม่นยำ ความเร่งด่วน 3 ระดับ มูลนิธิรับเคสและอัปเดตสถานะ
+- **ฝั่งมูลนิธิ:** dashboard, จัดการน้อง, คำขอและแชท, เคสแจ้งเหตุ, ของที่ต้องการ, ข้อมูลที่ผู้ใช้เห็น (พร้อมเพย์ ที่ตั้ง เบอร์)
+- **ฝั่งแอดมิน:** ภาพรวมงานค้าง, อนุมัติมูลนิธิ, กล่องข้อความ, จัดการผู้ใช้/ระงับบัญชี, บันทึก — ทุกการกระทำเก็บ audit log
+- **บัญชี:** อีเมล/รหัสผ่าน และ Google, ลืมรหัสผ่าน (เปิดเมื่อมี SMTP), ลบบัญชีตัวเอง
 
 ### Constraints
-- **Typography:** Requires robust support for Thai script using Google Font 'Prompt' with appropriate font sizing and line-heights.
-- **Backend Infrastructure:** Powered by Supabase database services with fallback local state/mock data for resilient offline/development modes.
+- **ตัวอักษร:** Prompt ทั้งแอป เนื้อหาขั้นต่ำ 16px line-height 1.6 (สระบน-ล่างภาษาไทยไม่ชนกัน)
+- **ความปลอดภัยอยู่ที่ฐานข้อมูล:** RLS ทุกตาราง, trigger กันเปลี่ยนบทบาท/สถานะตัวเอง, ผู้ใช้ที่ถูกระงับเขียนข้อมูลไม่ได้ — UI เป็นแค่ชั้นแรก
+- **อีเมล:** ยังไม่มี SMTP ของตัวเอง จึงปิดการยืนยันอีเมลและลืมรหัสผ่านไว้ (`VITE_EMAIL_CONFIRMATION`)
+- **Supabase แพ็กเกจฟรี:** บางฟีเจอร์ (เช่นตรวจรหัสผ่านที่รั่ว) ใช้ไม่ได้
 
 ## Brand Commitments
 
-- **Name:** 4 ขาหาบ้าน (4KhaHaBan) - Production Edition
-- **Tone & Voice:** Empathetic, trustworthy, professional, and warm.
-- **Visual Identity:** Warm Honey Amber primary accent (`#D97706` / `#B45309`), Warm Alabaster canvas (`#FAF8F5`), pure white surfaces (`#FFFFFF`) with 1px neutral borders (`#E5E7EB`), Forest Emerald verified & success accents (`#059669`), and ergonomic Tinder-inspired action controls (Emerald Like `#059669`, Crisp Crimson Nope `#DC2626`, Amber Super Like `#D97706`).
+- **ชื่อ:** 4 ขาหาบ้าน (4KhaHaBan) — ชื่อแบรนด์เป็นภาษาไทยทั้งสองภาษา
+- **น้ำเสียง:** อบอุ่น สุภาพ สั้น ตรงไปตรงมา เรียกสัตว์ว่า "น้อง"
+- **ภาพ:** ส้มน้ำผึ้ง (`#D97706` / `#B45309`) บนพื้นอุ่น `#FAF8F5`, เทาโทนอุ่น (stone), เขียว `#047857` เฉพาะ "ยืนยันแล้ว/สำเร็จ" — รายละเอียดใน `DESIGN.md`
+- **รูปน้องเป็นรูปจริงจากมูลนิธิ** ไม่ใช้ stock หรือ AI
 
 ## Evidence on Hand
 
-- `src/mockData.js`: Comprehensive mock dataset covering dogs, cats, shelter details, and adoption request states.
-- `DESIGN.md`: Established design system specifications for Tinder-style UI tokens, color palette, typography hierarchy, and component guidelines.
-- `src/pages/`: Implementation for Feed (Swipe), Animal Profile, Match Chat, Donation, Login, User Profile, and Admin Dashboard.
+- `DESIGN.md` — ระบบการออกแบบ (token, component, กฎของแต่ละหน้า)
+- `src/pages/`, `src/components/` — โค้ดทุกหน้า; `src/components/ui/` component กลาง
+- `src/i18n/` — ข้อความไทย/อังกฤษทั้งหมด
+- `supabase/migrations/` — schema และกฎความปลอดภัยทั้งหมด (001–031)
+- ข้อมูลจริงบน production: มูลนิธิ Saved Souls และน้อง 104 ตัว
 
 ## Product Principles
 
-1. **Empathy-First Visual Hierarchy:** Full-bleed pet photography and personality tags lead the experience to forge an emotional connection with potential adopters.
-2. **Low-Friction Matching:** Simplify the adoption journey from initial discovery to direct shelter contact with minimum steps.
-3. **Transparent Shelter Relationships:** Clearly present shelter credentials, location, and verified request statuses to build user trust.
-4. **Actionable Community Support:** Enable effortless financial support alongside adoption matching for overall shelter sustainability.
+1. **น้องเป็นพระเอก:** รูปใหญ่และเรื่องราวนำ เพื่อสร้างความผูกพันก่อนตัดสินใจ
+2. **ไม่โกหกผู้ใช้:** ไม่แสดงข้อมูลตัวอย่างแทนข้อมูลจริง ไม่เดาระยะทาง ไม่สร้าง QR จากเลขที่ไม่ใช่ของมูลนิธิ — โหลดไม่ได้ก็บอกว่าโหลดไม่ได้
+3. **ขั้นตอนน้อย:** จากเห็นน้องถึงได้คุยกับมูลนิธิให้สั้นที่สุด
+4. **โปร่งใสเรื่องมูลนิธิและเงิน:** มูลนิธิผ่านการตรวจเอกสาร การเปลี่ยนเลขพร้อมเพย์ถูกบันทึกและให้แอดมินตรวจ
+5. **งานค้างต้องไม่หาย:** แอดมินและมูลนิธิเห็นสิ่งที่รอนานที่สุดก่อน
 
 ## Accessibility & Inclusion
 
-- **Thai Typography Support:** Minimum body text size of 16px (`1rem`) and line-height of `1.5` for Prompt font to prevent overcrowding of Thai tone marks and vowels.
-- **High Contrast Ratios:** Dark charcoal body text (`#111418`) against light neutral card fills (`#FFFFFF`/`#F3F4F6`) or gradient overlays with high contrast for white text on photo backgrounds.
-- **Touch Target Standard:** Minimum 44px x 44px interactive touch targets for all swiping buttons, action icons, and navigation tabs.
+- เนื้อหาขั้นต่ำ 16px, คอนทราสต์ตาม WCAG AA (ตารางใน `DESIGN.md` §2.2)
+- พื้นที่กดขั้นต่ำ 44×44px, focus มองเห็นได้, ทุกการปัดทำด้วยปุ่ม/คีย์บอร์ดได้
+- รองรับ `prefers-reduced-motion` ทั้ง CSS และ framer-motion
+- สถานะไม่สื่อด้วยสีอย่างเดียว มีไอคอนหรือข้อความประกอบเสมอ
+- สองภาษา ไทย / English
