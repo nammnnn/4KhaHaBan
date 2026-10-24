@@ -48,8 +48,6 @@ const ROWS = [
   ['fi.phone.lead', 'ผู้ขอรับเลี้ยงจะเห็นเบอร์นี้ในแชท และกดโทรหามูลนิธิได้', 'Adopters see this number in chats and can tap to call you.'],
   ['fi.phone.label', 'เบอร์โทร', 'Phone number'],
   ['fi.phone.invalid', 'ใส่เบอร์โทร 9–10 หลัก ขึ้นต้นด้วย 0', 'Enter a 9–10 digit number starting with 0'],
-  ['fi.phone.previewLabel', 'ในแชทจะเห็นปุ่ม', 'In chats they see'],
-  ['fi.phone.call', 'โทรหามูลนิธิ', 'Call the foundation'],
   ['fi.loc.title', 'ที่ตั้งศูนย์', 'Centre location'],
   ['fi.loc.lead', 'หมุดใช้บอกระยะทางในหน้าปัด และแชร์ตำแหน่งในแชท ที่อยู่ใช้เป็นที่ส่งของบริจาค', 'The pin shows distances in the feed and is shared in chats. The address is where donated items are sent.'],
   ['fi.loc.useGps', 'ใช้ตำแหน่งที่ฉันอยู่ตอนนี้', 'Use where I am now'],

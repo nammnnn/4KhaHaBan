@@ -3,7 +3,7 @@
 // "Set up" tap finishes that one thing without leaving the page. The full edit window in the
 // profile page stays for editing everything at once.
 import { useEffect, useState } from 'react';
-import { AlertCircle, Check, LocateFixed, Phone, Search } from 'lucide-react';
+import { AlertCircle, Check, LocateFixed, Search } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
 import { useAuth } from '../../context/AuthContext';
@@ -185,10 +185,6 @@ export default function FoundationInfoDialog({ kind, info, onClose, onSaved }) {
               value={phone} onChange={(e) => { setPhone(formatThaiPhone(e.target.value)); setError(''); }}
               placeholder="081-234-5678" aria-invalid={error ? true : undefined} aria-describedby="fi-phone-err" />
             <FieldError id="fi-phone-err">{error}</FieldError>
-          </div>
-          <div className="fi-preview fi-preview--phone">
-            <span className="fi-preview__label">{t('fi.phone.previewLabel')}</span>
-            <span className={`fi-call ${isThaiPhone(phone) ? '' : 'is-off'}`}><Phone size={16} aria-hidden="true" /> {t('fi.phone.call')}</span>
           </div>
         </form>
       )}
