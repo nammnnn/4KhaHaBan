@@ -76,14 +76,17 @@ export function Chip({ onPhoto, className, children, ...props }) {
   return <span className={cn('ui-chip', onPhoto && 'ui-chip--on-photo', className)} {...props}>{children}</span>;
 }
 
-export function EmptyState({ icon: Icon, title, text, action }) {
+// `motion` gives the icon a small idle animation for error / not-found screens:
+// 'float' (couldn't load), 'search' (page not found), 'shake' (crash), 'sniff' (item not found).
+export function EmptyState({ icon: Icon, title, text, action, motion: anim, tone, children }) {
   return (
-    <div className="ui-empty">
+    <div className={cn('ui-empty', anim && `ui-empty--anim ui-empty--${anim}`)}>
       {Icon && (
-        <div className="ui-empty__icon" aria-hidden="true">
+        <div className={cn('ui-empty__icon', tone === 'danger' && 'ui-load-error__icon')} aria-hidden="true">
           <Icon size={40} />
         </div>
       )}
+      {children}
       <h3 className="ui-empty__title">{title}</h3>
       {text && <p className="ui-empty__text">{text}</p>}
       {action && <div className="ui-empty__action">{action}</div>}
@@ -101,10 +104,12 @@ export function LoadError({ onRetry, title, text, compact }) {
     try { await onRetry(); } finally { setBusy(false); }
   };
   return (
-    <div className={cn('ui-empty ui-load-error', compact && 'ui-load-error--compact')} role="alert">
+    <div className={cn('ui-empty ui-empty--anim ui-empty--float ui-load-error', compact && 'ui-load-error--compact', busy && 'is-busy')} role="alert">
       <div className="ui-empty__icon ui-load-error__icon" aria-hidden="true">
         <CloudOff size={compact ? 28 : 36} />
       </div>
+      {/* "Trying to reach the server" dots under the cloud */}
+      <span className="ui-load-error__dots" aria-hidden="true"><i /><i /><i /></span>
       <h3 className="ui-empty__title">{title || t('err.load.title')}</h3>
       <p className="ui-empty__text">{text || t('err.load.text')}</p>
       <div className="ui-empty__action">

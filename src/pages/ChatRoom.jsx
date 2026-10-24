@@ -11,7 +11,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { ChatRoomSkeleton } from '../components/Skeletons';
-import { Button, Dialog, LoadError, useToast } from '../components/ui';
+import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { initialsAvatar } from '../lib/avatar';
 import { MessageItem, dayLabel } from '../components/chat/ChatParts';
 import { useI18n } from '../i18n';
@@ -394,10 +394,13 @@ function ChatRoom() {
   if (!match && messages.length === 0) {
     return (
       <div className="chat-room-container fcr fcr--empty">
-        <span className="fcr-empty__icon" aria-hidden="true"><PawPrint size={32} /></span>
-        <h2>{t('fcr.notFound.title')}</h2>
-        <p>{t('cr.notFound.text')}</p>
-        <Button onClick={() => navigate('/matches')}>{t('fcr.notFound.back')}</Button>
+        <EmptyState
+          icon={PawPrint}
+          motion="sniff"
+          title={t('fcr.notFound.title')}
+          text={t('cr.notFound.text')}
+          action={<Button onClick={() => navigate('/matches')}>{t('fcr.notFound.back')}</Button>}
+        />
       </div>
     );
   }

@@ -465,6 +465,7 @@ const AnimalForm = () => {
         {loadState === 'notFound' ? (
           <EmptyState
             icon={PawPrint}
+            motion="sniff"
             title={t('af.err.notFound')}
             action={<Button onClick={() => navigate('/foundation/animals', { replace: true })}>{t('err.toList')}</Button>}
           />

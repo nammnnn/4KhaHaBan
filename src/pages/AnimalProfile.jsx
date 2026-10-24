@@ -199,6 +199,7 @@ function AnimalProfile() {
       <div className="animal-profile-page ap-not-found">
         <EmptyState
           icon={PawPrint}
+          motion="sniff"
           title={t('ap.notFoundTitle')}
           text={t('ap.notFoundText')}
           action={<Button variant="secondary" onClick={() => navigate('/')}>{t('ap.otherAnimals')}</Button>}
