@@ -1,11 +1,15 @@
 import React from 'react';
 import { PawWalk } from './motion/PawMotion';
+import BrandMark from './BrandMark';
+import { useI18n } from '../i18n';
 import '../pages/Login.css';
 import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
 import '../pages/FoundationDashboard.css';
 import '../pages/FoundationAnimals.css';
 import '../pages/FoundationIncidents.css';
+import '../pages/AnimalForm.css';
+import '../pages/FoundationChatRoom.css';
 
 /**
  * 4 ขาหาบ้าน — Skeleton Loading Components
@@ -174,62 +178,23 @@ export const ChatListSkeleton = () => {
 
 // 3. Chat Room Skeleton (ChatRoom, FoundationChatRoom, SupportChat) - Clean Minimalist Loader (No fake bubbles)
 export const ChatRoomSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden', boxSizing: 'border-box' }}>
-    {/* Top Header Placeholder */}
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 16px',
-        borderBottom: '1px solid #E5E7EB',
-        backgroundColor: '#FFFFFF',
-        flexShrink: 0
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div className="skeleton skeleton-circle" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div className="skeleton skeleton-text" style={{ width: '130px', height: '16px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '70px', height: '11px' }} />
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
-      </div>
-    </div>
-
-    {/* Center Loading State (Clean Minimalist Spinner - NO fake bubbles) */}
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAF8F5', gap: '12px' }}>
-      <div style={{
-        width: '44px',
-        height: '44px',
-        borderRadius: '50%',
-        backgroundColor: '#FFFFFF',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          width: '20px',
-          height: '20px',
-          border: '2.5px solid #F3F4F6',
-          borderTopColor: 'var(--primary, #D97706)',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite'
-        }} />
-      </div>
-      <span style={{ fontSize: '0.84rem', color: '#9CA3AF', fontWeight: 500 }}>
-        กำลังโหลดข้อความ...
+  // chat-room-container: phones hide the bottom dock for chat rooms, so the skeleton must too
+  <div className="chat-room-container fcr" aria-busy="true" aria-label="กำลังโหลด">
+    <div className="fcr-head">
+      <span className="fd-sk" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span className="fd-sk" style={{ width: 140, height: 16 }} />
+        <span className="fd-sk" style={{ width: 90, height: 12 }} />
       </span>
+      <span className="fd-sk" style={{ width: 44, height: 44, borderRadius: 12 }} />
     </div>
-
-    {/* Bottom Input Bar Placeholder */}
-    <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-      <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
-      <div className="skeleton" style={{ flex: 1, height: '40px', borderRadius: '20px' }} />
-      <div className="skeleton skeleton-circle" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
+    <div className="fcr-messages">
+      {[['left', 62], ['left', 48], ['right', 55], ['left', 40]].map(([side, w], i) => (
+        <span key={i} className="fd-sk" style={{ alignSelf: side === 'left' ? 'flex-start' : 'flex-end', width: `${w}%`, height: 44, borderRadius: 18 }} />
+      ))}
+    </div>
+    <div className="fcr-compose">
+      <span className="fd-sk" style={{ display: 'block', height: 44, borderRadius: 999 }} />
     </div>
   </div>
 );
@@ -274,31 +239,73 @@ export const FoundationDashboardSkeleton = () => (
 );
 
 // 5. Animals List Skeleton (FoundationAnimals)
-export const FoundationAnimalsSkeleton = () => (
-  <div className="fa-page" aria-busy="true" aria-label="กำลังโหลด">
-    <header className="fa-header">
-      <div>
-        <span className="fd-sk" style={{ display: 'block', width: 150, height: 28 }} />
-        <span className="fd-sk" style={{ display: 'block', width: 190, height: 16, marginTop: 6 }} />
+// Same rule as FoundationAnimals: the saved choice, else cards on wide screens and a list on phones
+function animalsView() {
+  let saved = null;
+  try { saved = localStorage.getItem('4kh_fa_view'); } catch { /* blocked */ }
+  if (saved === 'grid' || saved === 'list') return saved;
+  return typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches ? 'grid' : 'list';
+}
+
+export const FoundationAnimalsSkeleton = () => {
+  const view = animalsView();
+  return (
+    <div className="fa-page" aria-busy="true" aria-label="กำลังโหลด">
+      <header className="fa-header">
+        <div>
+          <span className="fd-sk" style={{ display: 'block', width: 150, height: 28 }} />
+          <span className="fd-sk" style={{ display: 'block', width: 190, height: 16, marginTop: 6 }} />
+        </div>
+        <span className="fd-sk fa-header__cta" style={{ height: 48, minWidth: 170 }} />
+      </header>
+      <div className="fa-toolbar">
+        <div className="fa-toolbar__row">
+          <span className="fd-sk fa-search" style={{ height: 44 }} />
+          <span className="fd-sk fa-tool" style={{ border: 0 }} />
+          <span className="fd-sk fa-tool" style={{ border: 0 }} />
+          <span className="fd-sk" style={{ width: 84, height: 44, borderRadius: 12, flexShrink: 0 }} />
+        </div>
+        <span className="fd-sk" style={{ height: 40, width: 360, maxWidth: '100%', borderRadius: 999 }} />
       </div>
-      <span className="fd-sk fa-header__cta" style={{ height: 48, minWidth: 170 }} />
-    </header>
-    <div className="fa-toolbar">
-      <span className="fd-sk fa-search" style={{ height: 44 }} />
-      <span className="fd-sk" style={{ height: 40, width: 320, maxWidth: '100%', borderRadius: 999 }} />
+      <ul className={`fa-grid fa-grid--${view}`}>
+        {[0, 1, 2, 3, 4, 5].slice(0, view === 'grid' ? 6 : 4).map((i) => (
+          <li key={i} className="fa-card">
+            <span className="fa-card__media"><span className="fd-sk fa-card__photo" style={{ borderRadius: view === 'grid' ? 0 : undefined }} /></span>
+            <div className="fa-card__body">
+              <span className="fd-sk" style={{ width: '50%', height: 22, marginTop: 4 }} />
+              <span className="fd-sk" style={{ width: '70%', height: 16, marginTop: 6 }} />
+              <span className="fd-sk" style={{ width: 130, height: 36, marginTop: 'auto', borderRadius: 999 }} />
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
-    <ul className="fa-grid">
-      {[0, 1, 2, 3].map((i) => (
-        <li key={i} className="fa-card">
-          <span className="fa-card__media"><span className="fd-sk fa-card__photo" /></span>
-          <div className="fa-card__body">
-            <span className="fd-sk" style={{ width: '50%', height: 22, marginTop: 4 }} />
-            <span className="fd-sk" style={{ width: '70%', height: 16, marginTop: 6 }} />
-            <span className="fd-sk" style={{ width: 120, height: 36, marginTop: 'auto', borderRadius: 999 }} />
-          </div>
-        </li>
+  );
+};
+
+// Add / edit animal: header and the four numbered sections, with the sticky save bar
+export const AnimalFormSkeleton = () => (
+  <div className="af-page" aria-busy="true" aria-label="กำลังโหลด">
+    <header className="af-header">
+      <span className="fd-sk" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <span className="fd-sk" style={{ display: 'block', width: 180, height: 26 }} />
+        <span className="fd-sk" style={{ display: 'block', width: '80%', maxWidth: 360, height: 14, marginTop: 8 }} />
+      </div>
+    </header>
+    <div className="af-form">
+      {[150, 300, 220, 260].map((h, i) => (
+        <section key={i} className="af-section" style={{ minHeight: h }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="fd-sk" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+            <span className="fd-sk" style={{ width: 120, height: 20 }} />
+          </span>
+          <span className="fd-sk" style={{ height: 14, width: '70%' }} />
+          <span className="fd-sk" style={{ flex: 1, minHeight: 48 }} />
+        </section>
       ))}
-    </ul>
+      <div className="af-savebar"><span className="fd-sk af-savebar__btn" style={{ minHeight: 52, borderRadius: 12 }} /></div>
+    </div>
   </div>
 );
 
@@ -373,44 +380,28 @@ export const AdoptionTimelineSkeleton = () => (
 
 // 8. Adoption Followup Form Skeleton (AdoptionFollowup)
 export const AdoptionFollowupSkeleton = () => (
-  <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', padding: '24px 16px 80px', boxSizing: 'border-box' }}>
-    <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <div className="skeleton" style={{ width: '38px', height: '38px', borderRadius: '8px' }} />
-        <div className="skeleton skeleton-text" style={{ width: '180px', height: '22px' }} />
+  <div style={{ minHeight: '100dvh', backgroundColor: 'var(--background)', padding: '24px 16px 80px', boxSizing: 'border-box' }} aria-busy="true" aria-label="กำลังโหลด">
+    <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="fd-sk" style={{ width: 38, height: 38, borderRadius: 8 }} />
+        <span className="fd-sk" style={{ width: 200, height: 22 }} />
+        <span className="fd-sk" style={{ width: 80, height: 34, borderRadius: 8, marginLeft: 'auto' }} />
       </div>
-
-      {/* Pet Card */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '14px 16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-        <div className="skeleton" style={{ width: '56px', height: '56px', borderRadius: '12px', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div className="skeleton skeleton-text" style={{ width: '110px', height: '18px', marginBottom: '6px' }} />
-          <div className="skeleton skeleton-text" style={{ width: '130px', height: '13px' }} />
-        </div>
+      <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '14px 16px', boxShadow: 'var(--elev-raised)', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span className="fd-sk" style={{ width: 68, height: 68, borderRadius: 12, flexShrink: 0 }} />
+        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span className="fd-sk" style={{ width: 110, height: 18 }} />
+          <span className="fd-sk" style={{ width: 160, height: 13 }} />
+          <span className="fd-sk" style={{ width: 100, height: 20, borderRadius: 999 }} />
+        </span>
       </div>
-
-      {/* Milestone Card */}
-      <div className="skeleton" style={{ width: '100%', height: '68px', borderRadius: '14px', marginBottom: '16px' }} />
-
-      {/* Photo Upload Box */}
-      <div className="skeleton" style={{ width: '100%', height: '130px', borderRadius: '14px', marginBottom: '16px' }} />
-
-      {/* Health Assessment Questions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '14px', border: '1px solid #E5E7EB' }}>
-            <div className="skeleton skeleton-text" style={{ width: '130px', height: '15px', marginBottom: '10px' }} />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div className="skeleton" style={{ flex: 1, height: '32px', borderRadius: '8px' }} />
-              <div className="skeleton" style={{ flex: 1, height: '32px', borderRadius: '8px' }} />
-            </div>
-          </div>
-        ))}
+      <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 20, boxShadow: 'var(--elev-raised)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <span className="fd-sk" style={{ width: 64, height: 64, borderRadius: '50%' }} />
+        <span className="fd-sk" style={{ width: '60%', height: 22 }} />
+        <span className="fd-sk" style={{ width: '100%', height: 110, borderRadius: 12 }} />
+        <span className="fd-sk" style={{ width: '90%', height: 14 }} />
+        <span className="fd-sk" style={{ width: '100%', height: 44, borderRadius: 10 }} />
       </div>
-
-      {/* Submit Button */}
-      <div className="skeleton" style={{ width: '100%', height: '48px', borderRadius: '12px' }} />
     </div>
   </div>
 );
@@ -445,6 +436,40 @@ export const FoundationNeedsSkeleton = () => (
         <div className="skeleton" style={{ width: '48px', height: '28px', borderRadius: '14px', flexShrink: 0 }} />
       </div>
     ))}
+  </div>
+);
+
+export const FoundationNeedsPageSkeleton = () => (
+  <div style={{ minHeight: '100dvh', backgroundColor: 'var(--background)', padding: '32px 16px 100px', boxSizing: 'border-box' }} aria-busy="true" aria-label="กำลังโหลด">
+    <div style={{ maxWidth: '840px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="fd-sk" style={{ width: 38, height: 38, borderRadius: 8 }} />
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span className="fd-sk" style={{ width: 200, height: 24 }} />
+            <span className="fd-sk" style={{ width: 'min(420px, 60vw)', height: 14 }} />
+          </span>
+        </div>
+        <span className="fd-sk" style={{ width: 170, height: 40, borderRadius: 8 }} />
+      </div>
+      <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line-200)', padding: '16px 20px', marginBottom: 24, display: 'flex', gap: 14 }}>
+        <span className="fd-sk" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0 }} />
+        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span className="fd-sk" style={{ width: '60%', height: 16 }} />
+          <span className="fd-sk" style={{ width: '45%', height: 13 }} />
+          <span className="fd-sk" style={{ width: '40%', height: 13 }} />
+          <span className="fd-sk" style={{ width: '70%', height: 13 }} />
+        </span>
+      </div>
+      <span className="fd-sk" style={{ display: 'block', width: 220, height: 14, marginBottom: 10 }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+        {[120, 150, 140, 170, 190, 130].map((w, i) => <span key={i} className="fd-sk" style={{ width: w, height: 32, borderRadius: 999 }} />)}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflow: 'hidden' }}>
+        {[80, 100, 120, 130, 110, 70].map((w, i) => <span key={i} className="fd-sk" style={{ width: w, height: 34, borderRadius: 8, flexShrink: 0 }} />)}
+      </div>
+      <FoundationNeedsSkeleton />
+    </div>
   </div>
 );
 
@@ -766,3 +791,66 @@ export const LoginSkeleton = () => (
   </div>
 );
 
+
+
+// Page skeleton for the current address. Used while a page's code loads and on first load.
+// More specific paths come first (/foundation/animals/new before /foundation/animals).
+export const RouteSkeleton = () => {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+  if (path === '/' || path.startsWith('/feed')) return <FeedPageSkeleton />;
+  if (path.startsWith('/login')) return <LoginSkeleton />;
+  if (path.startsWith('/animal/')) return <div className="animal-profile-page"><AnimalProfileSkeleton /></div>;
+  if (/^\/foundation\/animals\/(new|[^/]+\/edit)/.test(path)) return <AnimalFormSkeleton />;
+  if (path.startsWith('/foundation/animals')) return <FoundationAnimalsSkeleton />;
+  if (path.startsWith('/support-chat')) return <ChatRoomSkeleton />;
+  if (path.startsWith('/chat/') || path.startsWith('/foundation/chat/') || path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
+    // Phones open a chat full screen; wide screens show the list beside it
+    const wide = typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches;
+    if (!wide && /\/chat\//.test(path)) return <ChatRoomSkeleton />;
+    return <ChatListSkeleton />;
+  }
+  if (path.startsWith('/donation')) return <DonationSkeleton />;
+  if (path.startsWith('/profile')) return <UserProfileSkeleton />;
+  if (path.startsWith('/report')) return <IncidentReportSkeleton />;
+  if (path.startsWith('/foundation/incidents')) return <FoundationIncidentsSkeleton />;
+  if (path.startsWith('/foundation/needs')) return <FoundationNeedsPageSkeleton />;
+  if (path.startsWith('/foundation/pending')) return <FoundationPendingSkeleton />;
+  if (path === '/foundation' || path.startsWith('/foundation/dashboard')) return <FoundationDashboardSkeleton />;
+  if (path.startsWith('/verify-user') || path.startsWith('/foundation/onboarding')) return <FormPageSkeleton />;
+  if (path.includes('/timeline/')) return <AdoptionTimelineSkeleton />;
+  if (path.includes('/followup/')) return <AdoptionFollowupSkeleton />;
+  return <UniversalPageSkeleton />;
+};
+
+// First load, while the account is still loading: the menu frame plus the page skeleton,
+// instead of a blank screen. Tab count is guessed from the address (the role isn't known yet).
+export function BootSkeleton() {
+  const { t } = useI18n();
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const noNav = path.startsWith('/login') || path.startsWith('/foundation/onboarding');
+  if (noNav) return <div className="app-container"><main className="main-content"><RouteSkeleton /></main></div>;
+  const tabs = path.startsWith('/admin') || path.startsWith('/foundation/pending') ? 1 : 4;
+  return (
+    <div className="app-container">
+      <nav className="main-nav" aria-hidden="true">
+        <span className="nav-logo">
+          <span className="nav-logo__mark"><BrandMark size={36} /></span>
+          <span>{t('app.name.prefix')}<span className="nav-logo__accent">{t('app.name.accent')}</span></span>
+        </span>
+        <div className="nav-items">
+          {Array.from({ length: tabs + 1 }, (_, i) => (
+            <span key={i} className={`nav-item boot-nav-item ${i === tabs ? 'boot-nav-item--phone' : ''}`}>
+              <span className="nav-icon"><span className="fd-sk boot-nav-item__icon" /></span>
+              <span className="fd-sk boot-nav-item__label" />
+            </span>
+          ))}
+        </div>
+        <span className="nav-user boot-nav-user">
+          <span className="fd-sk" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+          <span className="fd-sk" style={{ width: 110, height: 14 }} />
+        </span>
+      </nav>
+      <main className="main-content"><RouteSkeleton /></main>
+    </div>
+  );
+}

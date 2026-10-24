@@ -21,7 +21,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
-import { FoundationNeedsSkeleton } from '../components/Skeletons';
+import { FoundationNeedsSkeleton, FoundationNeedsPageSkeleton } from '../components/Skeletons';
 import { Button, Dialog, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -197,21 +197,7 @@ export default function FoundationNeeds() {
     return n.category === selectedCategory;
   });
 
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100dvh',
-        backgroundColor: '#FAF8F5',
-        fontFamily: 'Prompt, sans-serif',
-        padding: '32px 16px 100px',
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ maxWidth: '840px', margin: '0 auto' }}>
-          <FoundationNeedsSkeleton />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <FoundationNeedsPageSkeleton />;
 
   return (
     <div style={{

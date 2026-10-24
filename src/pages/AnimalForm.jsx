@@ -5,7 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
-import { FormPageSkeleton } from '../components/Skeletons';
+import { AnimalFormSkeleton } from '../components/Skeletons';
 import { Button, Dialog, useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
@@ -431,7 +431,7 @@ const AnimalForm = () => {
   };
 
   if (loading) {
-    return <FormPageSkeleton />;
+    return <AnimalFormSkeleton />;
   }
 
   const hasCoords = Boolean(formData.latitude && formData.longitude);

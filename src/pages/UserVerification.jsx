@@ -18,6 +18,13 @@ function isValidThaiId(digits) {
 }
 
 // รายการคำถามแบบประเมินความพร้อมก่อนรับเลี้ยง
+// "1101700230708" or "1-1017-00230-70-8" -> "1-xxxx-xxxxx-x0-8" (first digit and last two shown)
+function maskIdCard(id) {
+  const d = String(id || '').replace(/\D/g, '');
+  if (d.length !== 13) return d ? 'x-xxxx-xxxxx-xx-x' : '-';
+  return `${d[0]}-xxxx-xxxxx-x${d[11]}-${d[12]}`;
+}
+
 const ASSESSMENT_QUESTIONS = [
   {
     id: 'housing',
@@ -355,7 +362,7 @@ export default function UserVerification() {
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '10px' }}>
                 <span style={{ color: '#6B7280' }}>เลขบัตรประชาชน:</span>
                 <strong style={{ color: '#111827' }}>
-                  {formData.id_card_no ? `${formData.id_card_no.slice(0, 3)}-xxxx-xxxxx-${formData.id_card_no.slice(-2)}` : '-'}
+                  {maskIdCard(formData.id_card_no)}
                 </strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

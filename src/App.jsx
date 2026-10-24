@@ -82,83 +82,10 @@ const FoundationNeeds = React.lazy(() => import('./pages/FoundationNeeds'));
 const AdoptionFollowup = React.lazy(() => import('./pages/AdoptionFollowup'));
 const AdoptionTimeline = React.lazy(() => import('./pages/AdoptionTimeline'));
 
-import {
-  FeedPageSkeleton,
-  FeedCardSkeleton,
-  AnimalProfileSkeleton,
-  ChatListSkeleton,
-  ChatRoomSkeleton,
-  DonationSkeleton,
-  IncidentReportSkeleton,
-  UserProfileSkeleton,
-  FoundationDashboardSkeleton,
-  FoundationAnimalsSkeleton,
-  FoundationIncidentsSkeleton,
-  FoundationNeedsSkeleton,
-  FoundationPendingSkeleton,
-  FormPageSkeleton,
-  AdoptionTimelineSkeleton,
-  AdoptionFollowupSkeleton,
-  UniversalPageSkeleton,
-  LoginSkeleton
-} from './components/Skeletons';
+import { RouteSkeleton } from './components/Skeletons';
 
 // Route-Adaptive Skeleton Fallback (100% Skeleton Load, no spinner)
-const PageLoader = () => {
-  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-
-  if (path === '/' || path.startsWith('/feed')) {
-    return <FeedPageSkeleton />;
-  }
-  if (path.startsWith('/login')) {
-    return <LoginSkeleton />;
-  }
-  if (path.startsWith('/animal/')) {
-    return (
-      <div className="animal-profile-page">
-        <AnimalProfileSkeleton />
-      </div>
-    );
-  }
-  if (path.startsWith('/chat/') || path.startsWith('/foundation/chat/') || path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
-    return <ChatListSkeleton />;
-  }
-  if (path.startsWith('/donation')) {
-    return <DonationSkeleton />;
-  }
-  if (path.startsWith('/profile')) {
-    return <UserProfileSkeleton />;
-  }
-  if (path.startsWith('/foundation/animals')) {
-    return <FoundationAnimalsSkeleton />;
-  }
-  if (path.startsWith('/report')) {
-    return <IncidentReportSkeleton />;
-  }
-  if (path.startsWith('/foundation/incidents')) {
-    return <FoundationIncidentsSkeleton />;
-  }
-  if (path.startsWith('/foundation/needs')) {
-    return <FoundationNeedsSkeleton />;
-  }
-  if (path.startsWith('/foundation/pending')) {
-    return <FoundationPendingSkeleton />;
-  }
-  if (path === '/foundation' || path.startsWith('/foundation/dashboard')) {
-    return <FoundationDashboardSkeleton />;
-  }
-  if (path.startsWith('/verify-user') || path.includes('/new') || path.includes('/edit') || path.startsWith('/foundation/onboarding')) {
-    return <FormPageSkeleton />;
-  }
-  if (path.startsWith('/adoption/timeline')) {
-    return <AdoptionTimelineSkeleton />;
-  }
-  if (path.startsWith('/adoption/followup')) {
-    return <AdoptionFollowupSkeleton />;
-  }
-
-  return <UniversalPageSkeleton />;
-};
+const PageLoader = () => <RouteSkeleton />;
 
 // RoleEnforcer: บังคับ redirect ตาม role + verification status
 // - foundation ที่ยังไม่ approved → redirect ไป /foundation/pending

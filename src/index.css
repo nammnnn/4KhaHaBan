@@ -752,3 +752,15 @@ button {
   padding: 20px;
   box-shadow: var(--elev-raised);
 }
+
+/* First-load menu placeholders (BootSkeleton in Skeletons.jsx) */
+.boot-nav-item { pointer-events: none; }
+.boot-nav-item__icon { display: block; width: 24px; height: 24px; border-radius: 8px; }
+.boot-nav-item__label { display: block; width: 44px; height: 10px; margin-top: 4px; }
+@media (min-width: 768px) {
+  .boot-nav-item--phone { display: none; }
+  .boot-nav-item__label { width: 80px; height: 14px; margin-top: 0; }
+}
+@media (max-width: 767px) {
+  .boot-nav-user { display: none; }
+}
