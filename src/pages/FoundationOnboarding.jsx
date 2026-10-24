@@ -411,30 +411,23 @@ const FoundationOnboarding = () => {
           marginBottom: '24px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '12px',
-            position: 'relative',
-          }}>
+          {/* Phones: other steps shrink to their number so the current step's title fits (onb-steps in index.css) */}
+          <div className="onb-steps">
             {stepsList.map((s) => {
               const isActive = step === s.number;
               const isDone = step > s.number;
               return (
                 <div
                   key={s.number}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    opacity: isActive || isDone ? 1 : 0.5,
-                  }}
+                  className={`onb-step ${isActive ? 'is-active' : ''}`}
+                  aria-current={isActive ? 'step' : undefined}
+                  style={{ opacity: isActive || isDone ? 1 : 0.5 }}
                 >
                   <div style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    backgroundColor: isDone ? '#059669' : isActive ? '#D97706' : '#F3F4F6',
+                    backgroundColor: isDone ? 'var(--success-fill)' : isActive ? 'var(--primary-strong)' : '#F3F4F6',
                     color: isDone || isActive ? '#FFFFFF' : '#6B7280',
                     display: 'flex',
                     alignItems: 'center',
@@ -446,7 +439,7 @@ const FoundationOnboarding = () => {
                   }}>
                     {isDone ? <CheckCircle2 size={18} /> : s.number}
                   </div>
-                  <div style={{ overflow: 'hidden' }}>
+                  <div className="onb-step__title" style={{ overflow: 'hidden', minWidth: 0 }}>
                     <div style={{
                       fontSize: '0.85rem',
                       fontWeight: isActive ? 600 : 500,
@@ -768,7 +761,7 @@ const FoundationOnboarding = () => {
                           คลิกบนแผนที่หรือลากหมุดสีแดงเพื่อปรับจุดพิกัด
                         </span>
                         {formData.latitude && formData.longitude && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#059669', fontSize: '0.74rem', fontWeight: 600 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--success-fill)', fontSize: '0.74rem', fontWeight: 600 }}>
                             <CheckCircle2 size={13} /> พิกัด: {Number(formData.latitude).toFixed(5)}, {Number(formData.longitude).toFixed(5)}
                           </span>
                         )}
@@ -941,9 +934,9 @@ const FoundationOnboarding = () => {
                             alignItems: 'center',
                             gap: '4px',
                             fontSize: '0.75rem',
-                            color: '#059669',
+                            color: 'var(--success-fill)',
                             fontWeight: 600,
-                            backgroundColor: '#ECFDF5',
+                            backgroundColor: 'var(--success-soft)',
                             padding: '3px 8px',
                             borderRadius: '6px',
                             flexShrink: 0,
@@ -1167,7 +1160,7 @@ const FoundationOnboarding = () => {
                     >
                       <span style={{ color: '#4B5563' }}>{getDocLabel(docType)}</span>
                       {file ? (
-                        <span style={{ color: '#059669', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ color: 'var(--success-fill)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <CheckCircle2 size={15} /> {file.name}
                         </span>
                       ) : (
@@ -1267,7 +1260,7 @@ const FoundationOnboarding = () => {
                   gap: '8px',
                   height: '42px',
                   padding: '0 24px',
-                  backgroundColor: isSubmitting ? '#9CA3AF' : '#059669',
+                  backgroundColor: isSubmitting ? '#9CA3AF' : 'var(--success-fill)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '0.875rem',
@@ -1278,10 +1271,10 @@ const FoundationOnboarding = () => {
                   transition: 'background-color 0.15s',
                 }}
                 onMouseEnter={e => {
-                  if (!isSubmitting) e.currentTarget.style.backgroundColor = '#047857';
+                  if (!isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success)';
                 }}
                 onMouseLeave={e => {
-                  if (!isSubmitting) e.currentTarget.style.backgroundColor = '#059669';
+                  if (!isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success-fill)';
                 }}
               >
                 {isSubmitting ? (

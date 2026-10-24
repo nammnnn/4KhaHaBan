@@ -252,8 +252,8 @@ function IncidentReport() {
       const result = await api.submitIncidentReport({
         userId: user?.id,
         animalType,
-        // Stored format the foundation dashboard already reads
-        symptoms: urgencyLevel === 'critical' ? `[ฉุกเฉินวิกฤต] ${symptoms}` : symptoms,
+        symptoms,
+        urgency: urgencyLevel,
         locationText,
         latitude: coordinates?.latitude,
         longitude: coordinates?.longitude,

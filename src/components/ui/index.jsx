@@ -1,7 +1,9 @@
 // Shared UI components. Spec: DESIGN.md §7.
 import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Loader2, RotateCw } from 'lucide-react';
+import { PetScene } from '../motion/PetScene';
+import { useI18n } from '../../i18n';
 import { cn } from '../../lib/utils';
 import './ui.css';
 import { MOTION } from '../../lib/motion';
@@ -75,17 +77,42 @@ export function Chip({ onPhoto, className, children, ...props }) {
   return <span className={cn('ui-chip', onPhoto && 'ui-chip--on-photo', className)} {...props}>{children}</span>;
 }
 
-export function EmptyState({ icon: Icon, title, text, action }) {
+// `art` replaces the icon with an illustration (e.g. <PetScene />) and lets the content rise in.
+export function EmptyState({ icon: Icon, art, title, text, action, children }) {
   return (
-    <div className="ui-empty">
-      {Icon && (
+    <div className={cn('ui-empty', art && 'ui-empty--anim')}>
+      {art ? <div className="ui-empty__art">{art}</div> : Icon && (
         <div className="ui-empty__icon" aria-hidden="true">
           <Icon size={40} />
         </div>
       )}
+      {children}
       <h3 className="ui-empty__title">{title}</h3>
       {text && <p className="ui-empty__text">{text}</p>}
       {action && <div className="ui-empty__action">{action}</div>}
+    </div>
+  );
+}
+
+// Shown instead of an empty state when data failed to load, so "nothing here" is never a lie.
+export function LoadError({ onRetry, title, text, compact }) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const retry = async () => {
+    if (!onRetry) return window.location.reload();
+    setBusy(true);
+    try { await onRetry(); } finally { setBusy(false); }
+  };
+  return (
+    <div className={cn('ui-empty ui-empty--anim ui-load-error', compact && 'ui-load-error--compact', busy && 'is-busy')} role="alert">
+      <div className="ui-empty__art"><PetScene variant="load" size={compact ? 'sm' : 'md'} /></div>
+      <h3 className="ui-empty__title">{title || t('err.load.title')}</h3>
+      <p className="ui-empty__text">{text || t('err.load.text')}</p>
+      <div className="ui-empty__action">
+        <Button variant="secondary" onClick={retry} loading={busy}>
+          {!busy && <RotateCw size={16} />} {t('err.retry')}
+        </Button>
+      </div>
     </div>
   );
 }

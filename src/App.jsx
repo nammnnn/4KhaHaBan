@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Loader, AlertCircle } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navigation } from './components/Navigation';
@@ -8,55 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import { ToastProvider } from './components/ui';
 import { LanguageProvider } from './i18n';
-
-// Error Boundary to prevent blank white screens
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center' }}>
-          <div style={{ maxWidth: '420px', background: 'white', padding: '28px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.06)', border: '1px solid #E5E7EB' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <AlertCircle size={26} />
-            </div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>เกิดข้อผิดพลาดในการแสดงผล</h2>
-            <p style={{ fontSize: '0.875rem', color: '#6B7280', margin: '0 0 20px', lineHeight: 1.5 }}>
-              ระบบพบปัญหาชั่วคราวในการโหลดข้อมูล กรุณาลองรีเฟรชหน้าจอใหม่อีกครั้ง
-            </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{ flex: 1, padding: '10px 16px', backgroundColor: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                โหลดหน้านี้ใหม่
-              </button>
-              <button 
-                onClick={() => window.location.href = '/'}
-                style={{ flex: 1, padding: '10px 16px', backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #D1D5DB', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                กลับหน้าหลัก
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import { ErrorBoundary, NotFound } from './components/ErrorScreens';
 
 // Lazy loaded routes for performance (Code Splitting)
 const Feed = React.lazy(() => import('./pages/Feed'));
@@ -82,83 +33,10 @@ const FoundationNeeds = React.lazy(() => import('./pages/FoundationNeeds'));
 const AdoptionFollowup = React.lazy(() => import('./pages/AdoptionFollowup'));
 const AdoptionTimeline = React.lazy(() => import('./pages/AdoptionTimeline'));
 
-import {
-  FeedPageSkeleton,
-  FeedCardSkeleton,
-  AnimalProfileSkeleton,
-  ChatListSkeleton,
-  ChatRoomSkeleton,
-  DonationSkeleton,
-  IncidentReportSkeleton,
-  UserProfileSkeleton,
-  FoundationDashboardSkeleton,
-  FoundationAnimalsSkeleton,
-  FoundationIncidentsSkeleton,
-  FoundationNeedsSkeleton,
-  FoundationPendingSkeleton,
-  FormPageSkeleton,
-  AdoptionTimelineSkeleton,
-  AdoptionFollowupSkeleton,
-  UniversalPageSkeleton,
-  LoginSkeleton
-} from './components/Skeletons';
+import { RouteSkeleton } from './components/Skeletons';
 
 // Route-Adaptive Skeleton Fallback (100% Skeleton Load, no spinner)
-const PageLoader = () => {
-  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-
-  if (path === '/' || path.startsWith('/feed')) {
-    return <FeedPageSkeleton />;
-  }
-  if (path.startsWith('/login')) {
-    return <LoginSkeleton />;
-  }
-  if (path.startsWith('/animal/')) {
-    return (
-      <div className="animal-profile-page">
-        <AnimalProfileSkeleton />
-      </div>
-    );
-  }
-  if (path.startsWith('/chat/') || path.startsWith('/foundation/chat/') || path.startsWith('/matches') || path.startsWith('/foundation/matches')) {
-    return <ChatListSkeleton />;
-  }
-  if (path.startsWith('/donation')) {
-    return <DonationSkeleton />;
-  }
-  if (path.startsWith('/profile')) {
-    return <UserProfileSkeleton />;
-  }
-  if (path.startsWith('/foundation/animals')) {
-    return <FoundationAnimalsSkeleton />;
-  }
-  if (path.startsWith('/report')) {
-    return <IncidentReportSkeleton />;
-  }
-  if (path.startsWith('/foundation/incidents')) {
-    return <FoundationIncidentsSkeleton />;
-  }
-  if (path.startsWith('/foundation/needs')) {
-    return <FoundationNeedsSkeleton />;
-  }
-  if (path.startsWith('/foundation/pending')) {
-    return <FoundationPendingSkeleton />;
-  }
-  if (path === '/foundation' || path.startsWith('/foundation/dashboard')) {
-    return <FoundationDashboardSkeleton />;
-  }
-  if (path.startsWith('/verify-user') || path.includes('/new') || path.includes('/edit') || path.startsWith('/foundation/onboarding')) {
-    return <FormPageSkeleton />;
-  }
-  if (path.startsWith('/adoption/timeline')) {
-    return <AdoptionTimelineSkeleton />;
-  }
-  if (path.startsWith('/adoption/followup')) {
-    return <AdoptionFollowupSkeleton />;
-  }
-
-  return <UniversalPageSkeleton />;
-};
+const PageLoader = () => <RouteSkeleton />;
 
 // RoleEnforcer: บังคับ redirect ตาม role + verification status
 // - foundation ที่ยังไม่ approved → redirect ไป /foundation/pending
@@ -273,6 +151,8 @@ function App() {
                       <Route path="/adoption/timeline/:matchId" element={<AdoptionTimeline />} />
                       <Route path="/foundation/followup/:matchId" element={<AdoptionFollowup />} />
                       <Route path="/foundation/timeline/:matchId" element={<AdoptionTimeline />} />
+
+                      <Route path="*" element={<NotFound />} />
                     </Route>
 
                     {/* Super Admin Routes */}

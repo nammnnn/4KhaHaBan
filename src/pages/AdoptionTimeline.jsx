@@ -16,14 +16,22 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ui';
+import { AdoptionUnavailable } from '../components/ErrorScreens';
+import { PET_PLACEHOLDER } from '../lib/avatar';
+import { followupLabel, milestoneText, formatDate } from '../lib/followup';
+import { useI18n, localizeAge } from '../i18n';
 import { AdoptionTimelineSkeleton } from '../components/Skeletons';
 
 export default function AdoptionTimeline() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const toast = useToast();
+  const { t, lang } = useI18n();
 
   const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState(null); // null | 'error' | 'notFound'
   const [matchData, setMatchData] = useState(null);
   const [animal, setAnimal] = useState(null);
   const [followupInfo, setFollowupInfo] = useState({ followups: [], milestones: [], nextDue: null });
@@ -36,20 +44,23 @@ export default function AdoptionTimeline() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadState(null);
       const info = await api.getAdoptionFollowups(matchId);
       setFollowupInfo(info);
+      if (!info.match) setLoadState('notFound');
 
       if (info.match) {
         setMatchData(info.match);
         if (info.match.animal) {
           setAnimal(info.match.animal);
         } else if (info.match.animal_id) {
-          const aData = await api.getAnimalById(info.match.animal_id);
+          const aData = await api.getAnimalById(info.match.animal_id).catch(() => null);
           setAnimal(aData);
         }
       }
     } catch (err) {
       console.error('Error fetching followup timeline:', err);
+      setLoadState('error');
     } finally {
       setLoading(false);
     }
@@ -68,11 +79,11 @@ export default function AdoptionTimeline() {
   const handleReview = async (followupId) => {
     try {
       await api.reviewAdoptionFollowup(followupId, matchId);
-      setToastMessage('ยืนยันผลการตรวจสอบเรียบร้อยแล้ว');
+      setToastMessage(t('tl.reviewed'));
       fetchData();
     } catch (err) {
       console.error('Error reviewing followup:', err);
-      alert('เกิดข้อผิดพลาดในการตรวจสอบ');
+      toast(t('tl.reviewFail'), { tone: 'error' });
     }
   };
 
@@ -80,34 +91,33 @@ export default function AdoptionTimeline() {
     try {
       setSendingReminder(milestoneLabel);
       await api.sendFollowupReminder(matchId, milestoneLabel);
-      setToastMessage('ส่งข้อความแจ้งเตือนผู้รับเลี้ยงผ่านห้องแชทแล้ว');
+      setToastMessage(t('tl.reminded'));
     } catch (err) {
       console.error('Error sending reminder:', err);
-      alert('เกิดข้อผิดพลาดในการส่งแจ้งเตือน');
+      toast(t('tl.remindFail'), { tone: 'error' });
     } finally {
       setSendingReminder(null);
     }
   };
 
-  const formatThaiDate = (dateStr) => {
-    if (!dateStr) return '-';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatThaiDate = (dateStr) => formatDate(dateStr, lang);
+
+  if (!loading && loadState) {
+    return <AdoptionUnavailable state={loadState} onRetry={fetchData} />;
+  }
 
   if (loading) {
     return <AdoptionTimelineSkeleton />;
   }
 
-  const petImage = animal?.images?.[0] || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=600';
-  const petName = animal?.name || 'น้องสัตว์เลี้ยง';
-  const petSpecies = animal?.species === 'cat' ? 'แมว' : 'สุนัข';
-  const petAge = animal?.age ? `${animal.age} ปี` : 'อายุ 2 ปี';
-  const petGender = animal?.gender === 'female' ? 'เพศเมีย' : 'เพศผู้';
+  // Facts come from the animal record (type/age/gender); nothing is filled in when missing
+  const petImage = animal?.images?.[0] || PET_PLACEHOLDER;
+  const petName = animal?.name || t('fmc.pet');
+  const petFacts = [
+    { dog: t('af.dog'), cat: t('af.cat') }[animal?.type || animal?.species],
+    animal?.age ? t('fu.age', { age: localizeAge(animal.age, lang) }) : null,
+    { male: t('af.male'), female: t('af.female') }[animal?.gender],
+  ].filter(Boolean).join(' | ');
 
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: '#FAF8F5', fontFamily: 'Prompt, sans-serif', padding: '24px 16px 80px', boxSizing: 'border-box' }}>
@@ -135,12 +145,12 @@ export default function AdoptionTimeline() {
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              aria-label="ย้อนกลับ"
+              aria-label={t('fnd.back')}
             >
               <ChevronLeft size={20} />
             </button>
             <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
-              ประวัติการติดตาม
+              {t('tl.title')}
             </h1>
           </div>
 
@@ -151,15 +161,15 @@ export default function AdoptionTimeline() {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 12px',
-                backgroundColor: '#DCFCE7',
-                color: '#15803D',
+                backgroundColor: 'var(--success-soft)',
+                color: 'var(--success)',
                 borderRadius: '8px',
                 fontSize: '0.82rem',
                 fontWeight: 600,
-                border: '1px solid #BBF7D0'
+                border: '1px solid var(--success-line)'
               }}
             >
-              <CheckCircle2 size={15} /> ครบทุกรอบแล้ว
+              <CheckCircle2 size={15} /> {t('tl.allDone')}
             </span>
           ) : followupInfo?.isDueForSubmission ? (
             <Link
@@ -169,7 +179,7 @@ export default function AdoptionTimeline() {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 12px',
-                backgroundColor: '#15803D',
+                backgroundColor: 'var(--success)',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '0.82rem',
@@ -178,7 +188,7 @@ export default function AdoptionTimeline() {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
               }}
             >
-              <Camera size={15} /> อัปเดตสถานะ
+              <Camera size={15} /> {t('tl.update')}
             </Link>
           ) : (
             <button
@@ -187,7 +197,7 @@ export default function AdoptionTimeline() {
                 const nd = followupInfo?.nextDue;
                 const days = nd?.daysRemaining || 0;
                 const daysUntil = nd?.daysUntilOpen || Math.max(1, days - 7);
-                setToastMessage(`ยังไม่ถึงรอบส่งอัปเดต (${nd?.milestoneLabel || 'รอบถัดไป'})\nระบบจะเปิดให้ส่งเมื่อถึงกำหนดในวันที่ ${formatThaiDate(nd?.dueDate)} (เปิดส่งล่วงหน้า 7 วัน หรืออีก ${daysUntil} วัน)`);
+                setToastMessage(t('tl.notYetToast', { label: milestoneText(nd?.milestoneIndex, t), date: formatThaiDate(nd?.dueDate), n: daysUntil }));
               }}
               style={{
                 display: 'inline-flex',
@@ -205,9 +215,9 @@ export default function AdoptionTimeline() {
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#E5E7EB'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-              title="ยังไม่ถึงกำหนดส่งอัปเดต"
+              title={t('tl.notYetTitle')}
             >
-              <Clock size={15} /> รอถึงกำหนดส่ง
+              <Clock size={15} /> {t('tl.waiting')}
             </button>
           )}
         </div>
@@ -234,20 +244,20 @@ export default function AdoptionTimeline() {
               {petName}
             </h2>
             <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#6B7280' }}>
-              {petSpecies} | อายุ {petAge} | {petGender}
+              {petFacts}
             </p>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              backgroundColor: '#DCFCE7',
-              color: '#15803D',
+              backgroundColor: 'var(--success-soft)',
+              color: 'var(--success)',
               fontSize: '0.75rem',
               fontWeight: 600,
               padding: '2px 8px',
               borderRadius: '6px'
             }}>
-              <CheckCircle2 size={12} /> อยู่กับเจ้าของแล้ว
+              <CheckCircle2 size={12} /> {t('fu.home')}
             </span>
           </div>
         </div>
@@ -284,7 +294,7 @@ export default function AdoptionTimeline() {
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',
-                    backgroundColor: isSubmitted ? '#16A34A' : isOverdue ? '#DC2626' : '#9CA3AF',
+                    backgroundColor: isSubmitted ? 'var(--success-fill)' : isOverdue ? '#DC2626' : '#9CA3AF',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
@@ -313,7 +323,7 @@ export default function AdoptionTimeline() {
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <div>
                         <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: '#111827' }}>
-                          {m.milestoneLabel}
+                          {milestoneText(m.milestoneIndex, t)}
                         </h3>
                         <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                           <Calendar size={12} /> {formatThaiDate(submission ? submission.submitted_at : m.dueDate)}
@@ -326,15 +336,15 @@ export default function AdoptionTimeline() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          backgroundColor: '#DCFCE7',
-                          color: '#15803D',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success)',
                           fontSize: '0.72rem',
                           fontWeight: 600,
                           padding: '3px 8px',
                           borderRadius: '6px'
                         }}>
                           <Check size={12} strokeWidth={3} />
-                          {submission.is_reviewed ? 'ตรวจสอบแล้ว' : 'ส่งรายงานแล้ว'}
+                          {submission.is_reviewed ? t('tl.isReviewed') : t('tl.submitted')}
                         </span>
                       ) : isOverdue ? (
                         <span style={{
@@ -348,21 +358,21 @@ export default function AdoptionTimeline() {
                           padding: '3px 8px',
                           borderRadius: '6px'
                         }}>
-                          เกินกำหนด {m.daysOverdue} วัน
+                          {t('tl.overdue', { n: m.daysOverdue })}
                         </span>
                       ) : m.isOpenForSubmission ? (
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          backgroundColor: '#DCFCE7',
-                          color: '#15803D',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success)',
                           fontSize: '0.72rem',
                           fontWeight: 600,
                           padding: '3px 8px',
                           borderRadius: '6px'
                         }}>
-                          ถึงกำหนดส่งแล้ว
+                          {t('tl.due')}
                         </span>
                       ) : (
                         <span style={{
@@ -376,7 +386,7 @@ export default function AdoptionTimeline() {
                           padding: '3px 8px',
                           borderRadius: '6px'
                         }}>
-                          รอถึงกำหนด
+                          {t('tl.upcoming')}
                         </span>
                       )}
                     </div>
@@ -417,7 +427,11 @@ export default function AdoptionTimeline() {
                           lineHeight: 1.5,
                           marginTop: '4px'
                         }}>
-                          <strong>สถานะ:</strong> {submission.health_status || 'แข็งแรงดี'} / {submission.food_status || 'กินอาหารปกติ'} / {submission.behavior_status || 'ปรับตัวได้ดี'}
+                          <strong>{t('tl.status')}</strong> {[
+                            followupLabel('health', submission.health_status, lang),
+                            followupLabel('food', submission.food_status, lang),
+                            followupLabel('behavior', submission.behavior_status, lang),
+                          ].filter(Boolean).join(' / ') || '-'}
                           {submission.notes && (
                             <div style={{ marginTop: '4px', color: '#6B7280', fontStyle: 'italic' }}>
                               "{submission.notes}"
@@ -435,7 +449,7 @@ export default function AdoptionTimeline() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                backgroundColor: '#15803D',
+                                backgroundColor: 'var(--success)',
                                 color: '#FFFFFF',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -445,7 +459,7 @@ export default function AdoptionTimeline() {
                                 cursor: 'pointer'
                               }}
                             >
-                              <Check size={14} /> ตรวจสอบความถูกต้อง
+                              <Check size={14} /> {t('tl.review')}
                             </button>
                           </div>
                         )}
@@ -456,7 +470,7 @@ export default function AdoptionTimeline() {
                     {isOverdue && !isSubmitted && (
                       <div style={{ marginTop: '6px' }}>
                         <p style={{ margin: '0 0 10px', fontSize: '0.8rem', color: '#B91C1C' }}>
-                          ยังไม่ได้รับการอัปเดตสถานะ กรุณาแจ้งเตือนผู้รับเลี้ยง
+                          {t('tl.noUpdate')}
                         </p>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {isFoundation ? (
@@ -483,7 +497,7 @@ export default function AdoptionTimeline() {
                               ) : (
                                 <Bell size={14} />
                               )}
-                              แจ้งเตือนผู้รับเลี้ยง
+                              {t('tl.remind')}
                             </button>
                           ) : (
                             <Link
@@ -492,7 +506,7 @@ export default function AdoptionTimeline() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                backgroundColor: '#15803D',
+                                backgroundColor: 'var(--success)',
                                 color: '#FFFFFF',
                                 borderRadius: '8px',
                                 padding: '6px 12px',
@@ -501,7 +515,7 @@ export default function AdoptionTimeline() {
                                 textDecoration: 'none'
                               }}
                             >
-                              <Camera size={14} /> อัปเดตสถานะรอบนี้
+                              <Camera size={14} /> {t('tl.updateThis')}
                             </Link>
                           )}
                         </div>
@@ -513,8 +527,8 @@ export default function AdoptionTimeline() {
                       <div style={{ marginTop: '8px' }}>
                         {m.isOpenForSubmission ? (
                           <div>
-                            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>
-                              เปิดให้ส่งรายงานแล้ว (ถึงกำหนด {formatThaiDate(m.dueDate)})
+                            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--success)', fontWeight: 600 }}>
+                              {t('tl.openNow', { date: formatThaiDate(m.dueDate) })}
                             </p>
                             {!isFoundation && (
                               <Link
@@ -523,7 +537,7 @@ export default function AdoptionTimeline() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '6px',
-                                  backgroundColor: '#15803D',
+                                  backgroundColor: 'var(--success)',
                                   color: '#FFFFFF',
                                   borderRadius: '8px',
                                   padding: '6px 12px',
@@ -532,17 +546,17 @@ export default function AdoptionTimeline() {
                                   textDecoration: 'none'
                                 }}
                               >
-                                <Camera size={14} /> อัปเดตสถานะรอบนี้
+                                <Camera size={14} /> {t('tl.updateThis')}
                               </Link>
                             )}
                           </div>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: '#6B7280' }}>
-                              กำหนดส่งอัปเดตรอบนี้อีก {m.daysRemaining} วัน
+                              {t('tl.dueIn', { n: m.daysRemaining })}
                             </p>
                             <span style={{ fontSize: '0.72rem', color: '#9CA3AF', backgroundColor: '#F9FAFB', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E5E7EB' }}>
-                              เปิดส่งล่วงหน้า 7 วัน
+                              {t('tl.opens7')}
                             </span>
                           </div>
                         )}
@@ -626,7 +640,7 @@ export default function AdoptionTimeline() {
             fontWeight: 500,
             zIndex: 9999
           }}>
-            <Check size={16} color="#10B981" /> {toastMessage}
+            <Check size={16} color="#059669" /> {toastMessage}
             <button
               type="button"
               onClick={() => setToastMessage(null)}

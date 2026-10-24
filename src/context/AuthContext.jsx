@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { BootSkeleton } from '../components/Skeletons';
 import { supabase } from '../services/supabaseClient';
 
 const AuthContext = createContext({});
@@ -538,7 +539,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? <BootSkeleton /> : children}
     </AuthContext.Provider>
   );
 };

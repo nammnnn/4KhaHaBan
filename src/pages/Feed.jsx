@@ -6,7 +6,7 @@ import { SwipeCard } from '../components/SwipeCard';
 import { displayNames } from '../lib/animal';
 import { hasAllTags, FILTERABLE_TAG_IDS } from '../lib/tags';
 import { useI18n, localizeDistance } from '../i18n';
-import { Button, Dialog, EmptyState, useToast } from '../components/ui';
+import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { FilterModal } from '../components/FilterModal';
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { FeedCardSkeleton } from '../components/Skeletons';
@@ -65,6 +65,7 @@ function Feed() {
   cardsRef.current = cards;
   const poolRef = useRef([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showMatch, setShowMatch] = useState(false);
   const [swipeTrigger, setSwipeTrigger] = useState(null);
   const [history, setHistory] = useState([]);
@@ -108,6 +109,7 @@ function Feed() {
   const loadAnimals = async (appliedFilters = filters, forcedCoords = null) => {
     const seq = ++loadSeqRef.current;
     setLoading(true);
+    setLoadError(false);
     try {
       let currentFilters = appliedFilters;
       
@@ -117,10 +119,7 @@ function Feed() {
           ? api.getUserPreferences(user?.id).catch(() => ({ maxDistance: 100, animalType: 'all', gender: 'all' }))
           : Promise.resolve(appliedFilters),
         Promise.resolve(forcedCoords || userCoords || null),
-        api.getAnimals(user?.id).catch(err => {
-          console.error("Failed to fetch animals from API:", err);
-          return [];
-        })
+        api.getAnimals(user?.id)
       ]);
 
       if (seq !== loadSeqRef.current) return;
@@ -172,6 +171,11 @@ function Feed() {
       setPendingMatch(null);
     } catch (error) {
       console.error("Failed to fetch animals", error);
+      if (seq === loadSeqRef.current) {
+        poolRef.current = [];
+        setCards([]);
+        setLoadError(true);
+      }
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
@@ -524,6 +528,8 @@ function Feed() {
       <div className="card-stack-container">
         {loading ? (
           <FeedCardSkeleton />
+        ) : cards.length === 0 && loadError ? (
+          <LoadError onRetry={() => loadAnimals()} />
         ) : cards.length === 0 ? (
           <EmptyState
             icon={Search}

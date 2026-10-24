@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormPageSkeleton } from '../components/Skeletons';
+import { Button } from '../components/ui';
+import { useI18n } from '../i18n';
+import { ASSESSMENT } from '../lib/assessment';
 import { MOTION } from '../lib/motion';
 
 // Thai national ID check digit — same rule the database enforces (migration 023)
@@ -18,6 +21,13 @@ function isValidThaiId(digits) {
 }
 
 // รายการคำถามแบบประเมินความพร้อมก่อนรับเลี้ยง
+// "1101700230708" or "1-1017-00230-70-8" -> "1-xxxx-xxxxx-x0-8" (first digit and last two shown)
+function maskIdCard(id) {
+  const d = String(id || '').replace(/\D/g, '');
+  if (d.length !== 13) return d ? 'x-xxxx-xxxxx-xx-x' : '-';
+  return `${d[0]}-xxxx-xxxxx-x${d[11]}-${d[12]}`;
+}
+
 const ASSESSMENT_QUESTIONS = [
   {
     id: 'housing',
@@ -78,6 +88,7 @@ const ASSESSMENT_QUESTIONS = [
 
 export default function UserVerification() {
   const { user, profile, userVerificationStatus, verifyUser, getUserVerificationData } = useAuth();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const returnUrl = location.state?.from || '/profile';
@@ -168,19 +179,19 @@ export default function UserVerification() {
     const rawPhone = formData.phone.replace(/\D/g, '');
 
     if (!formData.full_name.trim()) {
-      setErrorMsg('กรุณากรอกชื่อ - นามสกุล');
+      setErrorMsg(t('uv.err.name'));
       return;
     }
     if (rawId.length !== 13) {
-      setErrorMsg('เลขประจำตัวประชาชนต้องมี 13 หลัก');
+      setErrorMsg(t('uv.err.id13'));
       return;
     }
     if (!isValidThaiId(rawId)) {
-      setErrorMsg('เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
+      setErrorMsg(t('uv.err.idBad'));
       return;
     }
     if (!/^0\d{8,9}$/.test(rawPhone)) {
-      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
+      setErrorMsg(t('uv.err.phone'));
       return;
     }
 
@@ -199,22 +210,22 @@ export default function UserVerification() {
 
     if (!formData.full_name.trim()) {
       setStep(1);
-      setErrorMsg('กรุณากรอกชื่อ - นามสกุล');
+      setErrorMsg(t('uv.err.name'));
       return;
     }
     if (rawId.length !== 13 || !isValidThaiId(rawId)) {
       setStep(1);
-      setErrorMsg(rawId.length !== 13 ? 'เลขประจำตัวประชาชนต้องมี 13 หลัก' : 'เลขประจำตัวประชาชนไม่ถูกต้อง กรุณาตรวจอีกครั้ง');
+      setErrorMsg(rawId.length !== 13 ? t('uv.err.id13') : t('uv.err.idBad'));
       return;
     }
     if (!/^0\d{8,9}$/.test(rawPhone)) {
       setStep(1);
-      setErrorMsg('เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 0 และมี 9 หรือ 10 หลัก');
+      setErrorMsg(t('uv.err.phone'));
       return;
     }
 
     if (!isAssessmentComplete) {
-      setErrorMsg('กรุณาตอบแบบประเมินความพร้อมให้ครบทั้ง 5 ข้อ');
+      setErrorMsg(t('uv.err.answers'));
       return;
     }
 
@@ -230,7 +241,7 @@ export default function UserVerification() {
 
     setIsSubmitting(false);
     if (result?.error) {
-      setErrorMsg(result.error.message || 'เกิดข้อผิดพลาดในการยืนยันตัวตน');
+      setErrorMsg(t('uv.err.save'));
     } else {
       setSuccess(true);
       setIsEditing(false);
@@ -296,11 +307,11 @@ export default function UserVerification() {
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              aria-label="ย้อนกลับ"
+              aria-label={t('fnd.back')}
             >
               <ChevronLeft size={20} />
             </div>
-            <span>{returnUrl === '/' ? 'กลับไปหน้าค้นหา (Feed)' : 'กลับไปหน้าเดิม'}</span>
+            <span>{returnUrl === '/' ? t('uv.backFeed') : t('uv.back')}</span>
           </button>
 
           <div style={{
@@ -315,8 +326,8 @@ export default function UserVerification() {
                 width: '60px',
                 height: '60px',
                 borderRadius: '14px',
-                backgroundColor: '#ECFDF5',
-                color: '#059669',
+                backgroundColor: 'var(--success-soft)',
+                color: 'var(--success-fill)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -325,10 +336,10 @@ export default function UserVerification() {
                 <CheckCircle2 size={34} />
               </div>
               <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
-                ยืนยันตัวตนเรียบร้อยแล้ว
+                {t('uv.done.title')}
               </h1>
               <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
-                ข้อมูลของคุณได้รับการยืนยันและพร้อมส่งมอบให้มูลนิธิตรวจสอบความพร้อมในการรับเลี้ยง
+                {t('uv.done.text')}
               </p>
             </div>
 
@@ -345,66 +356,35 @@ export default function UserVerification() {
               fontSize: '0.9rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '10px' }}>
-                <span style={{ color: '#6B7280' }}>ชื่อ - นามสกุล:</span>
+                <span style={{ color: '#6B7280' }}>{t('uv.name')}</span>
                 <strong style={{ color: '#111827' }}>{formData.full_name || '-'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '10px' }}>
-                <span style={{ color: '#6B7280' }}>เบอร์โทรศัพท์:</span>
+                <span style={{ color: '#6B7280' }}>{t('uv.phone')}</span>
                 <strong style={{ color: '#111827' }}>{formData.phone || '-'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '10px' }}>
-                <span style={{ color: '#6B7280' }}>เลขบัตรประชาชน:</span>
+                <span style={{ color: '#6B7280' }}>{t('uv.id')}</span>
                 <strong style={{ color: '#111827' }}>
-                  {formData.id_card_no ? `${formData.id_card_no.slice(0, 3)}-xxxx-xxxxx-${formData.id_card_no.slice(-2)}` : '-'}
+                  {maskIdCard(formData.id_card_no)}
                 </strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#6B7280' }}>แบบประเมินความพร้อม:</span>
-                <span style={{ color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CheckCircle2 size={15} /> ตอบครบ 5 ข้อ
+                <span style={{ color: '#6B7280' }}>{t('uv.assessment')}</span>
+                <span style={{ color: 'var(--success-fill)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={15} /> {t('uv.answeredAll')}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                style={{
-                  flex: 1,
-                  height: '44px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#D97706',
-                  border: '1px solid #FCD34D',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Edit3 size={16} /> แก้ไขข้อมูล / แบบประเมิน
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(returnUrl)}
-                style={{
-                  flex: 1,
-                  height: '44px',
-                  backgroundColor: '#D97706',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                {returnUrl === '/' ? 'ไปค้นหาสัตว์เลี้ยง (Feed)' : 'กลับสู่หน้าเดิม'}
-              </button>
+            {/* Shared buttons: stacked on phones (main action on top), side by side on wide screens */}
+            <div className="ui-dialog__actions">
+              <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                <Edit3 size={16} aria-hidden="true" /> {t('uv.edit')}
+              </Button>
+              <Button onClick={() => navigate(returnUrl)}>
+                {returnUrl === '/' ? t('uv.toFeed') : t('uv.back')}
+              </Button>
             </div>
           </div>
         </div>
@@ -460,11 +440,11 @@ export default function UserVerification() {
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              aria-label="ย้อนกลับ"
+              aria-label={t('fnd.back')}
             >
               <ChevronLeft size={20} />
             </div>
-            <span>{step === 2 ? 'กลับไปแก้ไขข้อมูลส่วนตัว' : (returnUrl === '/' ? 'กลับไปหน้าค้นหา (Feed)' : 'กลับไปหน้าโปรไฟล์')}</span>
+            <span>{step === 2 ? t('uv.backStep1') : (returnUrl === '/' ? t('uv.backFeed') : t('uv.backProfile'))}</span>
           </button>
         </div>
 
@@ -487,9 +467,9 @@ export default function UserVerification() {
             <ShieldCheck size={24} color="#D97706" style={{ flexShrink: 0 }} />
             <div>
               <strong style={{ display: 'block', color: '#B45309', marginBottom: '2px' }}>
-                ยืนยันตัวตนเพื่อเริ่มส่งคำขอรับเลี้ยงน้อง
+                {t('uv.title')}
               </strong>
-              กรอกข้อมูลและตอบแบบประเมินให้ครบถ้วน เมื่อเสร็จสิ้นระบบจะพาท่านกลับไปยังน้องสัตว์เลี้ยงทันที
+              {t('uv.lead')}
             </div>
           </div>
         )}
@@ -523,19 +503,19 @@ export default function UserVerification() {
 
           {success && (
             <div style={{
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
+              backgroundColor: 'var(--success-soft)',
+              border: '1px solid var(--success-line)',
               padding: '12px 14px',
               borderRadius: '8px',
               marginBottom: '20px',
               fontSize: '0.85rem',
-              color: '#059669',
+              color: 'var(--success-fill)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}>
               <CheckCircle2 size={16} />
-              <span>บันทึกข้อมูลและแบบประเมินสำเร็จ กำลังนำคุณกลับหน้าโปรไฟล์...</span>
+              <span>{t('uv.saved')}</span>
             </div>
           )}
 
@@ -564,14 +544,14 @@ export default function UserVerification() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                      ยืนยันตัวตนผู้รับเลี้ยง (KYC)
+                      {t('uv.s1.title')}
                     </h1>
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '9999px' }}>
-                      ขั้นตอน 1/2
+                      {t('uv.step', { n: 1 })}
                     </span>
                   </div>
                   <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: '2px 0 0' }}>
-                    ข้อมูลใช้สำหรับระบุตัวตนและติดต่อประสานงานกับมูลนิธิ
+                    {t('uv.s1.text')}
                   </p>
                 </div>
               </div>
@@ -580,11 +560,11 @@ export default function UserVerification() {
                 {/* Full Name */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                    ชื่อ - นามสกุล (ตามบัตรประชาชน) <span style={{ color: '#DC2626' }}>*</span>
+                    {t('uv.f.name')} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="เช่น นายสมชาย ใจดี"
+                    placeholder={t('uv.f.namePh')}
                     value={formData.full_name}
                     onChange={e => setFormData(p => ({ ...p, full_name: e.target.value }))}
                     style={{
@@ -605,7 +585,7 @@ export default function UserVerification() {
                 {/* National ID */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                    เลขประจำตัวประชาชน (13 หลัก) <span style={{ color: '#DC2626' }}>*</span>
+                    {t('uv.f.id')} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -626,18 +606,18 @@ export default function UserVerification() {
                     }}
                   />
                   <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                    พิมพ์เฉพาะตัวเลขได้ ระบบจะจัดรูปแบบขีด (-) ให้อัตโนมัติ
+                    {t('uv.f.idHint')}
                   </span>
                 </div>
 
                 {/* Phone */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                    เบอร์โทรศัพท์ติดต่อ <span style={{ color: '#DC2626' }}>*</span>
+                    {t('uv.f.phone')} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <input
                     type="tel"
-                    placeholder="เช่น 0812345678"
+                    placeholder={t('uv.f.phonePh')}
                     value={formData.phone}
                     onChange={e => setFormData(p => ({ ...p, phone: formatPhone(e.target.value) }))}
                     style={{
@@ -654,7 +634,7 @@ export default function UserVerification() {
                     }}
                   />
                   <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '4px', display: 'block' }}>
-                    เบอร์โทรที่สามารถติดต่อได้จริงเพื่อประสานงานรับเลี้ยง
+                    {t('uv.f.phoneHint')}
                   </span>
                 </div>
 
@@ -683,7 +663,7 @@ export default function UserVerification() {
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#B45309'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#D97706'}
                   >
-                    <span>ถัดไป: ทำแบบประเมินความพร้อม</span>
+                    <span>{t('uv.next')}</span>
                     <ArrowRight size={18} />
                   </button>
                 </div>
@@ -702,7 +682,7 @@ export default function UserVerification() {
               {/* Title Header */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: '0 0 12px' }}>
-                  แบบประเมินความพร้อมก่อนรับเลี้ยง
+                  {t('uv.s2.title')}
                 </h1>
 
                 {/* Progress Bar with count */}
@@ -717,12 +697,12 @@ export default function UserVerification() {
                     <div style={{
                       width: `${(answeredCount / 5) * 100}%`,
                       height: '100%',
-                      backgroundColor: '#059669',
+                      backgroundColor: 'var(--success-fill)',
                       borderRadius: '9999px',
                       transition: 'width 0.3s ease'
                     }} />
                   </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669', minWidth: '32px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success-fill)', minWidth: '32px' }}>
                     {answeredCount}/5
                   </span>
                 </div>
@@ -730,21 +710,21 @@ export default function UserVerification() {
 
               {/* Paw Banner */}
               <div style={{
-                backgroundColor: '#ECFDF5',
+                backgroundColor: 'var(--success-soft)',
                 borderRadius: '12px',
                 padding: '14px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 marginBottom: '24px',
-                border: '1px solid #A7F3D0'
+                border: '1px solid var(--success-line)'
               }}>
                 <div style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  backgroundColor: '#D1FAE5',
-                  color: '#059669',
+                  backgroundColor: 'var(--success-soft)',
+                  color: 'var(--success-fill)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -752,8 +732,8 @@ export default function UserVerification() {
                 }}>
                   <PawPrint size={22} />
                 </div>
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#065F46', lineHeight: 1.4 }}>
-                  เพื่อให้น้องได้รับการดูแลที่ดีที่สุด<br />กรุณาตอบคำถามให้ครบถ้วน
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)', lineHeight: 1.4 }}>
+                  {t('uv.s2.text')}
                 </span>
               </div>
 
@@ -780,8 +760,8 @@ export default function UserVerification() {
                           width: '28px',
                           height: '28px',
                           borderRadius: '8px',
-                          backgroundColor: '#ECFDF5',
-                          color: '#059669',
+                          backgroundColor: 'var(--success-soft)',
+                          color: 'var(--success-fill)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -797,7 +777,7 @@ export default function UserVerification() {
                           margin: 0,
                           lineHeight: 1.4
                         }}>
-                          {q.number}. {q.question}
+                          {q.number}. {t(`uv.q.${q.id}`)}
                         </h3>
                       </div>
 
@@ -819,7 +799,7 @@ export default function UserVerification() {
                                 gap: '10px',
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
-                                color: isChecked ? '#065F46' : '#4B5563',
+                                color: isChecked ? 'var(--success)' : '#4B5563',
                                 fontWeight: isChecked ? 600 : 400,
                                 userSelect: 'none'
                               }}
@@ -829,13 +809,13 @@ export default function UserVerification() {
                                 width: '20px',
                                 height: '20px',
                                 borderRadius: '50%',
-                                border: isChecked ? '6px solid #059669' : '2px solid #D1D5DB',
+                                border: isChecked ? '6px solid var(--success-fill)' : '2px solid #D1D5DB',
                                 backgroundColor: '#FFFFFF',
                                 boxSizing: 'border-box',
                                 transition: 'all 0.15s ease',
                                 flexShrink: 0
                               }} />
-                              <span>{opt}</span>
+                              <span>{lang === 'en' ? (ASSESSMENT.find((a) => a.id === q.id)?.options.find(([th]) => th === opt)?.[1] || opt) : opt}</span>
                             </label>
                           );
                         })}
@@ -862,7 +842,7 @@ export default function UserVerification() {
                     cursor: 'pointer'
                   }}
                 >
-                  ย้อนกลับ
+                  {t('fnd.back')}
                 </button>
                 <button
                   type="button"
@@ -871,7 +851,7 @@ export default function UserVerification() {
                   style={{
                     flex: 1,
                     height: '46px',
-                    backgroundColor: isAssessmentComplete ? '#059669' : '#9CA3AF',
+                    backgroundColor: isAssessmentComplete ? 'var(--success-fill)' : '#9CA3AF',
                     color: '#FFFFFF',
                     borderRadius: '8px',
                     border: 'none',
@@ -885,16 +865,16 @@ export default function UserVerification() {
                     boxShadow: isAssessmentComplete ? '0 2px 6px rgba(5, 150, 105, 0.25)' : 'none',
                     transition: 'background-color 0.15s'
                   }}
-                  onMouseEnter={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = '#047857'; }}
-                  onMouseLeave={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = '#059669'; }}
+                  onMouseEnter={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success)'; }}
+                  onMouseLeave={e => { if (isAssessmentComplete && !isSubmitting) e.currentTarget.style.backgroundColor = 'var(--success-fill)'; }}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="spin" size={18} />
-                      <span>กำลังบันทึกข้อมูล...</span>
+                      <span>{t('uv.saving')}</span>
                     </>
                   ) : (
-                    'ยืนยันข้อมูลและส่งแบบประเมิน'
+                    t('uv.submit')
                   )}
                 </button>
               </div>

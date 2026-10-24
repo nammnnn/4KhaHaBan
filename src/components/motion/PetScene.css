@@ -1,0 +1,60 @@
+/* Dog + cat scene for error screens (PetScene.jsx). Everything is CSS so it costs nothing to load;
+   the global prefers-reduced-motion rule in index.css freezes it. */
+.pet-scene { display: block; width: 260px; max-width: 100%; height: auto; overflow: visible; }
+.pet-scene--sm { width: 190px; }
+.pet-scene * { transform-box: fill-box; }
+
+.pet-scene__line { stroke: var(--line-200, #E7E5E4); stroke-width: 2; stroke-linecap: round; }
+.pet__shadow { fill: rgba(28, 25, 23, 0.06); transform-origin: 50% 50%; animation: pet-shadow 0.35s ease-in-out infinite alternate; }
+@keyframes pet-shadow { to { transform: scaleX(0.92); } }
+
+/* ---- Walk cycle: legs swing from the hip, body bobs twice per step ---- */
+.pet__leg { transform-origin: 50% 8%; animation: pet-leg 0.7s ease-in-out infinite; }
+.pet__leg--b { animation-delay: -0.35s; }
+@keyframes pet-leg { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+.pet--cat .pet__leg { animation-duration: 0.56s; }
+.pet--cat .pet__leg--b { animation-delay: -0.28s; }
+.pet--cat .pet__shadow { animation-duration: 0.28s; }
+
+.pet__bob { animation: pet-bob 0.35s ease-in-out infinite alternate; }
+.pet__bob--cat { animation-duration: 0.28s; }
+@keyframes pet-bob { to { transform: translateY(-3px); } }
+
+.pet__tail { transform-origin: 100% 100%; }
+.pet__tail--dog { animation: pet-wag 0.3s ease-in-out infinite alternate; }
+.pet__tail--cat { animation: pet-sway 1.6s ease-in-out infinite alternate; }
+@keyframes pet-wag { from { transform: rotate(-12deg); } to { transform: rotate(14deg); } }
+@keyframes pet-sway { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+
+.pet__eye { transform-origin: 50% 50%; animation: pet-blink 4.2s infinite; }
+.pet--cat .pet__eye { animation-delay: 1.3s; }
+@keyframes pet-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+
+/* ---- 'load': "…" dots over the cat ---- */
+.pet-bubble__dot { fill: var(--ink-400, #A8A29E); animation: pet-dot 1.2s ease-in-out infinite; }
+.pet-bubble__dot:nth-of-type(2) { animation-delay: 0.15s; }
+.pet-bubble__dot:nth-of-type(3) { animation-delay: 0.3s; }
+@keyframes pet-dot { 0%, 60%, 100% { opacity: 0.35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+.is-busy .pet-bubble__dot { animation-duration: 0.6s; }
+
+/* ---- 'search': the dog sniffs the ground, "?" floats over the cat ---- */
+.pet-scene--search .pet__head--dog { transform-origin: 10% 90%; animation: pet-sniff 1.2s ease-in-out infinite; }
+@keyframes pet-sniff {
+  0%, 100% { transform: rotate(18deg) translateY(5px); }
+  25% { transform: rotate(22deg) translate(2px, 7px); }
+  50% { transform: rotate(16deg) translateY(5px); }
+  75% { transform: rotate(22deg) translate(-1px, 7px); }
+}
+.pet-question { font: 600 22px/1 var(--font-sans, sans-serif); fill: var(--ink-400, #78716C); transform-origin: 50% 100%; animation: pet-float 2.2s ease-in-out infinite; }
+@keyframes pet-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-4px) rotate(6deg); } }
+
+/* ---- 'crash': both stop, the dog's head wobbles, dots circle it ---- */
+.pet-scene--crash .pet__leg,
+.pet-scene--crash .pet__bob,
+.pet-scene--crash .pet__shadow { animation: none; }
+.pet-scene--crash .pet__tail--dog { animation: none; transform: rotate(30deg); }
+.pet-scene--crash .pet__head--dog { transform-origin: 30% 90%; animation: pet-dazed 2.4s ease-in-out infinite; }
+@keyframes pet-dazed { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(7deg); } }
+.pet-dizzy__orbit circle { fill: var(--ink-400, #A8A29E); }
+.pet-dizzy__orbit { transform-origin: 50% 50%; animation: pet-orbit 2s linear infinite; }
+@keyframes pet-orbit { to { transform: rotate(360deg); } }

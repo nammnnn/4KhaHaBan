@@ -1,414 +1,391 @@
-import React, { useState, useEffect } from 'react';
+// Foundation: the animals in its care. Phones get a compact list, desktop a photo grid.
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import {
+  ArrowUpDown, Check, ChevronDown, Edit2, ExternalLink, EyeOff, LayoutGrid, List, MessageCircle,
+  MoreHorizontal, PawPrint, PlusCircle, Search, SlidersHorizontal, Trash2, X,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
-import { PlusCircle, Search, Edit2, Trash2, ChevronLeft, Loader2, Image as ImageIcon } from 'lucide-react';
 import { FoundationAnimalsSkeleton } from '../components/Skeletons';
+import { Button, Dialog, LoadError, useToast } from '../components/ui';
+import { useI18n, localizeAge } from '../i18n';
+import './FoundationAnimals.css';
+
+// Labels: fa.status.<id>, fa.statusHint.<id>, fa.sort.<id>, fa.filter.<key>
+const STATUSES = ['available', 'adopted', 'hidden'];
+const SORTS = [
+  { id: 'newest', fn: (a, b) => new Date(b.created_at) - new Date(a.created_at) },
+  { id: 'oldest', fn: (a, b) => new Date(a.created_at) - new Date(b.created_at) },
+  { id: 'requests', fn: null }, // needs the request counts, set below
+  { id: 'name', fn: (a, b) => (a.name || '').localeCompare(b.name || '', 'th') },
+];
+const FILTER_GROUPS = [
+  { key: 'type', options: [['dog', 'animal.dog'], ['cat', 'animal.cat']] },
+  { key: 'gender', options: [['male', 'fa.male'], ['female', 'fa.female']] },
+  { key: 'size', options: [['small', 'fa.small'], ['medium', 'fa.medium'], ['large', 'fa.large']] },
+];
+const NO_FILTERS = { type: null, gender: null, size: null, hasRequests: false };
+const VIEW_KEY = '4kh_fa_view';
+
+const readView = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
+const saveView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } };
+
+function useWide() {
+  const query = '(min-width: 768px)';
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
+  useEffect(() => {
+    const mql = window.matchMedia?.(query);
+    if (!mql) return undefined;
+    const on = () => setWide(mql.matches);
+    mql.addEventListener('change', on);
+    return () => mql.removeEventListener('change', on);
+  }, []);
+  return wide;
+}
+
+// Small popover: closes on outside tap and Escape
+function usePopover() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  // Keep the panel on screen: nudge it left at the right edge, flip it up near the bottom/dock
+  useLayoutEffect(() => {
+    const panel = open && ref.current?.querySelector('.fa-menu__panel');
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const overRight = r.right - (window.innerWidth - 8);
+    if (overRight > 0) panel.style.transform = `translateX(${-overRight}px)`;
+    // On phones the floating dock covers the bottom of the screen
+    const dock = document.querySelector('.nav-item')?.closest('nav')?.getBoundingClientRect();
+    const bottomLimit = dock && dock.top > window.innerHeight / 2 ? dock.top - 8 : window.innerHeight - 8;
+    if (r.bottom > bottomLimit && r.height < ref.current.getBoundingClientRect().top - 8) panel.classList.add('is-up');
+  }, [open]);
+  return { open, setOpen, ref };
+}
+
+// Status pill that opens the app's own menu (native <select> lists can't be styled)
+function StatusMenu({ animal, onChange }) {
+  const { t } = useI18n();
+  const { open, setOpen, ref } = usePopover();
+  const current = STATUSES.includes(animal.status) ? animal.status : STATUSES[0];
+  return (
+    <div className="fa-pop" ref={ref}>
+      <button type="button" className={`fa-status fa-status--${current}`} aria-haspopup="menu" aria-expanded={open}
+        aria-label={t('fa.statusOf', { name: animal.name, status: t(`fa.status.${current}`) })} onClick={() => setOpen((v) => !v)}>
+        <span className="fa-status__dot" aria-hidden="true" /> {t(`fa.status.${current}`)} <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="fa-menu__panel fa-menu__panel--left" role="menu">
+          {STATUSES.map((s) => (
+            <button key={s} role="menuitemradio" aria-checked={s === current} type="button"
+              className={`fa-menu__item fa-menu__item--status ${s === current ? 'is-on' : ''}`}
+              onClick={() => { setOpen(false); if (s !== current) onChange(s); }}>
+              <span className={`fa-status__dot fa-status__dot--${s}`} aria-hidden="true" />
+              <span className="fa-menu__text"><span>{t(`fa.status.${s}`)}</span><small>{t(`fa.statusHint.${s}`)}</small></span>
+              {s === current && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SortMenu({ value, onChange }) {
+  const { t } = useI18n();
+  const { open, setOpen, ref } = usePopover();
+  const current = SORTS.find((s) => s.id === value) || SORTS[0];
+  return (
+    <div className="fa-pop" ref={ref}>
+      <button type="button" className="fa-tool" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <ArrowUpDown size={16} aria-hidden="true" /> <span className="fa-tool__label">{t(`fa.sort.${current.id}`)}</span>
+      </button>
+      {open && (
+        <div className="fa-menu__panel" role="menu">
+          {SORTS.map((s) => (
+            <button key={s.id} role="menuitemradio" aria-checked={s.id === value} type="button"
+              className={`fa-menu__item ${s.id === value ? 'is-on' : ''}`} onClick={() => { setOpen(false); onChange(s.id); }}>
+              <span className="fa-menu__text"><span>{t(`fa.sort.${s.id}`)}</span></span>
+              {s.id === value && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+const FILTERS = ['all', ...STATUSES];
+const TYPE_KEY = { dog: 'animal.dog', cat: 'animal.cat' };
+const GENDER_KEY = { male: 'fa.male', female: 'fa.female' };
+
+function AnimalPhoto({ src }) {
+  const [ok, setOk] = useState(true);
+  return src && ok
+    ? <img className="fa-card__photo" src={src} alt="" loading="lazy" onError={() => setOk(false)} />
+    : <span className="fa-card__photo fa-card__photo--empty"><PawPrint size={28} aria-hidden="true" /></span>;
+}
+
+// ⋯ menu: view as adopters see it, edit, hide, delete
+function RowMenu({ animal, onHide, onDelete }) {
+  const { t } = useI18n();
+  const { open, setOpen, ref } = usePopover();
+  return (
+    <div className="fa-menu" ref={ref}>
+      <button type="button" className="fa-icon-btn" aria-label={t('fa.more', { name: animal.name })} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <MoreHorizontal size={20} />
+      </button>
+      {open && (
+        <div className="fa-menu__panel" role="menu">
+          <Link role="menuitem" to={`/animal/${animal.id}`} className="fa-menu__item"><ExternalLink size={16} aria-hidden="true" /> {t('fa.menu.view')}</Link>
+          <Link role="menuitem" to={`/foundation/animals/${animal.id}/edit`} className="fa-menu__item"><Edit2 size={16} aria-hidden="true" /> {t('fa.menu.edit')}</Link>
+          {animal.status !== 'hidden' && (
+            <button role="menuitem" type="button" className="fa-menu__item" onClick={() => { setOpen(false); onHide(); }}><EyeOff size={16} aria-hidden="true" /> {t('fa.menu.hide')}</button>
+          )}
+          <button role="menuitem" type="button" className="fa-menu__item fa-menu__item--danger" onClick={() => { setOpen(false); onDelete(); }}><Trash2 size={16} aria-hidden="true" /> {t('fa.menu.delete')}</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const FoundationAnimals = () => {
   const { user } = useAuth();
+  const { t, lang } = useI18n();
+  const toast = useToast();
   const [animals, setAnimals] = useState([]);
+  const [requests, setRequests] = useState({}); // animal_id -> open request count
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, available, adopted
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [filters, setFilters] = useState(NO_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sort, setSort] = useState('newest');
+  const wide = useWide();
+  const [viewChoice, setViewChoice] = useState(readView);
+  const view = viewChoice === 'grid' || viewChoice === 'list' ? viewChoice : (wide ? 'grid' : 'list');
+  const chooseView = (v) => { setViewChoice(v); saveView(v); };
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (user && supabase) {
-      fetchAnimals();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const fetchAnimals = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('animals')
-        .select('*')
-        .eq('foundation_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setAnimals(data || []);
-    } catch (error) {
-      console.error('[Animals] Error fetching animals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลสัตว์ตัวนี้?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('animals')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      setAnimals(prev => prev.filter(a => a.id !== id));
-    } catch (error) {
-      console.error('[Animals] Error deleting animal:', error);
-      alert('ไม่สามารถลบได้ กรุณาลองใหม่อีกครั้ง');
-    }
-  };
+    if (!user || !supabase) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ data, error }, { data: open }] = await Promise.all([
+          supabase.from('animals').select('*').eq('foundation_id', user.id).order('created_at', { ascending: false }),
+          // RLS limits this to requests for this foundation's animals
+          supabase.from('matches').select('animal_id').in('status', ['pending', 'approved']),
+        ]);
+        if (error) throw error;
+        if (cancelled) return;
+        setLoadError(false);
+        setAnimals(data || []);
+        setRequests((open || []).reduce((acc, m) => ({ ...acc, [m.animal_id]: (acc[m.animal_id] || 0) + 1 }), {}));
+      } catch (error) {
+        console.error('[Animals] Error fetching animals:', error);
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, reloadKey]);
 
   const handleStatusChange = async (id, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('animals')
-        .update({ status: newStatus })
-        .eq('id', id);
-
-      if (error) throw error;
-      setAnimals(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-    } catch (error) {
+    const before = animals;
+    setAnimals((prev) => prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a)));
+    const { error } = await supabase.from('animals').update({ status: newStatus }).eq('id', id);
+    if (error) {
       console.error('[Animals] Error updating status:', error);
-      alert('ไม่สามารถเปลี่ยนสถานะได้ กรุณาลองใหม่อีกครั้ง');
+      setAnimals(before);
+      toast(t('fa.toast.statusFail'), { tone: 'error' });
     }
   };
 
-  // Filter animals
-  const filteredAnimals = animals.filter(a => {
-    const matchSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === 'all' || a.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from('animals').delete().eq('id', toDelete.id);
+    setDeleting(false);
+    if (error) {
+      console.error('[Animals] Error deleting animal:', error);
+      toast(t('fa.toast.delFail'), { tone: 'error' });
+      return;
+    }
+    setAnimals((prev) => prev.filter((a) => a.id !== toDelete.id));
+    toast(t('fa.toast.deleted', { name: toDelete.name }), { tone: 'success' });
+    setToDelete(null);
+  };
+
+  if (loading) return <FoundationAnimalsSkeleton />;
+
+  const q = searchQuery.toLowerCase().trim();
+  const counts = animals.reduce((acc, a) => ({ ...acc, [a.status]: (acc[a.status] || 0) + 1 }), {});
+  const activeFilters = FILTER_GROUPS.filter((g) => filters[g.key]).length + (filters.hasRequests ? 1 : 0);
+  const sortFn = sort === 'requests'
+    ? (a, b) => (requests[b.id] || 0) - (requests[a.id] || 0) || SORTS[0].fn(a, b)
+    : (SORTS.find((x) => x.id === sort) || SORTS[0]).fn;
+  const filtered = animals.filter((a) =>
+    (statusFilter === 'all' || a.status === statusFilter)
+    && (!q || (a.name || '').toLowerCase().includes(q))
+    && FILTER_GROUPS.every((g) => !filters[g.key] || a[g.key] === filters[g.key])
+    && (!filters.hasRequests || (requests[a.id] || 0) > 0)).sort(sortFn);
+  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: f[key] === value ? null : value }));
+  const clearAll = () => { setFilters(NO_FILTERS); setSearchQuery(''); setStatusFilter('all'); };
+  const deleteRequests = toDelete ? requests[toDelete.id] || 0 : 0;
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      backgroundColor: '#FAF8F5',
-      fontFamily: 'Prompt, sans-serif',
-      padding: '32px 16px 100px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{ maxWidth: '820px', margin: '0 auto' }}>
-        
-        {/* Header */}
-        <motion.div
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link
-              to="/foundation"
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '8px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #D1D5DB',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                color: '#374151',
-                textDecoration: 'none',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-            >
-              <ChevronLeft size={20} />
-            </Link>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 700, color: '#111827' }}>
-                สัตว์ในดูแลทั้งหมด
-              </h1>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280' }}>
-                รวม {animals.length} ตัวในการดูแลของคุณ
-              </p>
-            </div>
-          </div>
-          
-          <Link
-            to="/foundation/animals/new"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#D97706',
-              color: '#FFFFFF',
-              textDecoration: 'none',
-              padding: '0 16px',
-              height: '42px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'background-color 0.15s'
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#B45309'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#D97706'}
-          >
-            <PlusCircle size={18} />
-            <span>เพิ่มสัตว์หาบ้าน</span>
-          </Link>
-        </motion.div>
+    <div className="fa-page">
+      <header className="fa-header">
+        <div>
+          <h1 className="fa-header__title">{t('fa.title')}</h1>
+          {!loadError && <p className="fa-header__sub">{t('fa.sub', { total: animals.length, available: counts.available || 0 })}</p>}
+        </div>
+        <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary fa-header__cta">
+          <PlusCircle size={18} aria-hidden="true" /> {t('fnd.addAnimal')}
+        </Link>
+      </header>
 
-        {/* Filters */}
-        <motion.div
-          style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}
-        >
-          {/* Search */}
-          <div style={{ flex: '1 1 240px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9CA3AF' }} />
-            <input
-              type="text"
-              placeholder="ค้นหาชื่อสัตว์เลี้ยง..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                height: '42px',
-                padding: '0 14px 0 38px',
-                borderRadius: '8px',
-                border: '1px solid #D1D5DB',
-                backgroundColor: '#FFFFFF',
-                fontFamily: 'inherit',
-                fontSize: '0.9rem',
-                color: '#111827',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.15s, box-shadow 0.15s'
-              }}
-              onFocus={e => {
-                e.target.style.borderColor = '#D97706';
-                e.target.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.12)';
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = '#D1D5DB';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
+      {loadError && <LoadError onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} />}
 
-          {/* Status Filter Tabs */}
-          <div style={{
-            display: 'flex',
-            gap: '4px',
-            backgroundColor: '#F3F4F6',
-            borderRadius: '8px',
-            padding: '3px'
-          }}>
-            {[
-              { id: 'all', label: 'ทั้งหมด' },
-              { id: 'available', label: 'กำลังหาบ้าน' },
-              { id: 'adopted', label: 'ได้บ้านแล้ว' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setStatusFilter(f.id)}
-                style={{
-                  padding: '0 14px',
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  fontWeight: statusFilter === f.id ? 600 : 500,
-                  fontSize: '0.82rem',
-                  backgroundColor: statusFilter === f.id ? '#FFFFFF' : 'transparent',
-                  color: statusFilter === f.id ? '#111827' : '#6B7280',
-                  boxShadow: statusFilter === f.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  transition: 'all 0.15s'
-                }}
-              >
-                {f.label}
+      {animals.length > 0 && (
+        <div className="fa-toolbar">
+          <div className="fa-toolbar__row">
+            <label className="fa-search">
+              <Search size={18} aria-hidden="true" />
+              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('fa.search')} aria-label={t('fa.search')} />
+            </label>
+            <button type="button" className={`fa-tool ${showFilters || activeFilters ? 'is-on' : ''}`} aria-expanded={showFilters}
+              aria-controls="fa-filter-panel" onClick={() => setShowFilters((v) => !v)}>
+              <SlidersHorizontal size={16} aria-hidden="true" /> <span className="fa-tool__label">{t('fa.filter')}</span>
+              {activeFilters > 0 && <span className="fa-tool__count">{activeFilters}</span>}
+            </button>
+            <SortMenu value={sort} onChange={setSort} />
+            <div className="fa-view" role="group" aria-label={t('fa.view')}>
+              <button type="button" className={view === 'grid' ? 'is-on' : ''} aria-pressed={view === 'grid'} aria-label={t('fa.view.grid')} title={t('fa.view.grid')} onClick={() => chooseView('grid')}>
+                <LayoutGrid size={18} aria-hidden="true" />
               </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Animal List */}
-        {loading ? (
-          <FoundationAnimalsSkeleton />
-        ) : filteredAnimals.length === 0 ? (
-          <motion.div
-            style={{
-              textAlign: 'center',
-              padding: '56px 20px',
-              backgroundColor: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}
-          >
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              backgroundColor: '#F3F4F6',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              margin: '0 auto 12px',
-              color: '#9CA3AF'
-            }}>
-              <Search size={24} />
+              <button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} aria-label={t('fa.view.list')} title={t('fa.view.list')} onClick={() => chooseView('list')}>
+                <List size={18} aria-hidden="true" />
+              </button>
             </div>
-            <h3 style={{ margin: '0 0 4px', color: '#111827', fontSize: '1rem', fontWeight: 600 }}>ไม่พบข้อมูลสัตว์เลี้ยง</h3>
-            <p style={{ margin: 0, color: '#6B7280', fontSize: '0.85rem' }}>
-              ลองค้นหาด้วยคำอื่น หรือกดปุ่ม "เพิ่มสัตว์หาบ้าน" เพื่อสร้างโปรไฟล์ใหม่
-            </p>
-          </motion.div>
-        ) : (
-          <motion.div
-            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
-          >
-            {filteredAnimals.map(animal => (
-              <div
-                key={animal.id}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  border: '1px solid #E5E7EB',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center',
-                  flexWrap: 'wrap'
-                }}
-              >
-                {/* Image Thumbnail */}
-                <div style={{
-                  width: '72px',
-                  height: '72px',
-                  borderRadius: '8px',
-                  backgroundColor: '#F3F4F6',
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}>
-                  {animal.images && animal.images.length > 0 ? (
-                    <img src={animal.images[0]} alt={animal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9CA3AF' }}>
-                      <ImageIcon size={24} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {animal.name}
-                    </h3>
-                    <span style={{
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      backgroundColor: animal.status === 'available' ? '#FEF3C7' : animal.status === 'adopted' ? '#DCFCE7' : '#F3F4F6',
-                      color: animal.status === 'available' ? '#B45309' : animal.status === 'adopted' ? '#15803D' : '#4B5563',
-                      border: `1px solid ${animal.status === 'available' ? '#FCD34D' : animal.status === 'adopted' ? '#86EFAC' : '#D1D5DB'}`
-                    }}>
-                      {animal.status === 'available' ? 'กำลังหาบ้าน' : animal.status === 'adopted' ? 'ได้บ้านแล้ว' : 'ซ่อนโปรไฟล์'}
-                    </span>
+          </div>
+          {showFilters && (
+            <div id="fa-filter-panel" className="fa-fpanel">
+              {FILTER_GROUPS.map((g) => (
+                <div key={g.key} className="fa-fpanel__group" role="group" aria-label={t(`fa.filter.${g.key}`)}>
+                  <span className="fa-fpanel__label">{t(`fa.filter.${g.key}`)}</span>
+                  <div className="fa-fpanel__opts">
+                    {g.options.map(([id, labelKey]) => (
+                      <button key={id} type="button" aria-pressed={filters[g.key] === id}
+                        className={`fa-chip ${filters[g.key] === id ? 'is-on' : ''}`} onClick={() => setFilter(g.key, id)}>
+                        {filters[g.key] === id && <Check size={14} aria-hidden="true" />} {t(labelKey)}
+                      </button>
+                    ))}
                   </div>
-                  <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#6B7280' }}>
-                    {animal.type === 'dog' ? 'สุนัข' : animal.type === 'cat' ? 'แมว' : 'อื่นๆ'} • {animal.age || '-'} • {animal.gender === 'male' ? 'เพศผู้' : animal.gender === 'female' ? 'เพศเมีย' : '-'}
-                  </p>
                 </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  <select
-                    value={animal.status}
-                    onChange={(e) => handleStatusChange(animal.id, e.target.value)}
-                    style={{
-                      height: '36px',
-                      padding: '0 12px',
-                      borderRadius: '8px',
-                      border: animal.status === 'available' 
-                        ? '1.5px solid #FCD34D' 
-                        : animal.status === 'adopted' 
-                        ? '1.5px solid #86EFAC' 
-                        : '1.5px solid #D1D5DB',
-                      backgroundColor: animal.status === 'available' 
-                        ? '#FEF3C7' 
-                        : animal.status === 'adopted' 
-                        ? '#DCFCE7' 
-                        : '#F3F4F6',
-                      color: animal.status === 'available' 
-                        ? '#B45309' 
-                        : animal.status === 'adopted' 
-                        ? '#15803D' 
-                        : '#4B5563',
-                      fontFamily: 'inherit',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      outline: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                    }}
-                  >
-                    <option value="available" style={{ backgroundColor: '#FFFFFF', color: '#B45309', fontWeight: 600 }}>
-                      กำลังหาบ้าน
-                    </option>
-                    <option value="adopted" style={{ backgroundColor: '#FFFFFF', color: '#15803D', fontWeight: 600 }}>
-                      ได้บ้านแล้ว
-                    </option>
-                    <option value="hidden" style={{ backgroundColor: '#FFFFFF', color: '#4B5563', fontWeight: 600 }}>
-                      ซ่อนโปรไฟล์
-                    </option>
-                  </select>
-
-                  <Link
-                    to={`/foundation/animals/${animal.id}/edit`}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      backgroundColor: '#FFFFFF',
-                      color: '#374151',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      textDecoration: 'none',
-                      transition: 'background-color 0.15s'
-                    }}
-                    title="แก้ไขข้อมูล"
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                  >
-                    <Edit2 size={15} />
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(animal.id)}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
-                      border: '1px solid #FCA5A5',
-                      backgroundColor: '#FEF2F2',
-                      color: '#DC2626',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.15s'
-                    }}
-                    title="ลบข้อมูล"
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEE2E2'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                  >
-                    <Trash2 size={15} />
+              ))}
+              <div className="fa-fpanel__group" role="group" aria-label={t('fa.filter.requests')}>
+                <span className="fa-fpanel__label">{t('fa.filter.requests')}</span>
+                <div className="fa-fpanel__opts">
+                  <button type="button" aria-pressed={filters.hasRequests}
+                    className={`fa-chip ${filters.hasRequests ? 'is-on' : ''}`} onClick={() => setFilters((f) => ({ ...f, hasRequests: !f.hasRequests }))}>
+                    {filters.hasRequests && <Check size={14} aria-hidden="true" />} {t('fa.filter.hasRequests')}
                   </button>
                 </div>
               </div>
+              <div className="fa-fpanel__foot">
+                <button type="button" className="fa-link" onClick={() => setFilters(NO_FILTERS)} disabled={!activeFilters}>{t('fa.filter.clear')}</button>
+                <Button size="sm" onClick={() => setShowFilters(false)}>{t('fa.filter.show', { n: filtered.length })}</Button>
+              </div>
+            </div>
+          )}
+          <div className="fa-filters" role="tablist" aria-label={t('fa.filterStatus')}>
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === f}
+                className={`fa-filter ${statusFilter === f ? 'is-on' : ''}`}
+                onClick={() => setStatusFilter(f)}
+              >
+                {f === 'all' ? t('fa.all') : t(`fa.status.${f}`)} <span>{f === 'all' ? animals.length : counts[f] || 0}</span>
+              </button>
             ))}
-          </motion.div>
-        )}
+          </div>
+        </div>
+      )}
 
-      </div>
+      {loadError ? null : animals.length === 0 ? (
+        <div className="fa-empty">
+          <span className="fa-empty__icon" aria-hidden="true"><PawPrint size={32} /></span>
+          <h2>{t('fa.empty.title')}</h2>
+          <p>{t('fa.empty.text')}</p>
+          <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary">{t('fnd.addAnimal')}</Link>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="fa-none">
+          <p>{t('fa.none')}</p>
+          <button type="button" className="fa-link" onClick={clearAll}><X size={14} aria-hidden="true" /> {t('fa.clearAll')}</button>
+        </div>
+      ) : (
+        <ul className={`fa-grid fa-grid--${view}`}>
+          {filtered.map((animal) => {
+            const open = requests[animal.id] || 0;
+            const meta = [TYPE_KEY[animal.type] ? t(TYPE_KEY[animal.type]) : animal.type, localizeAge(animal.age, lang), GENDER_KEY[animal.gender] && t(GENDER_KEY[animal.gender])].filter(Boolean).join(' · ');
+            return (
+              <li key={animal.id} className={`fa-card fa-card--${animal.status}`}>
+                <Link to={`/foundation/animals/${animal.id}/edit`} className="fa-card__media" aria-label={t('fa.editOf', { name: animal.name })}>
+                  <AnimalPhoto src={animal.images?.[0]} />
+                </Link>
+                {open > 0 && view === 'grid' && (
+                  <Link to="/foundation/matches" className="fa-requests fa-requests--badge" aria-label={t('fa.requests', { n: open })} title={t('fa.requests', { n: open })}>
+                    <MessageCircle size={14} aria-hidden="true" /> {t(open === 1 ? 'fa.requestsBadgeOne' : 'fa.requestsBadge', { n: open })}
+                  </Link>
+                )}
+                <div className="fa-card__body">
+                  <div className="fa-card__top">
+                    <h2 className="fa-card__name">{animal.name}</h2>
+                    <RowMenu animal={animal} onHide={() => handleStatusChange(animal.id, 'hidden')} onDelete={() => setToDelete(animal)} />
+                  </div>
+                  {meta && <p className="fa-card__meta">{meta}</p>}
+                  <div className="fa-card__foot">
+                    <StatusMenu animal={animal} onChange={(st) => handleStatusChange(animal.id, st)} />
+                    {open > 0 && view === 'list' && (
+                      <Link to="/foundation/matches" className="fa-requests" aria-label={t('fa.requests', { n: open })} title={t('fa.requests', { n: open })}>
+                        <MessageCircle size={15} aria-hidden="true" /> {open}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Dialog open={Boolean(toDelete)} onClose={() => !deleting && setToDelete(null)} title={toDelete ? t('fa.del.title', { name: toDelete.name }) : ''}>
+        <div className="fa-delete">
+          <p>{toDelete && t('fa.del.text', { name: toDelete.name })}{deleteRequests > 0 ? t('fa.del.withRequests', { n: deleteRequests }) : ''}{lang === 'en' ? '.' : ''}</p>
+          <p className="fa-delete__hint">{t('fa.del.hint')}</p>
+        </div>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => { const a = toDelete; setToDelete(null); handleStatusChange(a.id, 'hidden'); }} disabled={deleting}>{t('fa.del.hide')}</Button>
+          <Button variant="danger" loading={deleting} onClick={handleDelete}>{t('fa.del.confirm')}</Button>
+        </div>
+      </Dialog>
     </div>
   );
 };

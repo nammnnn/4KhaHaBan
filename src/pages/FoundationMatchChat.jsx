@@ -1,52 +1,97 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
-import { Heart, Clock, Loader, ArrowLeft, Search, XCircle, CheckCircle, PawPrint, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, MessageCircle, PawPrint, Search, ShieldCheck } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
+import { LoadError } from '../components/ui';
 import FoundationChatRoom from './FoundationChatRoom';
+import { useI18n } from '../i18n';
+import './MatchChat.css';
+import './FoundationMatchChat.css';
 
-// Removed 3D Icon
+function groupOf(status) {
+  if (status === 'pending') return 'pending';
+  if (status === 'adopted' || status === 'completed') return 'adopted';
+  if (status === 'rejected') return 'rejected';
+  return 'active';
+}
+
+// "14:05" today, "เมื่อวาน" / "Yesterday", weekday this week, otherwise "12 ต.ค." / "12 Oct"
+function whenLabel(iso, t, lang) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400000);
+  const locale = lang === 'en' ? 'en-GB' : 'th-TH';
+  if (days <= 0) return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  if (days === 1) return t('fmc.yesterday');
+  if (days < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}
+
+// Adopter initials + a small photo of the pet they asked for (no third-party avatar service)
+function RequestRow({ match, animal, active, onOpen }) {
+  const { t, lang } = useI18n();
+  const name = match.userData?.full_name || t('fmc.adopter');
+  const [photoOk, setPhotoOk] = useState(true);
+  const [petOk, setPetOk] = useState(true);
+  const photo = match.userData?.avatar_url;
+  const pet = animal?.images?.[0];
+  const group = groupOf(match.status);
+  const waitingForYou = group === 'active' && match.lastSender === 'user';
+
+  let preview = match.lastMessage || '';
+  if (group === 'pending') preview = t('fmc.pendingPreview');
+
+  return (
+    <li>
+      <button
+        type="button"
+        className={`mc-row fmc-row mc-row--${group} ${active ? 'is-active' : ''} ${group === 'pending' || waitingForYou ? 'is-unread' : ''}`}
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+      >
+        <span className="fmc-avatar">
+          <span className="mc-row__avatar fmc-avatar__person">
+            {photo && photoOk ? <img src={photo} alt="" loading="lazy" onError={() => setPhotoOk(false)} /> : name.trim().charAt(0)}
+          </span>
+          <span className="fmc-avatar__pet" aria-hidden="true">
+            {pet && petOk ? <img src={pet} alt="" loading="lazy" onError={() => setPetOk(false)} /> : <PawPrint size={12} />}
+          </span>
+        </span>
+        <span className="mc-row__body">
+          <span className="mc-row__top">
+            <span className="mc-row__name">
+              {name}
+              {match.userData?.status === 'verified' && <ShieldCheck size={14} className="fmc-verified" aria-label={t('fmc.verified')} />}
+            </span>
+            <span className="mc-row__time">{whenLabel(match.created_at, t, lang)}</span>
+          </span>
+          <span className="fmc-pet">{t('fmc.asks')} <strong>{animal?.name || t('fmc.pet')}</strong></span>
+          <span className="mc-row__preview">{preview}</span>
+        </span>
+        {(group === 'pending' || waitingForYou) && <span className="mc-row__dot" aria-label={t('fmc.waiting')} />}
+      </button>
+    </li>
+  );
+}
 
 function FoundationMatchChat() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [matches, setMatches] = useState([]);
   const [animalData, setAnimalData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const navigate = useNavigate();
   const { matchId } = useParams(); // Check if a chat is active
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('active'); // 'active', 'pending', or 'rejected'
+  const [showRejected, setShowRejected] = useState(false);
   const [selectedAnimalId, setSelectedAnimalId] = useState('all');
-
-  const chipsRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const [hasOverflow, setHasOverflow] = useState(false);
-
-  // Mouse drag to scroll refs
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftStartRef = useRef(0);
-  const hasMovedRef = useRef(false);
-
-  const checkScroll = useCallback(() => {
-    if (chipsRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = chipsRef.current;
-      const overflow = scrollWidth > clientWidth + 4;
-      setHasOverflow(overflow);
-      setCanScrollLeft(scrollLeft > 4);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
-    }
-  }, []);
-
-  // Reset selected animal filter whenever active tab changes
-  useEffect(() => {
-    setSelectedAnimalId('all');
-  }, [activeTab]);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,6 +101,7 @@ function FoundationMatchChat() {
         if (showSkeleton) setLoading(true);
         const foundationMatches = await api.getFoundationMatches(user?.id);
         if (!isMounted) return;
+        setLoadError(false);
         setMatches(foundationMatches || []);
 
         if (foundationMatches && foundationMatches.length > 0) {
@@ -77,6 +123,8 @@ function FoundationMatchChat() {
         }
       } catch (error) {
         console.error("Error fetching foundation matches", error);
+        // A failed background refresh keeps the list that is already on screen
+        if (isMounted && showSkeleton) setLoadError(true);
       } finally {
         if (isMounted && showSkeleton) setLoading(false);
       }
@@ -106,534 +154,125 @@ function FoundationMatchChat() {
         supabase.removeChannel(channel);
       }
     };
-  }, [user?.id]);
-
-  // Animals with application count in current active tab (must be before any early returns)
-  const animalChips = useMemo(() => {
-    const counts = {};
-    matches.forEach(m => {
-      let matchesTab = false;
-      if (activeTab === 'active') matchesTab = m.status === 'approved' || m.status === 'adopted' || m.status === 'completed';
-      else if (activeTab === 'pending') matchesTab = m.status === 'pending';
-      else if (activeTab === 'rejected') matchesTab = m.status === 'rejected';
-
-      if (matchesTab && m.animalId) {
-        counts[m.animalId] = (counts[m.animalId] || 0) + 1;
-      }
-    });
-
-    return Object.keys(counts)
-      .map(id => ({
-        id,
-        animal: animalData[id],
-        count: counts[id]
-      }))
-      .filter(item => item.animal);
-  }, [matches, activeTab, animalData]);
-
-  useEffect(() => {
-    const el = chipsRef.current;
-    checkScroll();
-
-    let ro;
-    if (window.ResizeObserver && el) {
-      ro = new ResizeObserver(() => {
-        checkScroll();
-      });
-      ro.observe(el);
-    }
-
-    const timer = setTimeout(checkScroll, 120);
-    const handleResize = () => checkScroll();
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timer);
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [checkScroll, animalChips]);
-
-  const handleScrollChips = (direction) => {
-    if (chipsRef.current) {
-      const scrollDistance = Math.max(160, Math.floor(chipsRef.current.clientWidth * 0.7));
-      chipsRef.current.scrollBy({
-        left: direction === 'left' ? -scrollDistance : scrollDistance,
-        behavior: 'smooth'
-      });
-      setTimeout(checkScroll, 300);
-    }
-  };
-
-  const handleMouseDown = (e) => {
-    if (!chipsRef.current) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    startXRef.current = e.pageX - chipsRef.current.offsetLeft;
-    scrollLeftStartRef.current = chipsRef.current.scrollLeft;
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDraggingRef.current || !chipsRef.current) return;
-    const x = e.pageX - chipsRef.current.offsetLeft;
-    const walk = x - startXRef.current;
-    if (Math.abs(walk) > 4) {
-      hasMovedRef.current = true;
-    }
-    chipsRef.current.scrollLeft = scrollLeftStartRef.current - walk;
-    checkScroll();
-  };
-
-  const handleMouseUpOrLeave = () => {
-    isDraggingRef.current = false;
-  };
+  }, [user?.id, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <ChatListSkeleton />;
   }
 
-  // Filter logic
-  const filteredMatches = matches.filter(match => {
-    const animal = animalData[match.animalId];
+  // One list, grouped by what the foundation has to do (was three tabs; new requests sat in a
+  // tab that wasn't open by default, so they were easy to miss)
+  const q = searchQuery.toLowerCase().trim();
+  const visible = matches.filter((m) => {
+    const animal = animalData[m.animalId];
     if (!animal) return false;
-
-    // 1. Tab filter
-    let matchesTab = false;
-    if (activeTab === 'active') matchesTab = match.status === 'approved' || match.status === 'adopted' || match.status === 'completed';
-    else if (activeTab === 'pending') matchesTab = match.status === 'pending';
-    else if (activeTab === 'rejected') matchesTab = match.status === 'rejected';
-    if (!matchesTab) return false;
-
-    // 2. Animal filter chip
-    if (selectedAnimalId !== 'all' && match.animalId !== selectedAnimalId) {
-      return false;
-    }
-
-    // 3. Search filter (by adopter name, animal name, or message)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const adopterName = (match.userData?.full_name || 'ผู้ขอรับเลี้ยง').toLowerCase();
-      const animalName = animal.name.toLowerCase();
-      const lastMsg = (match.lastMessage || '').toLowerCase();
-      if (!adopterName.includes(q) && !animalName.includes(q) && !lastMsg.includes(q)) {
-        return false;
-      }
-    }
-
-    return true;
+    if (selectedAnimalId !== 'all' && m.animalId !== selectedAnimalId) return false;
+    if (!q) return true;
+    return [m.userData?.full_name, animal.name, m.lastMessage].some((v) => (v || '').toLowerCase().includes(q));
   });
+  const groups = {
+    pending: visible.filter((m) => groupOf(m.status) === 'pending'),
+    active: visible.filter((m) => groupOf(m.status) === 'active'),
+    adopted: visible.filter((m) => groupOf(m.status) === 'adopted'),
+    rejected: visible.filter((m) => groupOf(m.status) === 'rejected'),
+  };
 
-  const activeCount = matches.filter(m => m.status === 'approved' || m.status === 'adopted' || m.status === 'completed').length;
-  const pendingCount = matches.filter(m => m.status === 'pending').length;
-  const rejectedCount = matches.filter(m => m.status === 'rejected').length;
+  // Animals that have at least one request, for the filter
+  const animalOptions = Object.entries(
+    matches.reduce((acc, m) => ({ ...acc, [m.animalId]: (acc[m.animalId] || 0) + 1 }), {})
+  ).map(([id, count]) => ({ id, count, name: animalData[id]?.name })).filter((o) => o.name);
+
+  const openMatch = (match) => {
+    if (user?.id) api.markMatchAsRead(match.id, 'shelter', user.id);
+    navigate(`/foundation/chat/${match.id}`);
+  };
+
+  const renderGroup = (key, items) => items.length > 0 && (
+    <section className="mc-group" aria-labelledby={`fmc-${key}`} key={key}>
+      <h2 id={`fmc-${key}`} className="mc-group__title">
+        {t(`fmc.group.${key}`)} <span>{items.length}</span>
+      </h2>
+      {key === 'pending' && <p className="mc-group__hint">{t('fmc.pendingHint')}</p>}
+      <ul className="mc-list">
+        {items.map((m) => (
+          <RequestRow key={m.id} match={m} animal={animalData[m.animalId]} active={m.id === matchId} onOpen={() => openMatch(m)} />
+        ))}
+      </ul>
+    </section>
+  );
+
+  const nothing = visible.length === 0;
 
   return (
-    <div className="match-page matches-split-view">
-      
-      {/* List Panel */}
+    <div className="match-page matches-split-view mc">
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
-        <motion.div
-          className="list-header"
-          style={{ padding: '20px 20px 0' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 className="page-title" style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-dark, #111827)' }}>
-              แชทพูดคุย
-            </h1>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-medium, #6B7280)', backgroundColor: 'var(--gray-100, #F3F4F6)', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
-              {matches.length} รายการ
-            </span>
-          </div>
-
-          {/* Tabs with Count Badges */}
-          <div className="chat-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--gray-200, #E5E7EB)', marginTop: '16px' }}>
-            <button 
-              onClick={() => setActiveTab('active')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'active' ? '2.5px solid var(--primary, #D97706)' : '2.5px solid transparent',
-                color: activeTab === 'active' ? 'var(--primary, #D97706)' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>ข้อความ</span>
-              {activeCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'active' ? '#FEF3C7' : '#F3F4F6',
-                  color: activeTab === 'active' ? '#D97706' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {activeCount}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setActiveTab('pending')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'pending' ? '2.5px solid var(--primary, #D97706)' : '2.5px solid transparent',
-                color: activeTab === 'pending' ? 'var(--primary, #D97706)' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>รอดำเนินการ</span>
-              {pendingCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'pending' ? '#FEF3C7' : '#F3F4F6',
-                  color: activeTab === 'pending' ? '#D97706' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button 
-              onClick={() => setActiveTab('rejected')}
-              style={{ 
-                flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600,
-                borderBottom: activeTab === 'rejected' ? '2.5px solid #DC2626' : '2.5px solid transparent',
-                color: activeTab === 'rejected' ? '#DC2626' : 'var(--text-medium, #6B7280)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-              }}
-            >
-              <span>ปฏิเสธแล้ว</span>
-              {rejectedCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.72rem', padding: '1px 6px', borderRadius: '10px',
-                  backgroundColor: activeTab === 'rejected' ? '#FEE2E2' : '#F3F4F6',
-                  color: activeTab === 'rejected' ? '#DC2626' : '#6B7280',
-                  fontWeight: 700
-                }}>
-                  {rejectedCount}
-                </span>
-              )}
-            </button>
-          </div>
-          
-          {/* Search Box */}
-          <div className="chat-search-bar" style={{ padding: '14px 0 10px' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-              <input 
-                type="text" 
-                placeholder="ค้นหาชื่อผู้ขอ, ชื่อน้องสัตว์..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ 
-                  width: '100%', height: '40px', padding: '0 16px 0 38px', 
-                  borderRadius: '10px', border: '1px solid var(--gray-200, #E5E7EB)', 
-                  backgroundColor: '#F9FAFB', outline: 'none', fontSize: '0.875rem', 
-                  boxSizing: 'border-box', transition: 'all 0.15s ease' 
-                }}
-                onFocus={(e) => { e.target.style.backgroundColor = '#FFFFFF'; e.target.style.borderColor = 'var(--primary, #D97706)'; }}
-                onBlur={(e) => { e.target.style.backgroundColor = '#F9FAFB'; e.target.style.borderColor = '#E5E7EB'; }}
-              />
-            </div>
-          </div>
-
-          {/* Animal Filter Chips (หมวดหมู่ตามน้องสัตว์) */}
-          {animalChips.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0 12px', width: '100%' }}>
-              {/* Left Scroll Button (แสดงเฉพาะเมื่อมีการเลื่อนไปทางขวาแล้ว) */}
-              {canScrollLeft && (
-                <button
-                  type="button"
-                  onClick={() => handleScrollChips('left')}
-                  aria-label="เลื่อนซ้าย"
-                  className="chip-scroll-btn"
-                  style={{
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                    color: 'var(--primary, #D97706)',
-                    cursor: 'pointer'
-                  }}
+        <div className="mc-header">
+          <h1 className="mc-header__title">{t('fmc.title')}</h1>
+          {matches.length > 0 && (
+            <div className="fmc-filters">
+              <label className="mc-search">
+                <Search size={18} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('fmc.search')}
+                  aria-label={t('fmc.searchAria')}
+                />
+              </label>
+              {animalOptions.length > 1 && (
+                <select
+                  className="fmc-animal"
+                  value={selectedAnimalId}
+                  onChange={(e) => setSelectedAnimalId(e.target.value)}
+                  aria-label={t('fmc.filterAnimal')}
                 >
-                  <ChevronLeft size={16} />
-                </button>
-              )}
-
-              {/* Scrollable Container */}
-              <div 
-                ref={chipsRef}
-                className="animal-filter-chips"
-                onScroll={checkScroll}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUpOrLeave}
-                onMouseLeave={handleMouseUpOrLeave}
-                onWheel={(e) => {
-                  if (chipsRef.current && e.deltaY !== 0) {
-                    chipsRef.current.scrollLeft += e.deltaY;
-                    checkScroll();
-                  }
-                }}
-                style={{ 
-                  flex: 1, 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  padding: '4px 0',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!hasMovedRef.current) setSelectedAnimalId('all');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                    border: selectedAnimalId === 'all' ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
-                    backgroundColor: selectedAnimalId === 'all' ? 'var(--primary, #D97706)' : '#FFFFFF',
-                    color: selectedAnimalId === 'all' ? '#FFFFFF' : '#4B5563',
-                    boxShadow: selectedAnimalId === 'all' ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0
-                  }}
-                >
-                  <PawPrint size={13} />
-                  <span>ทั้งหมด</span>
-                  <span style={{ 
-                    fontSize: '0.72rem', 
-                    padding: '1px 6px', 
-                    borderRadius: '10px', 
-                    backgroundColor: selectedAnimalId === 'all' ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                    color: selectedAnimalId === 'all' ? '#FFFFFF' : '#6B7280'
-                  }}>
-                    {activeTab === 'active' ? activeCount : activeTab === 'pending' ? pendingCount : rejectedCount}
-                  </span>
-                </button>
-
-                {animalChips.map(item => {
-                  const isSelected = selectedAnimalId === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        if (!hasMovedRef.current) setSelectedAnimalId(isSelected ? 'all' : item.id);
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '4px 11px 4px 5px',
-                        borderRadius: '20px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        cursor: 'pointer',
-                        border: isSelected ? '1.5px solid var(--primary, #D97706)' : '1px solid #E5E7EB',
-                        backgroundColor: isSelected ? 'var(--primary, #D97706)' : '#FFFFFF',
-                        color: isSelected ? '#FFFFFF' : '#4B5563',
-                        boxShadow: isSelected ? '0 2px 6px rgba(217,119,6,0.25)' : 'none',
-                        transition: 'all 0.15s ease',
-                        flexShrink: 0
-                      }}
-                    >
-                      <img 
-                        src={item.animal.images?.[0] || 'https://via.placeholder.com/60'} 
-                        alt={item.animal.name}
-                        draggable={false}
-                        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', pointerEvents: 'none' }}
-                      />
-                      <span>{item.animal.name}</span>
-                      <span style={{ 
-                        fontSize: '0.72rem', 
-                        padding: '1px 6px', 
-                        borderRadius: '10px', 
-                        backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                        color: isSelected ? '#FFFFFF' : '#6B7280'
-                      }}>
-                        {item.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Right Scroll Button (แสดงเฉพาะเมื่อมีเนื้อหาที่เลื่อนไปทางขวาได้) */}
-              {canScrollRight && (
-                <button
-                  type="button"
-                  onClick={() => handleScrollChips('right')}
-                  aria-label="เลื่อนขวา"
-                  className="chip-scroll-btn"
-                  style={{
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                    color: 'var(--primary, #D97706)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <ChevronRight size={16} />
-                </button>
+                  <option value="all">{t('fmc.allAnimals')}</option>
+                  {animalOptions.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.count})</option>)}
+                </select>
               )}
             </div>
           )}
-        </motion.div>
-        
-        <motion.div
-          className="matches-list"
-          style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '0 16px 20px' }}
-        >
-          {filteredMatches.length === 0 ? (
-            <div className="empty-state" style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                <Search size={24} color="#9CA3AF" />
-              </div>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: '#374151' }}>ไม่พบรายการแชท</p>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#9CA3AF' }}>
-                {selectedAnimalId !== 'all' ? 'ไม่พบคำขอรับเลี้ยงของน้องตัวนี้ในหมวดนี้' : searchQuery ? 'ลองค้นหาด้วยคำอื่น' : 'ยังไม่มีข้อความในหมวดหมู่นี้'}
-              </p>
-              {selectedAnimalId !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedAnimalId('all')}
-                  style={{ marginTop: '10px', fontSize: '0.8rem', color: 'var(--primary, #D97706)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  แสดงผู้ขอรับเลี้ยงทั้งหมด
-                </button>
+        </div>
+
+        <div className="mc-scroll">
+          {loadError && matches.length === 0 ? (
+            <LoadError onRetry={() => setReloadKey((k) => k + 1)} />
+          ) : matches.length === 0 ? (
+            <div className="mc-how">
+              <span className="mc-how__icon" aria-hidden="true"><MessageCircle size={34} /></span>
+              <h2 className="mc-how__title">{t('fmc.empty.title')}</h2>
+              <p className="mc-how__lead">{t('fmc.empty.lead')}</p>
+              <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary mc-how__cta">{t('fnd.addAnimal')}</Link>
+            </div>
+          ) : nothing ? (
+            <div className="mc-empty-note">
+              {t('fmc.noMatch')}
+              {(selectedAnimalId !== 'all' || q) && (
+                <div><button type="button" className="fmc-clear" onClick={() => { setSelectedAnimalId('all'); setSearchQuery(''); }}>{t('fmc.clear')}</button></div>
               )}
             </div>
           ) : (
-            filteredMatches.map(match => {
-              const animal = animalData[match.animalId];
-              if (!animal) return null;
-
-              const isAdopted = match.status === 'adopted' || match.status === 'completed';
-              const isApproved = match.status === 'approved' || isAdopted;
-              const isRejected = match.status === 'rejected';
-              const isActive = match.id === matchId;
-
-              const adopterName = match.userData?.full_name || 'ผู้ขอรับเลี้ยง';
-              const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(adopterName)}&background=D97706&color=fff`;
-              const adopterAvatar = match.userData?.avatar_url || defaultAvatar;
-
-              return (
-                <div 
-                  key={match.id} 
-                  className={`match-item ${isAdopted ? 'approved' : isApproved ? 'approved' : isRejected ? 'rejected' : 'pending'} ${isActive ? 'active' : ''}`}
-                  style={{ minHeight: '88px', boxSizing: 'border-box' }}
-                  onClick={() => {
-                    if (user?.id) {
-                      api.markMatchAsRead(match.id, 'shelter', user.id);
-                    }
-                    navigate(`/foundation/chat/${match.id}`);
-                  }}
-                >
-                  {/* Adopter Avatar with Pet Badge Overlaid */}
-                  <div className="match-avatar" style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', flexShrink: 0 }}>
-                    <img 
-                      loading="lazy" 
-                      src={adopterAvatar} 
-                      alt={adopterName} 
-                      style={{ width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
-                      onError={(e) => { e.currentTarget.src = defaultAvatar; }}
-                    />
-                    {/* Corner Pet Badge */}
-                    <div 
-                      title={`ขอรับเลี้ยง: ${animal.name}`}
-                      style={{ 
-                        position: 'absolute', 
-                        bottom: '-2px', 
-                        right: '-2px', 
-                        width: '24px', 
-                        height: '24px', 
-                        borderRadius: '50%', 
-                        overflow: 'hidden', 
-                        border: '2px solid #FFFFFF', 
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                        backgroundColor: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2
-                      }}
-                    >
-                      <img 
-                        src={animal.images?.[0] || 'https://via.placeholder.com/50'} 
-                        alt={animal.name} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="match-info" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="match-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
-                        <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {adopterName}
-                        </h3>
-                        {match.userData?.kyc_verified && (
-                          <CheckCircle size={13} color="#16A34A" style={{ flexShrink: 0 }} title="ยืนยันตัวตนแล้ว (KYC)" />
-                        )}
-                      </div>
-                      <span className="timestamp" style={{ fontSize: '0.72rem', color: '#9CA3AF', flexShrink: 0 }}>
-                        {match.timestamp || 'เมื่อวาน'}
-                      </span>
-                    </div>
-
-                    {/* Target Pet Badge */}
-                    <div style={{ margin: '3px 0' }}>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '4px', 
-                        fontSize: '0.73rem', 
-                        color: '#9A3412', 
-                        backgroundColor: '#FFEDD5', 
-                        padding: '1px 8px', 
-                        borderRadius: '6px', 
-                        fontWeight: 600,
-                        maxWidth: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        <PawPrint size={11} style={{ flexShrink: 0 }} />
-                        <span>ขอรับเลี้ยง: <strong>{animal.name}</strong></span>
-                      </span>
-                    </div>
-
-                    <p className="last-message" style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {match.lastMessage || 'ส่งคำขอแล้ว'}
-                    </p>
-
-                    {isAdopted ? (
-                      <p className="pending-text text-sm" style={{ color: '#15803D', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
-                        <CheckCircle size={12} /> ส่งมอบแล้ว (ติดตามสถานะ)
-                      </p>
-                    ) : isRejected ? (
-                      <p className="pending-text text-sm" style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0 0' }}>
-                        <XCircle size={12} /> ปฏิเสธคำขอรับเลี้ยงแล้ว
-                      </p>
-                    ) : match.status === 'approved' ? (
-                      <p className="pending-text text-sm" style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, margin: '2px 0 0' }}>
-                        <CheckCircle size={12} /> อนุมัติแล้ว • กำลังสนทนา
-                      </p>
-                    ) : (
-                      <p className="pending-text text-sm" style={{ color: 'var(--warning-dark, #D97706)', margin: '2px 0 0', fontWeight: 500 }}>
-                        รอตรวจสอบและอนุมัติการรับเลี้ยง
-                      </p>
-                    )}
-                  </div>
+            <>
+              {renderGroup('pending', groups.pending)}
+              {renderGroup('active', groups.active)}
+              {renderGroup('adopted', groups.adopted)}
+              {groups.rejected.length > 0 && (
+                <div className="mc-rejected">
+                  <button
+                    type="button"
+                    className="mc-rejected__toggle"
+                    aria-expanded={showRejected}
+                    onClick={() => setShowRejected((v) => !v)}
+                  >
+                    {t('fmc.rejectedToggle', { n: groups.rejected.length })} <ChevronDown size={16} aria-hidden="true" />
+                  </button>
+                  {showRejected && renderGroup('rejected', groups.rejected)}
                 </div>
-              );
-            })
+              )}
+            </>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Chat Panel */}
@@ -641,11 +280,8 @@ function FoundationMatchChat() {
         {matchId ? (
           <FoundationChatRoom />
         ) : (
-          <div className="empty-chat-state">
-            <div style={{ padding: '24px', backgroundColor: 'var(--surface-container-high)', borderRadius: '50%', marginBottom: '16px' }}>
-              <Search size={48} color="var(--primary)" style={{ opacity: 0.5 }} />
-            </div>
-            <h3>เลือกแชทเพื่อจัดการคำขอและสนทนา</h3>
+          <div className="mc-panel-empty">
+            <p className="mc-empty-note">{t('fmc.pick')}</p>
           </div>
         )}
       </div>

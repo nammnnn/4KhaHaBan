@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { api } from '../services/api';
 import { DonationSkeleton, NeedsSkeleton } from '../components/Skeletons';
-import { Badge, Button, Dialog, useToast } from '../components/ui';
+import { Badge, Button, Dialog, LoadError, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
@@ -27,7 +27,9 @@ function placeOf(address = '') {
   return m ? m[1] : '';
 }
 
-const hasRealPromptpay = (f) => !f?.demo && (f?.promptpay_number || f?.phone || '').replace(/\D/g, '').length >= 10;
+// Only the PromptPay number the foundation set itself. Never its contact phone: that may not be
+// registered for PromptPay, or may belong to a staff member personally.
+const hasRealPromptpay = (f) => !f?.demo && (f?.promptpay_number || '').replace(/\D/g, '').length >= 10;
 
 function FoundationAvatar({ f }) {
   const initial = (f?.full_name || '').replace(/^มูลนิธิ\s*/, '').trim().charAt(0).toUpperCase();
@@ -152,6 +154,8 @@ function Donation() {
   const [foundations, setFoundations] = useState([]);
   const [selectedFoundationId, setSelectedFoundationId] = useState('');
   const [loadingFoundations, setLoadingFoundations] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [foundationNeeds, setFoundationNeeds] = useState([]);
   // Which foundation the list above belongs to. Until it matches the selected one we show a
   // same-sized placeholder; live refreshes keep the old list on screen instead of flashing.
@@ -164,16 +168,18 @@ function Donation() {
       try {
         const data = await api.getFoundations();
         if (!isMounted) return;
+        setLoadError(false);
         setFoundations(data || []);
         if (data?.length) setSelectedFoundationId((prev) => (prev && data.some((f) => f.id === prev) ? prev : data[0].id));
       } catch (err) {
         console.warn('Error fetching foundations:', err);
+        if (isMounted) setLoadError(true);
       } finally {
         if (isMounted) setLoadingFoundations(false);
       }
     })();
     return () => { isMounted = false; };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selectedFoundationId) return;
@@ -202,7 +208,7 @@ function Donation() {
   const foundation = foundations.find((f) => f.id === selectedFoundationId) || null;
   // Only ever build a QR for a real number — never a placeholder account
   const hasPromptpay = hasRealPromptpay(foundation);
-  const promptpay = hasPromptpay ? (foundation.promptpay_number || foundation.phone).replace(/\D/g, '') : '';
+  const promptpay = hasPromptpay ? foundation.promptpay_number.replace(/\D/g, '') : '';
   const amount = tier === CUSTOM ? Math.floor(Number(customAmount) || 0) : tier;
   const canDonate = !!foundation && hasPromptpay && amount >= 1;
 
@@ -266,6 +272,16 @@ function Donation() {
   };
 
   if (loadingFoundations) return <DonationSkeleton />;
+  if (loadError) {
+    return (
+      <div className="sp-page sp-page--wide">
+        <header className="sp-head">
+          <h1 className="sp-head__title">{t('donate.title')}</h1>
+        </header>
+        <LoadError onRetry={() => setReloadKey((k) => k + 1)} />
+      </div>
+    );
+  }
 
   const needs = [...foundationNeeds].sort((a, b) => (NEED_ORDER[a.urgency] ?? 2) - (NEED_ORDER[b.urgency] ?? 2));
   const baht = (n) => `฿${n.toLocaleString()}`;
@@ -476,7 +492,7 @@ function Donation() {
                   <div className="sp-qr">
                     <QRCodeSVG value={generatePayload(promptpay, { amount })} size={176} />
                     <button type="button" className="sp-qr__id" onClick={() => copy(promptpay, 'promptpay')}>
-                      {t('donate.pay.promptpay')} <b>{foundation?.promptpay_number || foundation?.phone}</b>
+                      {t('donate.pay.promptpay')} <b>{foundation?.promptpay_number}</b>
                       {copied === 'promptpay' ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                     </button>
                   </div>

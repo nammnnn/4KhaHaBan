@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion, useAnimationControls } from 'framer-motion';
+import BrandMark from './BrandMark';
 import { Home, MessageCircle, LogIn, Shield, Building2, HandHeart, PawPrint, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -283,7 +284,7 @@ export function Navigation() {
     <nav className="main-nav" aria-label={t('nav.main')}>
       {/* Logo — desktop sidebar only */}
       <Link to={isFoundationApproved ? '/foundation' : '/'} className="nav-logo" aria-label={t('app.home')}>
-        <span className="nav-logo__mark" aria-hidden="true"><PawPrint size={20} /></span>
+        <span className="nav-logo__mark" aria-hidden="true"><BrandMark size={36} /></span>
         <span>{t('app.name.prefix')}<span className="nav-logo__accent">{t('app.name.accent')}</span></span>
       </Link>
 

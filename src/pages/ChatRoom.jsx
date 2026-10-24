@@ -1,304 +1,44 @@
-import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Send, Loader, Image as ImageIcon, X, Info, MoreVertical, PlusCircle, MapPin, FileText, User, CheckCircle, Check, Clock, XCircle, CheckCircle2, Camera, Calendar, ShieldCheck, Heart } from 'lucide-react';
+// Adopter side of one adoption chat: which animal and foundation, where the request stands,
+// then the conversation. Mirrors FoundationChatRoom and shares its pieces (components/chat/ChatParts).
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import {
+  Building2, CalendarCheck, ChevronLeft, Clock, FileText, Flag, Heart, Image as ImageIcon, Loader, MapPin,
+  MoreVertical, Navigation, PawPrint, Phone, PlusCircle, Send, ShieldCheck, X, XCircle,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ChatRoomSkeleton } from '../components/Skeletons';
-import { MOTION } from '../lib/motion';
+import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
+import { initialsAvatar } from '../lib/avatar';
+import { MessageItem, dayLabel } from '../components/chat/ChatParts';
+import { PetScene } from '../components/motion/PetScene';
+import { useI18n } from '../i18n';
+import './FoundationChatRoom.css';
 
-const renderMessageContent = (text, isMe, isApplication = false) => {
-  if (!text) return null;
-  const lines = text.split('\n');
-  return (
-    <div style={{ overflowWrap: 'break-word', wordBreak: 'normal', maxWidth: '100%' }}>
-      {lines.map((line, idx) => {
-        const trimmed = line.trim();
-        // Check if line is a divider like ━━━━━━━━━━━━━━━━━━ or ----------
-        if (/^[━─\-=_~]{3,}$/.test(trimmed)) {
-          return (
-            <div
-              key={idx}
-              style={{
-                height: '1px',
-                backgroundColor: isApplication ? '#fed7aa' : (isMe ? 'rgba(255,255,255,0.35)' : 'var(--gray-200, #E5E7EB)'),
-                margin: '10px 0',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box'
-              }}
-            />
-          );
-        }
+// Sent to the foundation in Thai (the chat notice is Thai); labels follow the app language
+const CANCEL_REASONS = [
+  { id: 'family', th: 'ไม่สะดวกรับเลี้ยงแล้ว / ติดปัญหาครอบครัว' },
+  { id: 'home', th: 'สภาพแวดล้อมหรือที่อยู่อาศัยยังไม่พร้อม' },
+  { id: 'terms', th: 'พูดคุยแล้วเงื่อนไขไม่ตรงกัน' },
+  { id: 'other_pet', th: 'ต้องการเลือกดูสัตว์ตัวอื่นแทน' },
+  { id: 'other', th: null },
+];
 
-        const parts = line.split(/(https?:\/\/[^\s]+)/g);
-        return (
-          <div key={idx} style={{ minHeight: trimmed ? 'auto' : '0.6em', overflowWrap: 'break-word', wordBreak: 'normal', whiteSpace: 'pre-wrap' }}>
-            {parts.map((part, pIdx) => {
-              if (part.match(/^https?:\/\/[^\s]+$/)) {
-                return (
-                  <a
-                    key={pIdx}
-                    href={part}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: isMe ? '#ffffff' : '#2563eb',
-                      textDecoration: 'underline',
-                      wordBreak: 'break-all'
-                    }}
-                  >
-                    {part}
-                  </a>
-                );
-              }
-              return part;
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
+const markRead = (userId, matchId) => {
+  try {
+    const readChats = JSON.parse(localStorage.getItem(`read_chats_${userId}`) || '{}');
+    readChats[matchId] = Date.now();
+    localStorage.setItem(`read_chats_${userId}`, JSON.stringify(readChats));
+    window.dispatchEvent(new Event('chatReadUpdated'));
+  } catch (e) { /* storage blocked */ }
 };
 
-const OfficialNoticeCard = memo(function OfficialNoticeCard({ msg, timestamp }) {
-  const text = msg.text || '';
-  const isApproved = text.includes('ได้รับการอนุมัติแล้ว') || text.includes('อนุมัติคำขอ');
-  const isHandover = text.includes('การส่งมอบ') && (text.includes('เสร็จสมบูรณ์') || text.includes('สำเร็จ'));
-  const isCancelled = text.includes('ยกเลิก');
-  const isDeclined = !isApproved && !isHandover && (text.includes('ไม่สามารถอนุมัติ') || text.includes('ปฏิเสธ') || isCancelled);
+const now = () => ({ created_at: new Date().toISOString(), timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
-  // Extract clean lines without raw brackets or line dividers
-  const cleanLines = text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && !/^[━─\-=_~]{3,}$/.test(l) && !/^\[.*\]$/.test(l));
-
-  // Determine theme styles and badges
-  let icon = <CheckCircle2 size={20} color="#16A34A" />;
-  let iconBg = '#DCFCE7';
-  let badgeText = 'อนุมัติแล้ว';
-  let badgeColor = '#15803D';
-  let badgeBg = '#DCFCE7';
-  let cardBorder = '#BBF7D0';
-  let headerTitle = 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
-
-  if (isHandover) {
-    icon = <Heart size={20} color="#EA580C" />;
-    iconBg = '#FFEDD5';
-    badgeText = 'ส่งมอบสำเร็จ';
-    badgeColor = '#C2410C';
-    badgeBg = '#FFEDD5';
-    cardBorder = '#FED7AA';
-    headerTitle = 'ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ';
-  } else if (isDeclined) {
-    icon = <XCircle size={20} color="#DC2626" />;
-    iconBg = '#FEE2E2';
-    badgeText = isCancelled ? 'ยกเลิกแล้ว' : 'ไม่ผ่านการพิจารณา';
-    badgeColor = '#B91C1C';
-    badgeBg = '#FEE2E2';
-    cardBorder = '#FECDD3';
-    headerTitle = isCancelled ? 'แจ้งยกเลิกคำขอรับเลี้ยง' : 'แจ้งผลการพิจารณาคำขอรับเลี้ยง';
-  }
-
-  return (
-    <div style={{
-      width: '100%',
-      display: 'flex',
-      justifyContent: 'center',
-      margin: '18px 0',
-      padding: '0 8px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{
-        maxWidth: '460px',
-        width: '100%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: `1.5px solid ${cardBorder}`,
-        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        textAlign: 'left'
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderBottom: '1px solid #F3F4F6',
-          backgroundColor: '#FAFAFA'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              backgroundColor: iconBg,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              {icon}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>
-                {headerTitle}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: '#6B7280' }}>
-                ข้อความแจ้งเตือนอัตโนมัติจากระบบ
-              </div>
-            </div>
-          </div>
-
-          <span style={{
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            padding: '3px 10px',
-            borderRadius: '12px',
-            backgroundColor: badgeBg,
-            color: badgeColor,
-            flexShrink: 0
-          }}>
-            {badgeText}
-          </span>
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: '14px 16px', fontSize: '0.86rem', lineHeight: 1.6, color: '#374151' }}>
-          {cleanLines.map((line, idx) => {
-            const isReason = line.startsWith('เหตุผล:') || line.startsWith('รายละเอียดเพิ่มเติม:');
-            if (isReason) {
-              return (
-                <div key={idx} style={{
-                  margin: '10px 0',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FEE2E2',
-                  color: '#991B1B',
-                  fontSize: '0.82rem'
-                }}>
-                  {line}
-                </div>
-              );
-            }
-
-            const isHero = line.includes('ยินดีด้วย') || line.includes('ขอขอบคุณ');
-            return (
-              <p key={idx} style={{
-                margin: idx === 0 ? 0 : '8px 0 0',
-                fontWeight: isHero ? 600 : 400,
-                color: isHero ? '#111827' : '#4B5563'
-              }}>
-                {line}
-              </p>
-            );
-          })}
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          borderTop: '1px solid #F3F4F6',
-          fontSize: '0.72rem',
-          color: '#9CA3AF',
-          backgroundColor: '#FCFCFD'
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={13} color="#16A34A" /> ระบบรับรอง 4 ขาหาบ้าน
-          </span>
-          <span>{msg.timestamp || timestamp}</span>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const MessageItem = memo(function MessageItem({ msg, isUser, avatarUrl }) {
-  if (msg.sender === 'system') {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
-        <div style={{ padding: '6px 12px', backgroundColor: 'var(--success-light)', color: 'var(--success-dark)', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center', maxWidth: '90%', wordBreak: 'break-word' }}>
-          {msg.text}
-        </div>
-      </div>
-    );
-  }
-
-  // Official Adoption Status / Event Notice Card
-  const isOfficialNotice = msg.text && (
-    msg.text.includes('[แจ้งผลการพิจารณาคำขอรับเลี้ยง]') ||
-    msg.text.includes('[แจ้งขอยกเลิกคำขอรับเลี้ยง]') ||
-    msg.text.includes('[ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ]') ||
-    (msg.text.includes('คำขอรับเลี้ยง') && (msg.text.includes('ได้รับการอนุมัติแล้ว') || msg.text.includes('ไม่สามารถอนุมัติคำขอรับเลี้ยง')))
-  );
-
-  if (isOfficialNotice) {
-    return <OfficialNoticeCard msg={msg} timestamp={msg.timestamp} />;
-  }
-
-  const isApplication = msg.text && (msg.text.includes('ใบสมัครขอรับเลี้ยง') || msg.text.startsWith('\uD83D\uDCCB'));
-
-  return (
-    <div className={`message-row msg-${msg.sender}`} style={{ marginBottom: '16px' }}>
-      {!isUser && <img src={avatarUrl} alt="avatar" className="message-avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />}
-      <div className={`message-wrapper msg-${msg.sender}`} style={{ maxWidth: '100%', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
-        {isApplication ? (
-          <div style={{
-            background: '#ffffff',
-            border: '1.5px solid #fed7aa',
-            borderRadius: '16px',
-            padding: '14px',
-            boxShadow: '0 4px 14px rgba(249, 115, 22, 0.08)',
-            maxWidth: '100%',
-            width: '100%',
-            boxSizing: 'border-box',
-            textAlign: 'left',
-            overflow: 'hidden'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #ffedd5', paddingBottom: '10px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText size={18} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#9a3412' }}>ใบสมัครขอรับเลี้ยง & แบบประเมิน</div>
-                  <div style={{ fontSize: '0.72rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                    <CheckCircle size={12} /> ยืนยันตัวตนแล้ว (KYC Verified)
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, background: '#fffaf5', padding: '12px', borderRadius: '12px', border: '1px solid #fed7aa30', boxSizing: 'border-box', width: '100%', overflow: 'hidden' }}>
-              {renderMessageContent(msg.text, isUser, true)}
-            </div>
-          </div>
-        ) : (
-          <div className="message-bubble" style={{ overflowWrap: 'break-word', wordBreak: 'normal', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
-            {msg.imageUrl && (
-              <img src={msg.imageUrl} alt="attached" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px', display: 'block' }} />
-            )}
-            {msg.text && msg.text.trim() && renderMessageContent(msg.text, isUser, false)}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', alignSelf: isUser ? 'flex-end' : 'flex-start', whiteSpace: 'nowrap' }}>
-          <span className="message-timestamp" style={{ fontSize: '11px', color: 'var(--text-medium)', whiteSpace: 'nowrap' }}>{msg.timestamp}</span>
-          {isUser && <Check size={12} color="var(--primary)" />}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// Global in-memory cache for 0ms instant room switching
+// Global in-memory cache for instant room switching
 const userChatCache = new Map();
 
 function ChatRoom() {
@@ -306,314 +46,183 @@ function ChatRoom() {
   const navigate = useNavigate();
   const { matches } = useAppContext();
   const { user, profile } = useAuth();
+  const { t, lang } = useI18n();
+  const toast = useToast();
 
-  // Instant Cache lookup
-  const initialCache = useMemo(() => {
-    return matchId ? userChatCache.get(matchId) : null;
-  }, [matchId]);
+  const initialCache = useMemo(() => (matchId ? userChatCache.get(matchId) : null), [matchId]);
 
   const [messages, setMessages] = useState(() => initialCache?.messages || []);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(() => !initialCache);
   const [animal, setAnimal] = useState(() => initialCache?.animal || null);
   const [match, setMatch] = useState(() => initialCache?.match || null);
+  const [foundation, setFoundation] = useState(() => initialCache?.foundation || null);
   const [isSending, setIsSending] = useState(false);
+  const [petImgErr, setPetImgErr] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const moreRef = useRef(null);
+  const attachRef = useRef(null);
   const [showShelterModal, setShowShelterModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportImagePreview, setReportImagePreview] = useState(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-  const fileInputRef = useRef(null);
   const reportImageInputRef = useRef(null);
 
-  // Adopter Cancel States
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('ไม่สะดวกรับเลี้ยงแล้ว / ติดปัญหาครอบครัว');
+  const [cancelReason, setCancelReason] = useState('family');
   const [customCancelReason, setCustomCancelReason] = useState('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
-  const ADOPTER_CANCEL_REASONS = [
-    'ไม่สะดวกรับเลี้ยงแล้ว / ติดปัญหาครอบครัว',
-    'สภาพแวดล้อมหรือที่อยู่อาศัยยังไม่พร้อม',
-    'พูดคุยแล้วเงื่อนไขไม่ตรงกัน',
-    'ต้องการเลือกดูสัตว์ตัวอื่นแทน',
-    'อื่นๆ (ระบุเพิ่มเติม)'
-  ];
-
-  const handleConfirmCancelAdoption = async () => {
-    setIsSubmittingCancel(true);
-    try {
-      const finalReason = cancelReason === 'อื่นๆ (ระบุเพิ่มเติม)'
-        ? (customCancelReason.trim() || 'เหตุผลส่วนตัว')
-        : cancelReason;
-
-      await api.updateMatchStatus(matchId, 'rejected');
-      setMatch(prev => ({ ...prev, status: 'rejected' }));
-
-      // Revert animal status if needed
-      if (animal?.id && supabase) {
-        try {
-          await supabase.from('animals').update({ status: 'available' }).eq('id', animal.id);
-        } catch (e) {
-          console.warn('Could not revert animal status:', e);
-        }
-      }
-
-      // Send polite cancellation message into chat
-      const cancelText = `[ผู้ขอรับเลี้ยงแจ้งขอยกเลิกคำขอ]\n━━━━━━━━━━━━━━━━━━\nขออภัยทางมูลนิธิที่ไม่สามารถรับเลี้ยง ${animal?.name || 'น้อง'} ได้ในครั้งนี้\n\nเหตุผล: ${finalReason}${customCancelReason && cancelReason !== 'อื่นๆ (ระบุเพิ่มเติม)' ? `\nรายละเอียดเพิ่มเติม: ${customCancelReason}` : ''}\n━━━━━━━━━━━━━━━━━━\nขอบพระคุณมูลนิธิที่ให้คำแนะนำเป็นอย่างดีครับ/ค่ะ`;
-
-      await api.sendMessage(matchId, cancelText, 'user');
-
-      const sysMsg = {
-        id: `sys_${Date.now()}`,
-        sender: 'system',
-        text: 'คุณได้ยกเลิกคำขอรับเลี้ยงนี้แล้ว',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, sysMsg]);
-      setShowCancelModal(false);
-    } catch (err) {
-      console.error('Error cancelling adoption:', err);
-      alert('เกิดข้อผิดพลาดในการยกเลิกคำขอ กรุณาลองใหม่อีกครั้ง');
-    } finally {
-      setIsSubmittingCancel(false);
-    }
-  };
-
-  // ใช้ ref เพื่อเข้าถึงค่าล่าสุดของ matches และ user โดยไม่ trigger re-render
+  // Latest matches / user without re-running the loader when they change
   const matchesRef = useRef(matches);
   const userRef = useRef(user);
   useEffect(() => { matchesRef.current = matches; }, [matches]);
   useEffect(() => { userRef.current = user; }, [user]);
 
-  const handleReportImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setReportImagePreview(reader.result);
-    reader.readAsDataURL(file);
-  };
-
-  const handleReport = async (e) => {
-    e.preventDefault();
-    if (!reportReason.trim()) return;
-    setIsSubmittingReport(true);
-    try {
-      await api.reportUser(profile?.id, animal?.foundation_id, reportReason, reportImagePreview);
-      setShowReportModal(false);
-      setReportReason('');
-      setReportImagePreview(null);
-      setShowBlockModal(true);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmittingReport(false);
-    }
-  };
-
-  const handleBlock = async () => {
-    try {
-      await api.blockUser(profile?.id, animal?.foundation_id);
-      navigate('/matches');
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const messagesEndRef = useRef(null);
+  // Close the ⋯ menu and the attach menu on an outside tap or Escape
+  useEffect(() => {
+    if (!showMoreMenu && !showAttachMenu) return undefined;
+    const close = (e) => {
+      if (showMoreMenu && !moreRef.current?.contains(e.target)) setShowMoreMenu(false);
+      if (showAttachMenu && !attachRef.current?.contains(e.target)) setShowAttachMenu(false);
+    };
+    const esc = (e) => { if (e.key === 'Escape') { setShowMoreMenu(false); setShowAttachMenu(false); } };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', esc); };
+  }, [showMoreMenu, showAttachMenu]);
 
   // Keep cache updated whenever state changes
   useEffect(() => {
     if (matchId && (match || messages.length > 0)) {
-      const prevCached = userChatCache.get(matchId) || {};
+      const prev = userChatCache.get(matchId) || {};
       userChatCache.set(matchId, {
-        ...prevCached,
-        match: match || prevCached.match,
-        animal: animal || prevCached.animal,
-        messages: messages.length > 0 ? messages : prevCached.messages || []
+        ...prev,
+        match: match || prev.match,
+        animal: animal || prev.animal,
+        foundation: foundation || prev.foundation,
+        messages: messages.length > 0 ? messages : prev.messages || [],
       });
     }
-  }, [matchId, messages, match, animal]);
+  }, [matchId, messages, match, animal, foundation]);
 
-  // โหลดข้อมูลแชทครั้งเดียวเมื่อ matchId เปลี่ยน (ไม่ re-fetch ซ้ำเมื่อ matches/user เปลี่ยน)
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Load once per chat
   useEffect(() => {
     let cancelled = false;
-
-    // Check cache immediately on matchId change
+    setLoadError(false);
     if (userChatCache.has(matchId)) {
       const cached = userChatCache.get(matchId);
       if (cached.match) setMatch(cached.match);
       if (cached.animal) setAnimal(cached.animal);
+      if (cached.foundation) setFoundation(cached.foundation);
       if (cached.messages) setMessages(cached.messages);
       setLoading(false);
     } else {
       setLoading(true);
     }
 
-    const fetchChatData = async () => {
+    (async () => {
       try {
-        // อ่านค่าจาก ref เพื่อไม่ให้เกิดการ re-run เมื่อ context เปลี่ยน
-        const currentMatches = matchesRef.current;
         const currentUser = userRef.current;
-
-        // Find match in context or fetch it
-        let currentMatch = currentMatches?.find(m => m.id === matchId);
+        let currentMatch = matchesRef.current?.find((m) => m.id === matchId);
         if (!currentMatch && currentUser?.id) {
           const userMatches = await api.getUserMatches(currentUser.id);
-          currentMatch = userMatches.find(m => m.id === matchId);
+          currentMatch = userMatches.find((m) => m.id === matchId);
         }
-
         if (cancelled) return;
 
         if (currentMatch) {
           setMatch(currentMatch);
+          let animalData = null;
           try {
-            const animalData = await api.getAnimalById(currentMatch.animalId);
-            if (!cancelled) setAnimal(animalData);
+            animalData = await api.getAnimalById(currentMatch.animalId);
           } catch (animalErr) {
-            console.warn("Could not load animal details in ChatRoom:", animalErr);
-            // Intelligent fallback from match last_message or placeholder
-            let fallbackName = 'สัตว์เลี้ยง';
-            const nameMatch = currentMatch.last_message?.match(/ส่งมอบ\s+([^\s]+)\s+เสร็จสมบูรณ์/) ||
-                              currentMatch.last_message?.match(/ขอรับเลี้ยง\s+([^\s]+)\s+เพื่อให้/) ||
-                              currentMatch.last_message?.match(/รับเลี้ยง\s+([^\s]+)/);
-            if (nameMatch && nameMatch[1]) {
-              fallbackName = nameMatch[1];
-            }
-            if (!cancelled) {
-              setAnimal({
-                id: currentMatch.animalId,
-                name: fallbackName,
-                shelter: 'มูลนิธิเพื่อสัตว์เลี้ยง',
-                images: ['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80']
-              });
-            }
+            console.warn('Could not load animal details in ChatRoom:', animalErr);
+          }
+          if (!cancelled) setAnimal(animalData || { id: currentMatch.animalId, name: null, images: [] });
+
+          // The foundation's real details (the info window used to show a hardcoded sample foundation)
+          const foundationId = animalData?.foundation_id;
+          if (foundationId && supabase) {
+            const { data: fp } = await supabase
+              .from('foundation_profiles')
+              .select('id, foundation_name, address, contact_phone, verification_status, latitude, longitude')
+              .eq('id', foundationId)
+              .maybeSingle();
+            if (!cancelled) setFoundation(fp || { id: foundationId, foundation_name: animalData?.shelter || null });
           }
 
-          // Mark this chat as read
           if (currentUser?.id) {
-            try {
-              const readChats = JSON.parse(localStorage.getItem(`read_chats_${currentUser.id}`) || '{}');
-              readChats[matchId] = Date.now();
-              localStorage.setItem(`read_chats_${currentUser.id}`, JSON.stringify(readChats));
-              window.dispatchEvent(new Event('chatReadUpdated'));
-            } catch (e) {}
+            markRead(currentUser.id, matchId);
             api.markMatchAsRead(matchId, 'user', currentUser.id);
           }
         }
 
         try {
           const chatHistory = await api.getMessages(matchId);
-          if (cancelled) return;
-          setMessages(chatHistory || []);
-
-          // Update cache
-          userChatCache.set(matchId, {
-            match: currentMatch,
-            animal,
-            messages: chatHistory || []
-          });
+          if (!cancelled) setMessages(chatHistory || []);
         } catch (msgErr) {
-          console.error("Failed to load chat history:", msgErr);
+          console.error('Failed to load chat history:', msgErr);
         }
       } catch (error) {
-        console.error("Failed to load chat data", error);
+        console.error('Failed to load chat data', error);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
-    };
-
-    fetchChatData();
+    })();
     return () => { cancelled = true; };
-  }, [matchId]);
+  }, [matchId, reloadKey]);
 
-  // Subscribe to match status changes
+  // Status changes (approved, handed over…) arrive live
   useEffect(() => {
-    if (!matchId || !supabase) return;
-    const matchChannel = supabase
+    if (!matchId || !supabase) return undefined;
+    const channel = supabase
       .channel(`user_chat_match_${matchId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
-        (payload) => {
-          if (payload.new) {
-            setMatch(prev => ({ ...(prev || {}), ...payload.new, animalId: payload.new.animal_id }));
-          }
-        }
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` }, (payload) => {
+        if (payload.new) setMatch((prev) => ({ ...(prev || {}), ...payload.new, animalId: payload.new.animal_id }));
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(matchChannel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [matchId]);
 
-  // Subscribe to Supabase Realtime for incoming messages
+  // Incoming messages arrive live
   useEffect(() => {
-    if (!matchId) return;
-
-    // Realtime channel subscription
-    let channel = null;
-    if (supabase) {
-      channel = supabase
-        .channel(`chat_messages_${matchId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `match_id=eq.${matchId}`
-          },
-          (payload) => {
-            const newMsg = payload.new;
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              const filtered = prev.filter(
-                (m) => !(m.id.startsWith('temp_') && m.sender === newMsg.sender && m.text === newMsg.text)
-              );
-              return [
-                ...filtered,
-                {
-                  ...newMsg,
-                  imageUrl: newMsg.image_url,
-                  timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }
-              ];
-            });
-
-            // Mark as read immediately when user is in the room
-            if (newMsg.sender === 'shelter') {
-              const currentUser = userRef.current;
-              if (currentUser?.id) {
-                try {
-                  const readChats = JSON.parse(localStorage.getItem(`read_chats_${currentUser.id}`) || '{}');
-                  readChats[matchId] = Date.now();
-                  localStorage.setItem(`read_chats_${currentUser.id}`, JSON.stringify(readChats));
-                  window.dispatchEvent(new Event('chatReadUpdated'));
-                } catch (e) {}
-                api.markMatchAsRead(matchId, 'user', currentUser.id);
-              }
-            }
-          }
-        )
-        .subscribe();
-    }
-
-    return () => {
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
+    if (!matchId || !supabase) return undefined;
+    const channel = supabase
+      .channel(`chat_messages_${matchId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_id=eq.${matchId}` }, (payload) => {
+        const newMsg = payload.new;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          const filtered = prev.filter((m) => !(String(m.id).startsWith('temp_') && m.sender === newMsg.sender && m.text === newMsg.text));
+          return [...filtered, {
+            ...newMsg,
+            imageUrl: newMsg.image_url,
+            timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }];
+        });
+        if (newMsg.sender === 'shelter' && userRef.current?.id) {
+          markRead(userRef.current.id, matchId);
+          api.markMatchAsRead(matchId, 'user', userRef.current.id);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [matchId]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -640,9 +249,7 @@ function ChatRoom() {
       const fileName = `chat_${matchId}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const { error } = await supabase.storage.from('chat_images').upload(fileName, file);
       if (error) throw error;
-
-      const { data } = supabase.storage.from('chat_images').getPublicUrl(fileName);
-      return data.publicUrl;
+      return supabase.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
     } catch (err) {
       console.warn('Storage upload error, fallback to base64 preview:', err);
       return imagePreview;
@@ -652,68 +259,41 @@ function ChatRoom() {
   const handleSend = async (e) => {
     e.preventDefault();
     if ((!inputText.trim() && !imageFile) || isSending) return;
-
     const textToSend = inputText.trim();
     setInputText('');
     setIsSending(true);
-
     try {
       let imageUrl = null;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
         removeImage();
       }
-
       const tempId = `temp_${Date.now()}`;
-      const tempMsg = {
-        id: tempId,
-        sender: 'user',
-        text: textToSend,
-        imageUrl,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, tempMsg]);
-
+      setMessages((prev) => [...prev, { id: tempId, sender: 'user', text: textToSend, imageUrl, ...now() }]);
       const sent = await api.sendMessage(matchId, textToSend, 'user', imageUrl);
       if (sent && sent.id) {
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...sent, imageUrl: sent.image_url || sent.imageUrl } : m));
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...sent, imageUrl: sent.image_url || sent.imageUrl } : m)));
       }
-      if (user?.id) {
-        try {
-          const readChats = JSON.parse(localStorage.getItem(`read_chats_${user.id}`) || '{}');
-          readChats[matchId] = Date.now();
-          localStorage.setItem(`read_chats_${user.id}`, JSON.stringify(readChats));
-          window.dispatchEvent(new Event('chatReadUpdated'));
-        } catch (e) {}
-      }
+      if (user?.id) markRead(user.id, matchId);
     } catch (error) {
-      console.error("Failed to send message", error);
+      console.error('Failed to send message', error);
+      setInputText(textToSend);
+      toast(t('fcr.sendFail'), { tone: 'error' });
     } finally {
       setIsSending(false);
     }
   };
 
+  // Current position only; when it can't be found, say so (it used to send a fixed Bangkok point)
   const handleShareLocation = () => {
     setShowAttachMenu(false);
-    if (!navigator.geolocation) {
-      const locationText = `ตำแหน่งที่อยู่ของฉัน:\nhttps://www.google.com/maps/search/?api=1&query=13.7563,100.5018`;
-      api.sendMessage(matchId, locationText, 'user');
-      return;
-    }
-
+    if (!navigator.geolocation) { toast(t('fcr.loc.noGps'), { tone: 'error' }); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        const locationText = `แชร์ตำแหน่งที่อยู่ของฉัน:\n${mapUrl}`;
-        api.sendMessage(matchId, locationText, 'user');
+      ({ coords }) => {
+        api.sendMessage(matchId, `แชร์ตำแหน่งที่อยู่ของฉัน:\nhttps://www.google.com/maps?q=${coords.latitude},${coords.longitude}`, 'user');
       },
-      (err) => {
-        console.warn('Geolocation error:', err);
-        const locationText = `ตำแหน่งที่อยู่ของฉัน:\nhttps://www.google.com/maps/search/?api=1&query=13.7563,100.5018`;
-        api.sendMessage(matchId, locationText, 'user');
-      },
-      { timeout: 10000 }
+      () => toast(t('cr.locFail'), { tone: 'error' }),
+      { timeout: 10000 },
     );
   };
 
@@ -721,7 +301,6 @@ function ChatRoom() {
     const file = e.target.files[0];
     if (!file) return;
     setShowAttachMenu(false);
-
     try {
       setIsSending(true);
       let docUrl = null;
@@ -729,537 +308,331 @@ function ChatRoom() {
         const fileExt = file.name.split('.').pop();
         const fileName = `user_doc_${matchId}_${Date.now()}.${fileExt}`;
         const { error } = await supabase.storage.from('chat_images').upload(fileName, file);
-        if (!error) {
-          const { data } = supabase.storage.from('chat_images').getPublicUrl(fileName);
-          docUrl = data?.publicUrl;
-        }
+        if (!error) docUrl = supabase.storage.from('chat_images').getPublicUrl(fileName).data?.publicUrl;
       }
-      
-      const docMsgText = `แนบเอกสาร: ${file.name}${docUrl ? `\nดาวน์โหลด/เปิดดู: ${docUrl}` : ''}`;
-      await api.sendMessage(matchId, docMsgText, 'user');
+      await api.sendMessage(matchId, `แนบเอกสาร: ${file.name}${docUrl ? `\nดาวน์โหลด/เปิดดู: ${docUrl}` : ''}`, 'user');
     } catch (err) {
       console.error('Failed to send document:', err);
+      toast(t('fcr.sendFail'), { tone: 'error' });
     } finally {
       setIsSending(false);
       if (docInputRef.current) docInputRef.current.value = '';
     }
   };
 
-  const userAvatarUrl = useMemo(() => {
-    return profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || profile?.name || 'User')}&background=D97706&color=fff`;
-  }, [profile?.avatar_url, profile?.full_name, profile?.name]);
+  const handleConfirmCancel = async () => {
+    setIsSubmittingCancel(true);
+    try {
+      const reason = CANCEL_REASONS.find((r) => r.id === cancelReason) || CANCEL_REASONS[0];
+      const finalReason = reason.id === 'other' ? (customCancelReason.trim() || 'เหตุผลส่วนตัว') : reason.th;
 
-  const animalAvatarUrl = useMemo(() => {
-    return animal?.images?.[0] || 'https://via.placeholder.com/150';
-  }, [animal?.images]);
+      await api.updateMatchStatus(matchId, 'rejected');
+      setMatch((prev) => ({ ...prev, status: 'rejected' }));
+      // The animal's status is the foundation's to change (this used to try resetting it to 'available')
 
-  if (loading) {
-    return <ChatRoomSkeleton />;
+      await api.sendMessage(matchId, `[ผู้ขอรับเลี้ยงแจ้งขอยกเลิกคำขอ]\n━━━━━━━━━━━━━━━━━━\nขออภัยทางมูลนิธิที่ไม่สามารถรับเลี้ยง ${animal?.name || 'น้อง'} ได้ในครั้งนี้\n\nเหตุผล: ${finalReason}\n━━━━━━━━━━━━━━━━━━\nขอบพระคุณมูลนิธิที่ให้คำแนะนำเป็นอย่างดีครับ/ค่ะ`, 'user');
+
+      setMessages((prev) => [...prev, { id: `sys_${Date.now()}`, sender: 'system', text: t('cr.sys.cancelled'), ...now() }]);
+      setShowCancelModal(false);
+    } catch (err) {
+      console.error('Error cancelling adoption:', err);
+      toast(t('cr.cancelFail'), { tone: 'error' });
+    } finally {
+      setIsSubmittingCancel(false);
+    }
+  };
+
+  const handleReportImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setReportImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    if (!reportReason.trim()) return;
+    setIsSubmittingReport(true);
+    try {
+      await api.reportUser(profile?.id, animal?.foundation_id, reportReason, reportImagePreview);
+      setShowReportModal(false);
+      setReportReason('');
+      setReportImagePreview(null);
+      toast(t('fcr.report.sent'), { tone: 'success' });
+      setShowBlockModal(true);
+    } catch (error) {
+      console.error(error);
+      toast(t('fcr.report.fail'), { tone: 'error' });
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    try {
+      await api.blockUser(profile?.id, animal?.foundation_id);
+      navigate('/matches');
+    } catch (error) {
+      console.error(error);
+      toast(t('fcr.block.fail'), { tone: 'error' });
+    }
+  };
+
+  const foundationName = foundation?.foundation_name || animal?.shelter || t('cr.foundation');
+  const foundationAvatar = useMemo(() => initialsAvatar(foundationName), [foundationName]);
+
+  if (loading) return <ChatRoomSkeleton />;
+
+  if (!match && messages.length === 0 && loadError) {
+    return (
+      <div className="chat-room-container fcr fcr--empty">
+        <LoadError onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }} />
+      </div>
+    );
   }
 
-  return (
-    <div className="chat-room-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
-      {/* Header */}
-      <div className="chat-header" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--gray-200, #E5E7EB)',
-        backgroundColor: '#FFFFFF',
-        flexShrink: 0,
-        zIndex: 10,
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-          <button 
-            className="chat-back-btn" 
-            onClick={() => navigate('/matches')} 
-            aria-label="ย้อนกลับไปหน้ารายการแชท"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          
-          {animal && (
-            <div className="chat-partner-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, margin: 0, flex: 1 }}>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img 
-                  src={animal.images?.[0] || 'https://via.placeholder.com/150'} 
-                  alt={animal.name} 
-                  className="chat-avatar" 
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #E5E7EB' }} 
-                />
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {animal.name}
-                </h2>
-                <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {animal.shelter_name || 'ศูนย์พักพิงสัตว์'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+  if (!match && messages.length === 0) {
+    return (
+      <div className="chat-room-container fcr fcr--empty">
+        <EmptyState
+          art={<PetScene variant="search" />}
+          title={t('fcr.notFound.title')}
+          text={t('cr.notFound.text')}
+          action={<Button onClick={() => navigate('/matches')}>{t('fcr.notFound.back')}</Button>}
+        />
+      </div>
+    );
+  }
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative', flexShrink: 0 }}>
-          <button 
-            onClick={() => setShowShelterModal(true)} 
-            title="ข้อมูลศูนย์พักพิง" 
-            style={{ 
-              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5E7EB', 
-              background: '#F9FAFB', cursor: 'pointer', color: '#4B5563',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background-color 0.15s' 
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-          >
-            <Info size={18} />
+  const status = match?.status;
+  const petName = animal?.name || t('fmc.pet');
+  const verified = foundation?.verification_status === 'approved';
+  const canCancel = status === 'pending' || status === 'approved';
+  const mapsUrl = foundation?.latitude != null && foundation?.longitude != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${foundation.latitude},${foundation.longitude}`
+    : foundation?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(foundation.address)}` : null;
+  let lastDay = null;
+
+  return (
+    <div className="chat-room-container fcr">
+      <header className="fcr-head">
+        <button type="button" className="fcr-icon-btn fcr-back chat-back-btn" onClick={() => navigate('/matches')} aria-label={t('fcr.backToList')}>
+          <ChevronLeft size={22} />
+        </button>
+        {animal?.id ? (
+          <Link to={`/animal/${animal.id}`} className="fcr-who" aria-label={t('fcr.viewPet', { name: petName })}>
+            <span className="fcr-pet fcr-pet--round">
+              {animal.images?.[0] && !petImgErr ? <img src={animal.images[0]} alt="" onError={() => setPetImgErr(true)} /> : <PawPrint size={18} aria-hidden="true" />}
+            </span>
+            <span className="fcr-who__text">
+              <span className="fcr-who__name">{petName}</span>
+              <span className="fcr-who__sub fcr-who__sub--row"><span>{foundationName}</span>{verified && <ShieldCheck size={13} className="fcr-verified" aria-label={t('cr.verifiedFoundation')} />}</span>
+            </span>
+          </Link>
+        ) : <span className="fcr-who" />}
+        <div className="fcr-pop" ref={moreRef}>
+          <button type="button" className="fcr-icon-btn" aria-label={t('fcr.more')} aria-haspopup="menu" aria-expanded={showMoreMenu} onClick={() => setShowMoreMenu((v) => !v)}>
+            <MoreVertical size={20} />
           </button>
-          <button 
-            onClick={() => setShowMoreMenu(!showMoreMenu)} 
-            title="ตัวเลือกเพิ่มเติม"
-            style={{ 
-              width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #E5E7EB', 
-              background: '#F9FAFB', cursor: 'pointer', color: '#4B5563',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background-color 0.15s' 
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-          >
-            <MoreVertical size={18} />
-          </button>
-          
           {showMoreMenu && (
-            <div style={{ position: 'absolute', top: '100%', right: '0', background: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 100, border: '1px solid #E5E7EB', minWidth: '190px', marginTop: '6px' }}>
-              {match && (match.status === 'approved' || match.status === 'pending') && (
-                <button 
-                  style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid #F3F4F6', textAlign: 'left', cursor: 'pointer', color: '#DC2626', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }} 
-                  onClick={() => { setShowMoreMenu(false); setShowCancelModal(true); }}
-                >
-                  <XCircle size={15} /> ขอยกเลิกคำขอรับเลี้ยง
+            <div className="fcr-menu" role="menu">
+              <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => { setShowMoreMenu(false); setShowShelterModal(true); }}>
+                <Building2 size={16} aria-hidden="true" /> {t('cr.menu.foundation')}
+              </button>
+              {foundation?.contact_phone && (
+                <a role="menuitem" className="fcr-menu__item" href={`tel:${foundation.contact_phone}`}>
+                  <Phone size={16} aria-hidden="true" /> {t('fcr.menu.call', { phone: foundation.contact_phone })}
+                </a>
+              )}
+              {canCancel && (
+                <button type="button" role="menuitem" className="fcr-menu__item fcr-menu__item--danger" onClick={() => { setShowMoreMenu(false); setShowCancelModal(true); }}>
+                  <XCircle size={16} aria-hidden="true" /> {t('cr.menu.cancel')}
                 </button>
               )}
-              <button style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#6B7280', fontSize: '0.875rem', fontWeight: 500 }} onClick={() => { setShowMoreMenu(false); setShowReportModal(true); }}>
-                รายงานมูลนิธิ / บล็อก
+              <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => { setShowMoreMenu(false); setShowReportModal(true); }}>
+                <Flag size={16} aria-hidden="true" /> {t('cr.menu.report')}
               </button>
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Match Status Banner for Adopter */}
-      {match && match.status === 'pending' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#FFFBEB', borderBottom: '1px solid #FDE68A', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#B45309', fontSize: '0.82rem', fontWeight: 600 }}>
-            <Clock size={16} color="#D97706" />
-            <span>ใบสมัครและคำขอรับเลี้ยงอยู่ระหว่างรอการตรวจสอบและอนุมัติจากเจ้าหน้าที่มูลนิธิ</span>
+      {/* Where the request stands, with the one thing the adopter can do next */}
+      {status === 'pending' && (
+        <section className="fcr-status fcr-status--pending">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><Clock size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('cr.pending.title', { pet: petName })}</strong>
+              <span>{t('cr.pending.text')}</span>
+              <button type="button" className="fcr-link fcr-link--quiet fcr-link--inline" onClick={() => setShowCancelModal(true)}>{t('cr.cancelShort')}</button>
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCancelModal(true)}
-            style={{
-              padding: '4px 10px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: '#6B7280',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #D1D5DB',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            ยกเลิกคำขอ
-          </button>
-        </div>
+        </section>
       )}
 
-      {match && match.status === 'approved' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#ECFDF5', borderBottom: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontSize: '0.82rem', fontWeight: 600 }}>
-            <CheckCircle size={16} color="#059669" />
-            <span>ยินดีด้วย! คำขอรับเลี้ยงได้รับการอนุมัติแล้ว ท่านสามารถพูดคุยรายละเอียดและนัดหมายส่งมอบในแชทนี้ได้เลย</span>
+      {status === 'approved' && (
+        <section className="fcr-status fcr-status--approved">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><CalendarCheck size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('cr.approved.title')}</strong>
+              <span>{t('cr.approved.text', { pet: petName })}</span>
+            </span>
+            {mapsUrl && <a className="fcr-link" href={mapsUrl} target="_blank" rel="noopener noreferrer"><Navigation size={15} aria-hidden="true" /> {t('cr.directions')}</a>}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCancelModal(true)}
-            style={{
-              padding: '4px 10px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              color: '#DC2626',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #FCA5A5',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <XCircle size={13} /> ขอยกเลิกคำขอ
-          </button>
-        </div>
+        </section>
       )}
 
-      {match && match.status === 'rejected' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', gap: '8px', color: '#B91C1C', fontSize: '0.82rem', fontWeight: 600 }}>
-          <XCircle size={16} color="#DC2626" />
-          <span>คำขอรับเลี้ยงนี้ถูกยกเลิกหรือปฏิเสธแล้ว ท่านสามารถเลือกดูสัตว์ตัวอื่นในหน้าหลักได้เสมอ</span>
-        </div>
-      )}
-
-      {match && (match.status === 'adopted' || match.status === 'completed') && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803D', fontSize: '0.84rem', fontWeight: 600 }}>
-            <CheckCircle2 size={18} color="#16A34A" />
-            <span>น้องอยู่กับคุณแล้ว • อัปเดตรูปถ่ายและสถานะสุขภาพทุก 2 เดือน</span>
+      {(status === 'adopted' || status === 'completed') && (
+        <section className="fcr-status fcr-status--adopted">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><Heart size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('cr.adopted.title', { pet: petName })}</strong>
+              <span>{t('cr.adopted.text')}</span>
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(`/adoption/timeline/${matchId}`)}
-            style={{
-              padding: '6px 14px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              color: '#FFFFFF',
-              backgroundColor: '#15803D',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 3px rgba(21,128,61,0.2)'
-            }}
-          >
-            <Calendar size={15} /> ติดตามสถานะน้อง
-          </button>
-        </div>
+          <div className="fcr-status__actions">
+            <Button size="sm" onClick={() => navigate(`/adoption/timeline/${matchId}`)}><CalendarCheck size={16} aria-hidden="true" /> {t('cr.adopted.cta')}</Button>
+          </div>
+        </section>
       )}
 
-      {match && match.status === 'rejected' && (
-        <div style={{ padding: '10px 18px', backgroundColor: '#FEF2F2', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', gap: '8px', color: '#B91C1C', fontSize: '0.82rem', fontWeight: 600 }}>
-          <XCircle size={16} color="#DC2626" />
-          <span>คำขอรับเลี้ยงนี้ไม่ผ่านการพิจารณา ท่านสามารถดูเหตุผลในแชท และเลือกดูสัตว์ตัวอื่นที่กำลังหาบ้านได้เสมอ</span>
-        </div>
+      {status === 'rejected' && (
+        <section className="fcr-status fcr-status--rejected">
+          <div className="fcr-status__top">
+            <span className="fcr-status__icon" aria-hidden="true"><XCircle size={18} /></span>
+            <span className="fcr-status__text">
+              <strong>{t('cr.rejected.title')}</strong>
+              <span>{t('cr.rejected.text')}</span>
+            </span>
+            <Link to="/" className="fcr-link">{t('cr.rejected.cta')}</Link>
+          </div>
+        </section>
       )}
 
-      {/* Shelter Info Modal */}
-      <AnimatePresence>
-        {showShelterModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowShelterModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.2rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={20} color="var(--primary)" /> ข้อมูลมูลนิธิ
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.95rem' }}>
-                <div><strong>ชื่อศูนย์พักพิง:</strong> มูลนิธิเพื่อสุนัขจรจัดชลบุรี</div>
-                <div><strong>เบอร์ติดต่อ:</strong> 038-123-4567</div>
-                <div><strong>ที่อยู่:</strong> 123 ถ.สุขุมวิท ต.แสนสุข อ.เมือง จ.ชลบุรี</div>
-                <div style={{ padding: '8px', background: 'var(--success-light)', color: 'var(--success)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontWeight: 600 }}>
-                  <Info size={16} /> ตรวจสอบและยืนยันตัวตนแล้ว
-                </div>
-              </div>
-              <button className="btn btn-primary btn-full" style={{ marginTop: '24px' }} onClick={() => setShowShelterModal(false)}>ปิดหน้าต่าง</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Report Modal */}
-      <AnimatePresence>
-        {showReportModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowReportModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.2rem', color: 'var(--text-dark)' }}>รายงานปัญหา</h3>
-              <form onSubmit={handleReport}>
-                <textarea 
-                  placeholder="โปรดระบุเหตุผลในการรายงาน..." 
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '8px', border: '1px solid var(--gray-200)', marginBottom: '16px', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem' }}
-                  required
-                />
-                <div style={{ marginBottom: '16px' }}>
-                  <input type="file" accept="image/*" ref={reportImageInputRef} onChange={handleReportImageSelect} style={{ display: 'none' }} />
-                  <button type="button" onClick={() => reportImageInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-medium)', fontSize: '0.9rem' }}>
-                    <ImageIcon size={18} /> แนบรูปภาพหลักฐาน
-                  </button>
-                  {reportImagePreview && (
-                    <div style={{ position: 'relative', marginTop: '12px', display: 'inline-block' }}>
-                      <img src={reportImagePreview} alt="Proof preview" style={{ height: '80px', borderRadius: '8px', border: '1px solid var(--gray-200)', objectFit: 'cover' }} />
-                      <button type="button" onClick={() => setReportImagePreview(null)} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowReportModal(false)}>ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1, backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={!reportReason.trim() || isSubmittingReport}>
-                    {isSubmittingReport ? <Loader size={20} className="spin" /> : 'รายงาน'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Block Confirmation Modal */}
-      <AnimatePresence>
-        {showBlockModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => setShowBlockModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)', textAlign: 'center' }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '1.2rem', color: 'var(--text-dark)' }}>ต้องการบล็อกผู้ใช้นี้ด้วยหรือไม่?</h3>
-              <p style={{ color: 'var(--text-medium)', marginBottom: '24px' }}>หากบล็อก คุณจะไม่ได้รับข้อความจากมูลนิธินี้อีก</p>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowBlockModal(false)}>ไม่บล็อก</button>
-                <button className="btn btn-primary" style={{ flex: 1, backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBlock}>บล็อกผู้ใช้</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Cancel Adoption Modal for Adopter */}
-      <AnimatePresence>
-        {showCancelModal && (
-          <motion.div 
-            className="modal-overlay" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={MOTION.base}
-            onClick={() => !isSubmittingCancel && setShowCancelModal(false)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px' }}
-          >
-            <motion.div 
-              className="modal-content" 
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={MOTION.base}
-              onClick={e => e.stopPropagation()} 
-              style={{ background: 'white', padding: '24px', borderRadius: '20px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 48px rgba(0,0,0,0.12)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <XCircle size={24} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#111827', fontWeight: 700 }}>
-                    ขอยกเลิกคำขอรับเลี้ยง
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
-                    สัตว์เลี้ยง: <strong>{animal?.name || 'น้อง'}</strong>
-                  </p>
-                </div>
-              </div>
-
-              <p style={{ fontSize: '0.875rem', color: '#374151', margin: '0 0 12px', fontWeight: 600 }}>
-                เลือกเหตุผลในการขอยกเลิกคำขอ:
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                {ADOPTER_CANCEL_REASONS.map((reason, idx) => (
-                  <label 
-                    key={idx}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', 
-                      borderRadius: '10px', border: cancelReason === reason ? '1.5px solid #DC2626' : '1px solid #E5E7EB',
-                      backgroundColor: cancelReason === reason ? '#FEF2F2' : '#F9FAFB',
-                      cursor: 'pointer', fontSize: '0.85rem', color: '#1F2937', transition: 'all 0.15s'
-                    }}
-                  >
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
-                      value={reason} 
-                      checked={cancelReason === reason} 
-                      onChange={() => setCancelReason(reason)}
-                      style={{ accentColor: '#DC2626' }}
-                    />
-                    <span>{reason}</span>
-                  </label>
-                ))}
-              </div>
-
-              {cancelReason === 'อื่นๆ (ระบุเพิ่มเติม)' && (
-                <textarea 
-                  placeholder="โปรดระบุเหตุผลในการขอยกเลิก..." 
-                  value={customCancelReason}
-                  onChange={(e) => setCustomCancelReason(e.target.value)}
-                  style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '10px', border: '1px solid #E5E7EB', marginBottom: '14px', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                  required
-                />
-              )}
-
-              <p style={{ fontSize: '0.78rem', color: '#6B7280', margin: '0 0 20px', lineHeight: 1.4 }}>
-                ระบบจะส่งข้อความแจ้งขอยกเลิกคำขอพร้อมเหตุผลให้มูลนิธิทราบ และเปิดโอกาสให้น้องได้เจอบ้านอื่นต่อไป
-              </p>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: 600 }} 
-                  onClick={() => setShowCancelModal(false)}
-                  disabled={isSubmittingCancel}
-                >
-                  ปิด
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  style={{ flex: 1.3, padding: '10px', borderRadius: '10px', fontWeight: 600, backgroundColor: '#DC2626', borderColor: '#DC2626', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  onClick={handleConfirmCancelAdoption}
-                  disabled={isSubmittingCancel || (cancelReason === 'อื่นๆ (ระบุเพิ่มเติม)' && !customCancelReason.trim())}
-                >
-                  {isSubmittingCancel ? <Loader size={18} className="spin" /> : 'ยืนยันยกเลิกคำขอ'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Messages */}
-      <div className="chat-messages-area" style={{ flex: 1, minHeight: 0, padding: '14px 12px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: '#FAF8F5' }}>
-        {/* Date Separator */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-          <span style={{ backgroundColor: 'var(--surface, #FFFFFF)', border: '1px solid var(--gray-200, #E5E7EB)', color: 'var(--text-medium, #6B7280)', fontSize: '0.72rem', padding: '3px 12px', borderRadius: '9999px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-            วันนี้
-          </span>
-        </div>
-
+      <div className="chat-messages fcr-messages">
+        {messages.length === 0 && <p className="fcr-messages__empty">{t('cr.noMessages')}</p>}
         {messages.map((msg) => {
-          const isUser = msg.sender === 'user';
+          const day = dayLabel(msg.created_at, t, lang);
+          const showDay = day !== lastDay;
+          lastDay = day;
           return (
-            <MessageItem
-              key={msg.id}
-              msg={msg}
-              isUser={isUser}
-              avatarUrl={isUser ? userAvatarUrl : animalAvatarUrl}
-            />
+            <React.Fragment key={msg.id}>
+              {showDay && <div className="fcr-day"><span>{day}</span></div>}
+              <MessageItem msg={msg} isMe={msg.sender === 'user'} otherPic={foundationAvatar} />
+            </React.Fragment>
           );
         })}
         <div ref={messagesEndRef} />
-        {isSending && (
-          <div className="message-row msg-user" style={{ marginBottom: '12px' }}>
-            <div className="message-wrapper msg-user" style={{ maxWidth: '100%', alignItems: 'flex-end' }}>
-              <div className="message-bubble" style={{ opacity: 0.7, width: 'fit-content' }}>
-                กำลังส่ง...
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Input */}
-      <div className="chat-input-wrapper" style={{ position: 'relative', padding: '8px 12px calc(8px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--gray-200, #E5E7EB)', backgroundColor: '#FFFFFF', flexShrink: 0, boxSizing: 'border-box', zIndex: 10 }}>
-        {showAttachMenu && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', background: 'white', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '14px 18px', display: 'flex', gap: '20px', zIndex: 100, border: '1px solid #E5E7EB' }}>
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => docInputRef.current?.click()}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--success-light, #ECFDF5)', color: 'var(--success, #059669)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={22} />
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ส่งเอกสาร</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={handleShareLocation}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e0f2fe', color: '#0284c7', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <MapPin size={22} />
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark, #111827)', fontWeight: 500 }}>ตำแหน่ง</span>
-            </div>
-          </div>
-        )}
-
+      <div className="fcr-compose chat-input-wrapper">
         {imagePreview && (
-          <div style={{ position: 'absolute', bottom: '100%', left: '12px', marginBottom: '8px', backgroundColor: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB' }}>
-            <img src={imagePreview} alt="preview" style={{ height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
-            <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '-6px', right: '-6px', background: 'var(--danger, #DC2626)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-              <X size={13} />
-            </button>
+          <div className="fcr-compose__preview">
+            <img src={imagePreview} alt="" />
+            <button type="button" onClick={removeImage} aria-label={t('fcr.removeImage')}><X size={14} /></button>
           </div>
         )}
-        <form className="chat-input-area" onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, padding: '4px 6px', backgroundColor: 'var(--surface-container-low, #F9FAFB)', border: '1px solid var(--gray-200, #E5E7EB)', borderRadius: '24px' }}>
-          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', transition: 'transform 0.2s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PlusCircle size={22} />
-          </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', padding: '6px', cursor: 'pointer', color: 'var(--text-medium, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <form className="fcr-compose__bar" onSubmit={handleSend}>
+          <div className="fcr-pop" ref={attachRef}>
+            <button type="button" className={`fcr-icon-btn fcr-attach ${showAttachMenu ? 'is-open' : ''}`} aria-label={t('fcr.attach')} aria-haspopup="menu" aria-expanded={showAttachMenu} onClick={() => setShowAttachMenu((v) => !v)}>
+              <PlusCircle size={22} />
+            </button>
+            {showAttachMenu && (
+              <div className="fcr-menu fcr-menu--up" role="menu">
+                <button type="button" role="menuitem" className="fcr-menu__item" onClick={handleShareLocation}><Navigation size={16} aria-hidden="true" /> {t('fcr.attach.current')}</button>
+                <button type="button" role="menuitem" className="fcr-menu__item" onClick={() => docInputRef.current?.click()}><FileText size={16} aria-hidden="true" /> {t('fcr.attach.doc')}</button>
+              </div>
+            )}
+          </div>
+          <button type="button" className="fcr-icon-btn" aria-label={t('fcr.attach.photo')} onClick={() => fileInputRef.current?.click()}>
             <ImageIcon size={22} />
           </button>
-          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} />
-          <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} style={{ display: 'none' }} />
-
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} hidden />
+          <input type="file" accept=".pdf,.doc,.docx,image/*" ref={docInputRef} onChange={handleDocSelect} hidden />
           <input
             type="text"
-            placeholder="พิมพ์ข้อความ..."
+            className="fcr-compose__input"
+            placeholder={t('fcr.placeholder')}
+            aria-label={t('fcr.placeholder')}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={isSending}
-            style={{ flex: 1, padding: '6px 8px', backgroundColor: 'transparent', border: 'none', outline: 'none', color: 'var(--text-dark, #111827)', fontSize: '16px', fontFamily: 'inherit' }}
           />
-          <button type="submit" className="btn-send" disabled={(!inputText.trim() && !imageFile) || isSending} style={{ background: 'var(--primary, #D97706)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', minWidth: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(217,119,6,0.25)', opacity: (!inputText.trim() && !imageFile) || isSending ? 0.5 : 1 }}>
-            <Send size={16} />
+          <button type="submit" className="fcr-send" disabled={(!inputText.trim() && !imageFile) || isSending} aria-label={t('fcr.send')}>
+            {isSending ? <Loader className="ui-spin" size={18} /> : <Send size={17} />}
           </button>
         </form>
       </div>
+
+      {/* Foundation (real details; this used to be a hardcoded sample foundation) */}
+      <Dialog open={showShelterModal} onClose={() => setShowShelterModal(false)} title={foundationName}>
+        {verified
+          ? <span className="fcr-badge fcr-badge--ok"><ShieldCheck size={13} aria-hidden="true" /> {t('cr.verifiedFoundation')}</span>
+          : <span className="fcr-badge fcr-badge--warn">{t('cr.unverifiedFoundation')}</span>}
+        <dl className="fcr-facts fcr-facts--single">
+          <div><dt>{t('fcr.applicant.phone')}</dt><dd>{foundation?.contact_phone ? <a href={`tel:${foundation.contact_phone}`}>{foundation.contact_phone}</a> : '-'}</dd></div>
+          <div><dt>{t('cr.address')}</dt><dd>{foundation?.address || '-'}</dd></div>
+        </dl>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowShelterModal(false)}>{t('fcr.close')}</Button>
+          {mapsUrl && <a className="ui-btn ui-btn--primary" href={mapsUrl} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t('cr.directions')}</a>}
+        </div>
+      </Dialog>
+
+      {/* Cancel */}
+      <Dialog open={showCancelModal} onClose={() => !isSubmittingCancel && setShowCancelModal(false)} title={t('cr.cancelQ', { pet: petName })}>
+        <fieldset className="fcr-reasons">
+          <legend>{t('fcr.reason')}</legend>
+          {CANCEL_REASONS.map((r) => (
+            <label key={r.id} className={`fcr-reason ${cancelReason === r.id ? 'is-on' : ''}`}>
+              <input type="radio" name="cr-reason" value={r.id} checked={cancelReason === r.id} onChange={() => setCancelReason(r.id)} />
+              <span>{t(`cr.reason.${r.id}`)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {cancelReason === 'other' && (
+          <textarea className="fcr-textarea" placeholder={t('cr.reason.otherPh')} aria-label={t('cr.reason.otherPh')} value={customCancelReason} onChange={(e) => setCustomCancelReason(e.target.value)} />
+        )}
+        <p className="fcr-note">{t('cr.cancelNote')}</p>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowCancelModal(false)} disabled={isSubmittingCancel}>{t('fnd.back')}</Button>
+          <Button variant="danger" onClick={handleConfirmCancel} loading={isSubmittingCancel} disabled={cancelReason === 'other' && !customCancelReason.trim()}>{t('cr.cancelConfirm')}</Button>
+        </div>
+      </Dialog>
+
+      {/* Report */}
+      <Dialog open={showReportModal} onClose={() => !isSubmittingReport && setShowReportModal(false)} title={t('fcr.report.title', { name: foundationName })}>
+        <form onSubmit={handleReport}>
+          <textarea className="fcr-textarea" placeholder={t('fcr.report.ph')} aria-label={t('fcr.report.ph')} value={reportReason} onChange={(e) => setReportReason(e.target.value)} required />
+          <input type="file" accept="image/*" ref={reportImageInputRef} onChange={handleReportImageSelect} hidden />
+          {reportImagePreview ? (
+            <div className="fcr-compose__preview fcr-report-img">
+              <img src={reportImagePreview} alt="" />
+              <button type="button" onClick={() => setReportImagePreview(null)} aria-label={t('fcr.removeImage')}><X size={14} /></button>
+            </div>
+          ) : (
+            <button type="button" className="fcr-link fcr-report-attach" onClick={() => reportImageInputRef.current?.click()}>
+              <ImageIcon size={16} aria-hidden="true" /> {t('fcr.report.attach')}
+            </button>
+          )}
+          <div className="ui-dialog__actions">
+            <Button type="button" variant="secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>{t('fnd.back')}</Button>
+            <Button type="submit" variant="danger" loading={isSubmittingReport} disabled={!reportReason.trim()}>{t('fcr.report.send')}</Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog open={showBlockModal} onClose={() => setShowBlockModal(false)} title={t('cr.block.title')}>
+        <p>{t('cr.block.text')}</p>
+        <div className="ui-dialog__actions">
+          <Button variant="secondary" onClick={() => setShowBlockModal(false)}>{t('fcr.block.no')}</Button>
+          <Button variant="danger" onClick={handleBlock}>{t('fcr.block.yes')}</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

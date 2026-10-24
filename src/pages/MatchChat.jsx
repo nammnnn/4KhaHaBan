@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Search, MessageCircleHeart, PawPrint, Heart, ShieldCheck, MessagesSquare, ChevronDown } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
-import { Badge } from '../components/ui';
+import { Badge, LoadError } from '../components/ui';
 import { useI18n } from '../i18n';
 import { displayNames } from '../lib/animal';
 import ChatRoom from './ChatRoom';
@@ -128,7 +128,7 @@ function MatchRow({ match, animal, active, unread, onOpen, t, lang }) {
 }
 
 function MatchChat() {
-  const { matches, loadingMatches } = useAppContext();
+  const { matches, loadingMatches, matchesError, retryMatches } = useAppContext();
   const { user } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -259,7 +259,9 @@ function MatchChat() {
         <motion.div
           className="mc-scroll"
         >
-          {!hasAny ? (
+          {!hasAny && matchesError ? (
+            <LoadError onRetry={retryMatches} />
+          ) : !hasAny ? (
             <>
               {/* Mobile shows the full guide here; desktop shows it in the right panel */}
               <div className="mc-only-mobile"><HowItWorks t={t} compact /></div>
@@ -298,7 +300,7 @@ function MatchChat() {
           <div className="mc-panel-empty">
             {hasAny ? (
               <p className="mc-empty-note">{t('chat.pick')}</p>
-            ) : (
+            ) : matchesError ? null : (
               <HowItWorks t={t} />
             )}
           </div>

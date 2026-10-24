@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles, Building2, Star, Banknote, PiggyBank, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOTION } from '../lib/motion';
+import { initialsAvatar } from '../lib/avatar';
 
 const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -702,8 +703,8 @@ const AdminDashboard = () => {
           className="admin-kpi-grid"
         >
           <div className="admin-kpi-card">
-            <div className="admin-kpi-icon-wrap" style={{ background: '#F0F9FF' }}>
-              <Users size={20} color="#0284C7" />
+            <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+              <Users size={20} color="#B45309" />
             </div>
             {loading && profiles.length === 0 ? (
               <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '3px 0' }} />
@@ -726,7 +727,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-kpi-card">
-            <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+            <div className="admin-kpi-icon-wrap" style={{ background: 'var(--success-soft)' }}>
               <Shield size={20} color="#059669" />
             </div>
             {loading && profiles.length === 0 ? (
@@ -743,13 +744,13 @@ const AdminDashboard = () => {
           className="admin-tab-nav"
         >
           {[
-            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} />, color: '#0284C7' },
-            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length, color: '#D97706' },
-            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={17} />, badge: incidents.filter(i => i.status === 'pending').length, color: '#DC2626' },
-            { id: 'donations', label: 'ประวัติบริจาค', icon: <Banknote size={17} />, color: '#059669' },
-            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount, color: '#7C3AED' },
-            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} />, color: '#DC2626' },
-            { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} />, color: '#4B5563' }
+            { id: 'users', label: 'รายชื่อผู้ใช้', icon: <Users size={17} /> },
+            { id: 'approvals', label: 'คำขอมูลนิธิ', icon: <Building2 size={17} />, badge: pendingFoundations.length },
+            { id: 'incidents', label: 'แจ้งเหตุกู้ภัย', icon: <AlertTriangle size={17} />, badge: incidents.filter(i => i.status === 'pending').length },
+            { id: 'donations', label: 'ประวัติบริจาค', icon: <Banknote size={17} /> },
+            { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount },
+            { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} /> },
+            { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} /> }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -765,21 +766,22 @@ const AdminDashboard = () => {
                 }}
                 className="admin-tab-pill"
                 style={{
-                  backgroundColor: isActive ? tab.color : '#FFFFFF',
-                  color: isActive ? '#FFFFFF' : '#374151',
-                  border: isActive ? `1.5px solid ${tab.color}` : '1px solid #E5E7EB',
+                  // Same as the filter chips elsewhere in the app: dark when selected
+                  backgroundColor: isActive ? 'var(--ink-900)' : 'var(--surface)',
+                  color: isActive ? '#FFFFFF' : 'var(--ink-700)',
+                  border: isActive ? '1.5px solid var(--ink-900)' : '1px solid var(--line-200)',
                   boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.02)',
                   fontWeight: isActive ? 700 : 500
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#FFFFFF' : tab.color }}>
+                <span style={{ display: 'flex', alignItems: 'center', color: isActive ? '#FFFFFF' : 'var(--ink-500)' }}>
                   {tab.icon}
                 </span>
                 <span>{tab.label}</span>
                 {tab.badge > 0 && (
                   <span style={{
                     backgroundColor: isActive ? '#FFFFFF' : '#DC2626',
-                    color: isActive ? tab.color : '#FFFFFF',
+                    color: isActive ? 'var(--ink-900)' : '#FFFFFF',
                     minWidth: '20px',
                     height: '20px',
                     borderRadius: '9999px',
@@ -864,12 +866,12 @@ const AdminDashboard = () => {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                       <img 
-                        src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`} 
+                        src={profile.avatar_url || initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User')} 
                         alt="avatar" 
                         style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`;
+                          e.target.src = initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User');
                         }}
                       />
                       <div style={{ minWidth: 0 }}>
@@ -935,12 +937,12 @@ const AdminDashboard = () => {
                               style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} 
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`;
+                                e.target.src = initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User');
                               }}
                             />
                           ) : (
                             <img 
-                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || profile.email?.split('@')[0] || 'User')}&background=D97706&color=fff&size=128`} 
+                              src={initialsAvatar(profile.full_name || profile.email?.split('@')[0] || 'User')} 
                               alt="avatar fallback" 
                               style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} 
                             />
@@ -1075,7 +1077,7 @@ const AdminDashboard = () => {
           ) : (
             <div style={{ padding: '80px 24px', textAlign: 'center', backgroundColor: 'white', borderRadius: '16px', border: '2px dashed var(--gray-200)' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(33,225,146,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 16px' }}>
-                <CheckCircle size={32} color="var(--success)" />
+                <CheckCircle size={32} color="#047857" />
               </div>
               <h3 style={{ margin: '0 0 8px', color: 'var(--text-dark)' }}>ยอดเยี่ยม! ไม่มีคำขอใหม่</h3>
               <p style={{ margin: 0, color: 'var(--text-medium)' }}>ทุกคำขอได้รับการตรวจสอบเรียบร้อยแล้ว</p>
@@ -1111,7 +1113,7 @@ const AdminDashboard = () => {
                 {/* 3 Summary KPI Cards: Clean, Meaningful, Non-redundant */}
                 <div className="admin-kpi-grid">
                   <div className="admin-kpi-card">
-                    <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+                    <div className="admin-kpi-icon-wrap" style={{ background: 'var(--success-soft)' }}>
                       <Banknote size={20} color="#059669" />
                     </div>
                     <span className="admin-kpi-count">฿ {totalAmount.toLocaleString()}</span>
@@ -1127,8 +1129,8 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="admin-kpi-card">
-                    <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
-                      <FileCheck size={20} color="#2563EB" />
+                    <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+                      <FileCheck size={20} color="#B45309" />
                     </div>
                     <span className="admin-kpi-count">{slipCount}</span>
                     <span className="admin-kpi-label">แนบหลักฐานสลิป</span>
@@ -1529,9 +1531,9 @@ const AdminDashboard = () => {
                         }}
                         style={{ 
                           padding: '5px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 600,
-                          backgroundColor: report.status === 'resolved' ? '#ECFDF5' : '#FEF3C7',
-                          color: report.status === 'resolved' ? '#059669' : '#D97706',
-                          border: `1px solid ${report.status === 'resolved' ? '#A7F3D0' : '#FCD34D'}`,
+                          backgroundColor: report.status === 'resolved' ? 'var(--success-soft)' : '#FEF3C7',
+                          color: report.status === 'resolved' ? 'var(--success-fill)' : '#D97706',
+                          border: `1px solid ${report.status === 'resolved' ? 'var(--success-line)' : '#FCD34D'}`,
                           outline: 'none', cursor: 'pointer'
                         }}
                       >
@@ -1653,9 +1655,9 @@ const AdminDashboard = () => {
                             }}
                             style={{ 
                               padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
-                              backgroundColor: report.status === 'resolved' ? '#ECFDF5' : '#FEF3C7',
-                              color: report.status === 'resolved' ? '#059669' : '#D97706',
-                              border: `1px solid ${report.status === 'resolved' ? '#A7F3D0' : '#FCD34D'}`,
+                              backgroundColor: report.status === 'resolved' ? 'var(--success-soft)' : '#FEF3C7',
+                              color: report.status === 'resolved' ? 'var(--success-fill)' : '#D97706',
+                              border: `1px solid ${report.status === 'resolved' ? 'var(--success-line)' : '#FCD34D'}`,
                               outline: 'none', cursor: 'pointer'
                             }}
                           >
@@ -1885,16 +1887,16 @@ const AdminDashboard = () => {
                             <span style={{ 
                               display: 'inline-flex', alignItems: 'center', gap: '5px',
                               padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE'
+                              backgroundColor: 'var(--surface-sunken)', color: 'var(--ink-700)', border: '1px solid var(--line-200)'
                             }}>
-                              <Compass size={13} color="#1D4ED8" />
+                              <Compass size={13} color="#57534E" />
                               กำลังเข้าช่วยเหลือ
                             </span>
                           ) : inc.status === 'resolved' ? (
                             <span style={{ 
                               display: 'inline-flex', alignItems: 'center', gap: '5px',
                               padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0'
+                              backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', border: '1px solid var(--success-line)'
                             }}>
                               <CheckCircle2 size={13} color="#059669" />
                               ช่วยเหลือสำเร็จ
@@ -1915,9 +1917,9 @@ const AdminDashboard = () => {
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', gap: '4px',
                               padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              backgroundColor: inc.status === 'resolved' ? '#ECFDF5' : '#FEF3C7',
-                              color: inc.status === 'resolved' ? '#065F46' : '#92400E',
-                              border: `1px solid ${inc.status === 'resolved' ? '#A7F3D0' : '#FDE68A'}`
+                              backgroundColor: inc.status === 'resolved' ? 'var(--success-soft)' : '#FEF3C7',
+                              color: inc.status === 'resolved' ? 'var(--success)' : '#92400E',
+                              border: `1px solid ${inc.status === 'resolved' ? 'var(--success-line)' : '#FDE68A'}`
                             }}>
                               {inc.status === 'resolved' ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
                               ผู้รับเคส: {inc.rescuer_name}
@@ -1984,9 +1986,9 @@ const AdminDashboard = () => {
                               href={`tel:${inc.reporter_phone}`}
                               style={{ 
                                 display: 'inline-flex', alignItems: 'center', gap: '4px', 
-                                color: '#059669', fontWeight: 600, textDecoration: 'none',
-                                backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px',
-                                border: '1px solid #A7F3D0'
+                                color: 'var(--success-fill)', fontWeight: 600, textDecoration: 'none',
+                                backgroundColor: 'var(--success-soft)', padding: '2px 8px', borderRadius: '6px',
+                                border: '1px solid var(--success-line)'
                               }}
                             >
                               <Phone size={12} /> {inc.reporter_phone}
@@ -2036,8 +2038,8 @@ const AdminDashboard = () => {
                         {inc.status === 'in_progress' && (
                           <>
                             <div style={{
-                              padding: '6px 10px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE',
-                              borderRadius: '8px', fontSize: '0.75rem', color: '#1D4ED8', fontWeight: 600,
+                              padding: '6px 10px', backgroundColor: 'var(--surface-sunken)', border: '1px solid var(--line-200)',
+                              borderRadius: '8px', fontSize: '0.75rem', color: 'var(--ink-700)', fontWeight: 600,
                               display: 'flex', alignItems: 'center', gap: '4px'
                             }}>
                               <UserCheck size={13} /> {inc.rescuer_name ? `ผู้รับเคส: ${inc.rescuer_name}` : 'กำลังเข้าช่วยเหลือ'}
@@ -2047,12 +2049,12 @@ const AdminDashboard = () => {
                               onClick={() => handleUpdateIncidentStatus(inc.id, 'resolved')}
                               style={{ 
                                 height: '36px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                                backgroundColor: '#059669', color: '#FFFFFF', border: 'none',
+                                backgroundColor: 'var(--success-fill)', color: '#FFFFFF', border: 'none',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)', transition: 'all 0.15s'
                               }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#047857'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#059669'}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--success)'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--success-fill)'}
                             >
                               <CheckCircle2 size={14} />
                               ช่วยเหลือสำเร็จ
@@ -2077,13 +2079,13 @@ const AdminDashboard = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px',
-                              padding: '10px 12px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0',
-                              borderRadius: '10px', color: '#059669', textAlign: 'center'
+                              padding: '10px 12px', backgroundColor: 'var(--success-soft)', border: '1px solid var(--success-line)',
+                              borderRadius: '10px', color: 'var(--success-fill)', textAlign: 'center'
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', fontWeight: 700 }}>
                                 <CheckCircle2 size={15} color="#059669" /> ภารกิจสำเร็จ
                               </div>
-                              <span style={{ fontSize: '0.7rem', color: '#047857' }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--success)' }}>
                                 {inc.rescuer_name ? `โดย: ${inc.rescuer_name}` : 'ปิดเคสเรียบร้อย'}
                               </span>
                             </div>
@@ -2142,8 +2144,8 @@ const AdminDashboard = () => {
                     const isApprove = log.action === 'APPROVE_FOUNDATION';
                     const isReject = log.action === 'REJECT_FOUNDATION';
                     const isRole = log.action === 'UPDATE_ROLE';
-                    const iconBg = isApprove ? '#ECFDF5' : isReject ? '#FEF2F2' : isRole ? '#EFF6FF' : '#F3F4F6';
-                    const iconColor = isApprove ? '#059669' : isReject ? '#DC2626' : isRole ? '#2563EB' : '#4B5563';
+                    const iconBg = isApprove ? 'var(--success-soft)' : isReject ? '#FEF2F2' : isRole ? 'var(--primary-soft)' : '#F3F4F6';
+                    const iconColor = isApprove ? 'var(--success-fill)' : isReject ? '#DC2626' : isRole ? '#B45309' : '#4B5563';
                     const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : log.action;
 
                     return (
@@ -2200,9 +2202,9 @@ const AdminDashboard = () => {
                         <td style={{ padding: '16px' }}>
                           <span style={{ 
                             padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
-                            backgroundColor: log.action === 'APPROVE_FOUNDATION' ? '#ECFDF5' : log.action === 'REJECT_FOUNDATION' ? '#FEF2F2' : '#FEF3C7',
-                            color: log.action === 'APPROVE_FOUNDATION' ? '#059669' : log.action === 'REJECT_FOUNDATION' ? '#DC2626' : '#D97706',
-                            border: `1px solid ${log.action === 'APPROVE_FOUNDATION' ? '#A7F3D0' : log.action === 'REJECT_FOUNDATION' ? '#FCA5A5' : '#FCD34D'}`
+                            backgroundColor: log.action === 'APPROVE_FOUNDATION' ? 'var(--success-soft)' : log.action === 'REJECT_FOUNDATION' ? '#FEF2F2' : '#FEF3C7',
+                            color: log.action === 'APPROVE_FOUNDATION' ? 'var(--success-fill)' : log.action === 'REJECT_FOUNDATION' ? '#DC2626' : '#D97706',
+                            border: `1px solid ${log.action === 'APPROVE_FOUNDATION' ? 'var(--success-line)' : log.action === 'REJECT_FOUNDATION' ? '#FCA5A5' : '#FCD34D'}`
                           }}>
                             {log.action}
                           </span>
@@ -2390,7 +2392,7 @@ const AdminDashboard = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={MOTION.base}
-            style={{ position: 'fixed', bottom: '24px', right: '24px', backgroundColor: toast.type === 'error' ? 'var(--danger)' : '#059669', color: 'white', padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 9999 }}
+            style={{ position: 'fixed', bottom: '24px', right: '24px', backgroundColor: toast.type === 'error' ? 'var(--danger)' : 'var(--success-fill)', color: 'white', padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 9999 }}
           >
             {toast.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
             <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{toast.text}</span>
@@ -2516,7 +2518,7 @@ const DonationsTabSkeleton = () => (
   <>
     <div className="admin-kpi-grid" style={{ marginBottom: '18px' }}>
       <div className="admin-kpi-card">
-        <div className="admin-kpi-icon-wrap" style={{ background: '#ECFDF5' }}>
+        <div className="admin-kpi-icon-wrap" style={{ background: 'var(--success-soft)' }}>
           <Banknote size={20} color="#059669" />
         </div>
         <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
@@ -2530,8 +2532,8 @@ const DonationsTabSkeleton = () => (
         <span className="admin-kpi-label">รายการแจ้งโอนทั้งหมด</span>
       </div>
       <div className="admin-kpi-card">
-        <div className="admin-kpi-icon-wrap" style={{ background: '#EFF6FF' }}>
-          <FileCheck size={20} color="#2563EB" />
+        <div className="admin-kpi-icon-wrap" style={{ background: 'var(--primary-soft)' }}>
+          <FileCheck size={20} color="#B45309" />
         </div>
         <div className="skeleton" style={{ width: '48px', height: '24px', borderRadius: '6px', margin: '4px 0' }} />
         <span className="admin-kpi-label">แนบหลักฐานสลิป</span>

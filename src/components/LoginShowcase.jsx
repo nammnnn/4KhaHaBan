@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Heart, X, RotateCcw, PawPrint, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Heart, X, RotateCcw, ShieldCheck, MessageCircle } from 'lucide-react';
+import BrandMark from './BrandMark';
 import { useI18n, localizeAge } from '../i18n';
 
 // Real animals from the foundation (the 800px cat photos are sharp enough for a hero)
@@ -31,8 +32,8 @@ export function LoginShowcase() {
     ? {}
     : {
         animate: {
-          backgroundColor: ['#FFFFFF', '#FFFFFF', '#059669', '#059669', '#FFFFFF'],
-          color: ['#059669', '#059669', '#FFFFFF', '#FFFFFF', '#059669'],
+          backgroundColor: ['#FFFFFF', '#FFFFFF', 'var(--success-fill)', 'var(--success-fill)', '#FFFFFF'],
+          color: ['var(--success-fill)', 'var(--success-fill)', '#FFFFFF', '#FFFFFF', 'var(--success-fill)'],
           scale: [1, 1, 0.9, 1, 1, 1],
         },
         transition: {
@@ -45,7 +46,7 @@ export function LoginShowcase() {
     <div className="ls">
       <div className="ls-brand">
         <span className="ls-brand__icon" aria-hidden="true">
-          <PawPrint size={16} strokeWidth={2.4} />
+          <BrandMark size={32} />
         </span>
         <span className="ls-brand__name">
           {t('app.name.prefix')}<span>{t('app.name.accent')}</span>

@@ -8,6 +8,7 @@ const AppContext = createContext(null);
 export const AppProvider = ({ children }) => {
   const [matches, setMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [matchesError, setMatchesError] = useState(false);
   const { user } = useAuth();
 
   const loadGlobalData = useCallback(async () => {
@@ -19,8 +20,11 @@ export const AppProvider = ({ children }) => {
     try {
       const userMatches = await api.getUserMatches(user.id);
       setMatches(userMatches);
+      setMatchesError(false);
     } catch (error) {
       console.error("Failed to load matches", error);
+      // Pages show "couldn't load" instead of "no chats yet"; matches already on screen stay.
+      setMatchesError(true);
     } finally {
       setLoadingMatches(false);
     }
@@ -76,12 +80,20 @@ export const AppProvider = ({ children }) => {
     return loadGlobalData();
   }, [loadGlobalData]);
 
+  // "Try again" after a failed load: show the loading skeleton while it retries
+  const retryMatches = useCallback(() => {
+    setLoadingMatches(true);
+    return loadGlobalData();
+  }, [loadGlobalData]);
+
   const value = React.useMemo(() => ({
     matches,
     loadingMatches,
+    matchesError,
     addMatch,
-    refreshMatches
-  }), [matches, loadingMatches, addMatch, refreshMatches]);
+    refreshMatches,
+    retryMatches
+  }), [matches, loadingMatches, matchesError, addMatch, refreshMatches, retryMatches]);
 
   return (
     <AppContext.Provider value={value}>

@@ -20,6 +20,7 @@
   --success: #047857;
   --success-fill: #059669;
   --success-soft: #ECFDF5;
+  --success-line: #A7F3D0;
   --danger: #DC2626;
   --danger-strong: #B91C1C;
   --danger-soft: #FEF2F2;
@@ -342,7 +343,9 @@ button {
 }
 
 .nav-item:hover { color: var(--ink-700); }
-.nav-item.active { color: var(--primary-strong); }
+/* Active = warm-grey pill, dark label, amber icon — same as the desktop sidebar */
+.nav-item.active { color: var(--ink-900); }
+.nav-item.active .nav-icon { color: var(--primary-strong); }
 
 /* Sliding highlight behind the active icon (animated with framer-motion layoutId) */
 .nav-pill {
@@ -353,7 +356,8 @@ button {
   height: 32px;
   margin-left: -28px;
   border-radius: var(--radius-full);
-  background: var(--primary-soft);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--line-200);
   z-index: 0;
 }
 
@@ -419,6 +423,13 @@ button {
 
 .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .nav-item.active .nav-avatar { box-shadow: 0 0 0 2px var(--primary); }
+/* Profile tab (mobile dock): a round photo inside the pill looks doubled up, so the active
+   state is just a ring around the photo, Instagram-style. The pill stays (invisible) so the
+   slide animation still runs from/to the other tabs. */
+@media (max-width: 767px) {
+  .nav-item:has(.nav-avatar) .nav-pill { background: transparent; box-shadow: none; }
+  .nav-item.active .nav-avatar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary-strong); }
+}
 
 /* --- Desktop layout: sidebar --- */
 @media (min-width: 768px) {
@@ -741,4 +752,24 @@ button {
   border-radius: var(--radius-lg);
   padding: 20px;
   box-shadow: var(--elev-raised);
+}
+
+/* First-load menu placeholders (BootSkeleton in Skeletons.jsx) */
+.boot-nav-item { pointer-events: none; }
+.boot-nav-item__icon { display: block; width: 24px; height: 24px; border-radius: 8px; }
+.boot-nav-item__label { display: block; width: 44px; height: 10px; margin-top: 4px; }
+@media (min-width: 768px) {
+  .boot-nav-item--phone { display: none; }
+  .boot-nav-item__label { width: 80px; height: 14px; margin-top: 0; }
+}
+@media (max-width: 767px) {
+  .boot-nav-user { display: none; }
+}
+
+/* Foundation sign-up stepper (FoundationOnboarding.jsx) */
+.onb-steps { display: flex; gap: var(--space-3); }
+.onb-step { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+@media (max-width: 520px) {
+  .onb-step:not(.is-active) { flex: none; }
+  .onb-step:not(.is-active) .onb-step__title { display: none; }
 }

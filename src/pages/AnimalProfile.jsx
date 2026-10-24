@@ -21,6 +21,7 @@ import { calculateDistance, formatDistance, getUserCoordinates, getLocationPermi
 import { VerificationPromptModal } from '../components/VerificationPromptModal';
 import { displayNames } from '../lib/animal';
 import { displayTags } from '../lib/tags';
+import { PetScene } from '../components/motion/PetScene';
 import { useI18n, localizeAge, localizeDistance } from '../i18n';
 import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
 import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
@@ -198,7 +199,7 @@ function AnimalProfile() {
     return (
       <div className="animal-profile-page ap-not-found">
         <EmptyState
-          icon={PawPrint}
+          art={<PetScene variant="search" />}
           title={t('ap.notFoundTitle')}
           text={t('ap.notFoundText')}
           action={<Button variant="secondary" onClick={() => navigate('/')}>{t('ap.otherAnimals')}</Button>}

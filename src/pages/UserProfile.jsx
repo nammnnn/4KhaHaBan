@@ -43,7 +43,7 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useI18n();
-  const { matches } = useAppContext();
+  const { matches, matchesError, retryMatches } = useAppContext();
   const [searchParams] = useSearchParams();
   const [searchPrefs, setSearchPrefs] = useState(null);
   const [imgError, setImgError] = useState(false);
@@ -938,7 +938,7 @@ export default function UserProfile() {
                 title={t('pf.requests')}
                 action={matches?.length > 0 && <Link to="/matches" className="pf-section__action">{t('common.seeAll')}</Link>}
               >
-                <AdoptionRequests matches={matches} />
+                <AdoptionRequests matches={matches} error={matchesError} onRetry={retryMatches} />
               </ProfileSection>
             </div>
           )}
@@ -1167,7 +1167,7 @@ export default function UserProfile() {
                   }}>
                     {foundationDetails?.foundation_name || profile?.full_name || 'ศูนย์พักพิงสัตว์'}
                   </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--success-fill)', fontWeight: 600 }}>
                     <CheckCircle size={14} />
                     <span>ได้รับการรับรองแล้ว (Verified)</span>
                   </div>
@@ -1377,7 +1377,7 @@ export default function UserProfile() {
               {/* Modal Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <FileText size={20} />
                   </div>
                   <div>
@@ -1413,9 +1413,9 @@ export default function UserProfile() {
                           borderRadius: '20px',
                           fontSize: '0.8rem',
                           fontWeight: 600,
-                          border: isSelected ? '1.5px solid #059669' : '1px solid #E5E7EB',
-                          backgroundColor: isSelected ? '#ECFDF5' : '#F9FAFB',
-                          color: isSelected ? '#065F46' : '#4B5563',
+                          border: isSelected ? '1.5px solid var(--success-fill)' : '1px solid #E5E7EB',
+                          backgroundColor: isSelected ? 'var(--success-soft)' : '#F9FAFB',
+                          color: isSelected ? 'var(--success)' : '#4B5563',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
                           transition: 'all 0.12s'
@@ -1587,7 +1587,7 @@ export default function UserProfile() {
               </div>
 
               {locationSuccessMsg && (
-                <div style={{ padding: '10px 14px', backgroundColor: '#ECFDF5', color: '#059669', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid #A7F3D0' }}>
+                <div style={{ padding: '10px 14px', backgroundColor: 'var(--success-soft)', color: 'var(--success-fill)', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid var(--success-line)' }}>
                   <CheckCircle size={18} /> {locationSuccessMsg}
                 </div>
               )}
@@ -1708,7 +1708,7 @@ export default function UserProfile() {
                         คลิกบนแผนที่หรือลากหมุดสีแดงเพื่อปรับจุดพิกัด
                       </span>
                       {foundationLocationData.latitude && foundationLocationData.longitude && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#059669', fontSize: '0.74rem', fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--success-fill)', fontSize: '0.74rem', fontWeight: 600 }}>
                           <CheckCircle size={13} /> พิกัด: {Number(foundationLocationData.latitude).toFixed(5)}, {Number(foundationLocationData.longitude).toFixed(5)}
                         </span>
                       )}

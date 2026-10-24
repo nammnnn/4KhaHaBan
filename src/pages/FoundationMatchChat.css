@@ -1,0 +1,52 @@
+/* Foundation chat list — builds on MatchChat.css (mc-*) */
+.fmc-filters { display: flex; gap: var(--space-2); }
+.fmc-filters .mc-search { flex: 1; min-width: 0; }
+.fmc-animal {
+  flex-shrink: 0;
+  max-width: 44%;
+  height: 42px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font: inherit;
+  font-size: var(--text-label);
+  color: var(--ink-700);
+}
+
+/* Adopter initials with the pet they asked for in the corner */
+.fmc-avatar { position: relative; flex-shrink: 0; }
+.fmc-avatar__person {
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary-deep);
+  font-weight: 700;
+  font-size: var(--text-body);
+}
+.fmc-avatar__pet {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--surface-sunken);
+  color: var(--ink-500);
+}
+.fmc-avatar__pet img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.fmc-row .mc-row__name { display: inline-flex; align-items: center; gap: 4px; }
+.fmc-verified { flex-shrink: 0; color: var(--success); }
+.fmc-pet { font-size: var(--text-label); color: var(--ink-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fmc-pet strong { color: var(--primary-deep); font-weight: 600; }
+
+/* New requests stand out a little more than ongoing chats */
+.mc-row--pending { background: var(--primary-wash); }
+.mc-row--pending:hover { background: var(--primary-soft); }
+
+.fmc-clear { margin-top: var(--space-2); font-weight: 600; color: var(--primary-strong); cursor: pointer; }
