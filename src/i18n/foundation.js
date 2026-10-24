@@ -1,6 +1,15 @@
 // Foundation-side strings. Each row is [key, Thai, English] so the two languages stay side by side.
 // Merged into th.js / en.js by index.jsx.
 const ROWS = [
+  // Login / sign-up field messages
+  ['login.fe.email', 'กรอกอีเมล', 'Enter your email'],
+  ['login.fe.emailFormat', 'รูปแบบอีเมลไม่ถูกต้อง เช่น name@example.com', 'That email doesn\'t look right, e.g. name@example.com'],
+  ['login.fe.password', 'กรอกรหัสผ่าน', 'Enter your password'],
+  ['login.fe.passwordShort', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'Use at least 6 characters'],
+  ['login.fe.name', 'กรอกชื่อ-นามสกุล', 'Enter your full name'],
+  ['login.fe.foundationName', 'กรอกชื่อมูลนิธิ', 'Enter the foundation name'],
+  ['login.fe.phone', 'กรอกเบอร์โทรติดต่อ', 'Enter a contact phone number'],
+  ['login.fe.phoneFormat', 'เบอร์โทรไม่ครบ', 'That phone number is too short'],
   // Errors (shared by every page)
   ['err.load.title', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load this"],
   ['err.load.text', 'อาจเป็นที่อินเทอร์เน็ตหรือระบบขัดข้องชั่วคราว ลองอีกครั้งได้เลย', 'Your connection or our server may be having a moment. Please try again.'],

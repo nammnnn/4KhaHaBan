@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Loader2, Mail, Lock, User, Phone, FileText,
-  X, Shield
+  X, Shield, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoginSkeleton } from '../components/Skeletons';
@@ -29,6 +29,10 @@ const Login = () => {
   const [agreed, setAgreed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  // Per-field messages shown under each input (the forms use noValidate, so the browser's own
+  // "Please fill out this field" bubble never shows and messages follow the app language)
+  const [fieldErrors, setFieldErrors] = useState({});
+  const formRef = useRef(null);
   // Email waiting for its confirmation link (after sign-up, or a login refused for that reason)
   const [pendingEmail, setPendingEmail] = useState('');
   const [resendState, setResendState] = useState('idle'); // idle | sending | sent | error
@@ -93,12 +97,39 @@ const Login = () => {
     }
   };
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const validate = (mode) => {
+    const errs = {};
+    if (mode === 'register' && !fullName.trim()) errs.fullName = t(role === 'user' ? 'login.fe.name' : 'login.fe.foundationName');
+    if (!email.trim()) errs.email = t('login.fe.email');
+    else if (!EMAIL_RE.test(email.trim())) errs.email = t('login.fe.emailFormat');
+    if (!password) errs.password = t('login.fe.password');
+    else if (mode === 'register' && password.length < 6) errs.password = t('login.fe.passwordShort');
+    if (mode === 'register' && role === 'foundation') {
+      const digits = phone.replace(/\D/g, '');
+      if (!digits) errs.phone = t('login.fe.phone');
+      else if (digits.length < 9) errs.phone = t('login.fe.phoneFormat');
+    }
+    setFieldErrors(errs);
+    const first = Object.keys(errs)[0];
+    if (first) formRef.current?.querySelector(`[name="${first}"]`)?.focus();
+    return !first;
+  };
+  // Typing in a field clears its message
+  const clearField = (name) => setFieldErrors((f) => (f[name] ? { ...f, [name]: undefined } : f));
+  const fieldError = (name) => fieldErrors[name] && (
+    <span className="login-field-error" id={`login-err-${name}`} role="alert">
+      <AlertCircle size={14} aria-hidden="true" /> {fieldErrors[name]}
+    </span>
+  );
+  const invalid = (name) => (fieldErrors[name]
+    ? { 'aria-invalid': true, 'aria-describedby': `login-err-${name}`, className: 'login-input-control is-invalid' }
+    : { className: 'login-input-control' });
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg(t('login.err.missing'));
-      return;
-    }
+    setErrorMsg('');
+    if (!validate('login')) return;
 
     setIsSubmitting(true);
     setErrorMsg('');
@@ -124,15 +155,7 @@ const Login = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!email || !password || !fullName) {
-      setErrorMsg(t('login.err.required'));
-      return;
-    }
-
-    if (role === 'foundation' && !phone) {
-      setErrorMsg(t('login.err.foundationPhone'));
-      return;
-    }
+    if (!validate('register')) return;
 
     setIsSubmitting(true);
 
@@ -353,31 +376,35 @@ const Login = () => {
 
           {/* Forms */}
           {activeTab === 'login' ? (
-            <form onSubmit={handleEmailLogin} className="login-field-group">
+            <form ref={formRef} onSubmit={handleEmailLogin} className="login-field-group" noValidate>
               <div className="login-input-wrapper">
                 <label className="login-input-label">{t('login.email')}</label>
                 <input
                   type="email"
-                  className="login-input-control"
+                  name="email"
+                  {...invalid('email')}
                   placeholder="name@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearField('email'); }}
                   required
                   autoComplete="email"
                 />
+                {fieldError('email')}
               </div>
 
               <div className="login-input-wrapper">
                 <label className="login-input-label">{t('login.password')}</label>
                 <input
                   type="password"
-                  className="login-input-control"
+                  name="password"
+                  {...invalid('password')}
                   placeholder={t('login.passwordPh')}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearField('password'); }}
                   required
                   autoComplete="current-password"
                 />
+                {fieldError('password')}
               </div>
 
               <button
@@ -394,7 +421,7 @@ const Login = () => {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="login-field-group">
+            <form ref={formRef} onSubmit={handleRegister} className="login-field-group" noValidate>
               <div className="login-input-wrapper">
                 <label className="login-input-label">
                   <span>{role === 'user' ? t('login.fullName') : t('login.foundationName')}</span>
@@ -402,12 +429,14 @@ const Login = () => {
                 </label>
                 <input
                   type="text"
-                  className="login-input-control"
+                  name="fullName"
+                  {...invalid('fullName')}
                   placeholder={role === 'user' ? t('login.fullNamePh') : t('login.foundationNamePh')}
                   value={fullName}
-                  onChange={e => setFullName(e.target.value)}
+                  onChange={e => { setFullName(e.target.value); clearField('fullName'); }}
                   required
                 />
+                {fieldError('fullName')}
               </div>
 
               <div className="login-input-wrapper">
@@ -417,13 +446,15 @@ const Login = () => {
                 </label>
                 <input
                   type="email"
-                  className="login-input-control"
+                  name="email"
+                  {...invalid('email')}
                   placeholder="name@example.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); clearField('email'); }}
                   required
                   autoComplete="email"
                 />
+                {fieldError('email')}
               </div>
 
               <div className="login-input-wrapper">
@@ -433,14 +464,16 @@ const Login = () => {
                 </label>
                 <input
                   type="password"
-                  className="login-input-control"
+                  name="password"
+                  {...invalid('password')}
                   placeholder={t('login.newPasswordPh')}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => { setPassword(e.target.value); clearField('password'); }}
                   required
                   minLength={6}
                   autoComplete="new-password"
                 />
+                {fieldError('password')}
               </div>
 
               {role === 'foundation' && (
@@ -452,12 +485,14 @@ const Login = () => {
                     </label>
                     <input
                       type="tel"
-                      className="login-input-control"
+                      name="phone"
+                      {...invalid('phone')}
                       placeholder={t('login.phonePh')}
                       value={phone}
-                      onChange={e => setPhone(formatPhoneNumber(e.target.value))}
+                      onChange={e => { setPhone(formatPhoneNumber(e.target.value)); clearField('phone'); }}
                       required
                     />
+                    {fieldError('phone')}
                   </div>
 
                   <div className="login-input-wrapper">
@@ -520,6 +555,7 @@ const Login = () => {
                   onClick={() => {
                     setActiveTab('register');
                     setRole('user');
+                    setFieldErrors({});
                     setErrorMsg('');
                     setSuccessMsg('');
                   }}
@@ -535,6 +571,7 @@ const Login = () => {
                   className="login-footer-link"
                   onClick={() => {
                     setActiveTab('login');
+                    setFieldErrors({});
                     setErrorMsg('');
                     setSuccessMsg('');
                   }}

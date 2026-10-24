@@ -400,6 +400,19 @@
   box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
 }
 
+.login-input-control.is-invalid { border-color: var(--danger, #DC2626); }
+.login-input-control.is-invalid:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+.login-field-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--danger, #DC2626);
+}
+.login-field-error svg { flex-shrink: 0; }
+
 .login-input-control::placeholder {
   color: #9CA3AF;
   font-size: 0.875rem;
