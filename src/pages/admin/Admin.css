@@ -141,6 +141,45 @@
 .adm-people li.adm-decided + li.adm-decided { box-shadow: inset 0 1px 0 var(--line-200); }
 .adm-decided .adm-person__email { white-space: normal; }
 
+.adm-icon--danger { background: var(--danger-soft) !important; color: var(--danger-strong) !important; }
+.adm-time { flex-shrink: 0; font-size: 0.75rem; color: var(--ink-500); }
+.adm-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+.adm-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Support / reports switch */
+.adm-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: var(--radius-full); background: var(--surface-sunken); }
+.adm-seg button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: 0; border-radius: var(--radius-full);
+  background: none; font: inherit; font-size: var(--text-label); font-weight: 500; color: var(--ink-600); cursor: pointer;
+}
+.adm-seg button.is-on { background: var(--surface); color: var(--ink-900); font-weight: 600; box-shadow: var(--elev-raised); }
+
+/* Chat thread (support + report history) */
+.adm-thread__email { margin: -8px 0 var(--space-3); font-size: 0.8125rem; color: var(--ink-500); }
+.adm-thread { display: flex; flex-direction: column; gap: var(--space-2); max-height: 50dvh; overflow-y: auto; padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.adm-thread--compact { max-height: 260px; align-self: stretch; }
+.adm-bubble { align-self: flex-start; max-width: 85%; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface); color: var(--ink-900); font-size: var(--text-label); line-height: 1.5; }
+.adm-bubble.is-mine { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--primary-soft); }
+.adm-bubble p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.adm-bubble strong { display: block; font-size: 0.72rem; color: var(--ink-500); }
+.adm-bubble img { display: block; max-width: 220px; max-height: 220px; border-radius: 10px; margin-bottom: 4px; }
+.adm-bubble time { display: block; margin-top: 2px; font-size: 0.68rem; color: var(--ink-500); text-align: right; }
+.adm-thread__preview { position: relative; align-self: flex-start; margin-top: var(--space-2); }
+.adm-thread__preview img { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 10px; }
+.adm-thread__preview button { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--ink-900); color: #FFFFFF; cursor: pointer; }
+.adm-composer { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
+.adm-composer .fn-input { flex: 1; min-width: 0; }
+.adm-composer .ui-btn { flex-shrink: 0; width: 48px; padding: 0; }
+.adm-proof img { display: block; max-width: 100%; max-height: 260px; border-radius: var(--radius-md); object-fit: contain; background: var(--surface-sunken); }
+
+/* Overview drill-downs */
+.adm-watch { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.adm-watch__item { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.adm-watch__item strong { font-size: var(--text-body); color: var(--ink-900); }
+.adm-pay { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-body); }
+.adm-pay s { color: var(--ink-500); }
+.adm-pay b { color: var(--danger-strong); }
+
 /* Old screens shown inside the console */
 .admin-legacy--embedded { display: block; }
 

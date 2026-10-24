@@ -12,6 +12,7 @@ import {
   PawPrint,
   MapPin,
   CheckCircle2,
+  Flag,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAppContext } from '../context/AppContext';
@@ -24,7 +25,7 @@ import { displayTags } from '../lib/tags';
 import { PetScene } from '../components/motion/PetScene';
 import { useI18n, localizeAge, localizeDistance } from '../i18n';
 import { formatGender, formatType, formatSize, splitStory } from '../lib/animal';
-import { Button, IconButton, Chip, EmptyState, useToast } from '../components/ui';
+import { Button, IconButton, Chip, EmptyState, Dialog, useToast } from '../components/ui';
 
 import './AnimalProfileBento.css';
 
@@ -83,6 +84,10 @@ function AnimalProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportMore, setReportMore] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
   const { t, lang } = useI18n();
   const { matches, addMatch } = useAppContext();
   const { user, userVerificationStatus } = useAuth();
@@ -194,6 +199,22 @@ function AnimalProfile() {
       </div>
     );
   }
+
+  const sendReport = async () => {
+    if (!reportReason || !user || !animal) return;
+    setReportBusy(true);
+    try {
+      const reason = [t(`ap.report.reason.${reportReason}`), reportMore.trim()].filter(Boolean).join(' — ');
+      await api.reportListing(user.id, animal, reason);
+      toast(t('ap.report.sent'), { tone: 'success' });
+      setReporting(false); setReportReason(''); setReportMore('');
+    } catch (err) {
+      console.error('report listing failed', err);
+      toast(t('ap.report.fail'), { tone: 'error' });
+    } finally {
+      setReportBusy(false);
+    }
+  };
 
   if (notFound || !animal) {
     return (
@@ -378,8 +399,34 @@ function AnimalProfile() {
               )}
             </div>
           </section>
+
+          {user && animal.foundation_id && animal.foundation_id !== user.id && (
+            <button type="button" className="ap-report" onClick={() => setReporting(true)}>
+              <Flag size={14} aria-hidden="true" /> {t('ap.report.link')}
+            </button>
+          )}
         </motion.section>
       </div>
+
+      <Dialog open={reporting} onClose={() => !reportBusy && setReporting(false)} title={t('ap.report.title')}
+        actions={(
+          <>
+            <Button variant="secondary" onClick={() => setReporting(false)} disabled={reportBusy}>{t('common.cancel')}</Button>
+            <Button variant="danger" onClick={sendReport} loading={reportBusy} disabled={!reportReason}>{t('ap.report.send')}</Button>
+          </>
+        )}>
+        <p className="ap-report__note">{t('ap.report.note')}</p>
+        <div className="ap-report__reasons" role="radiogroup" aria-label={t('ap.report.title')}>
+          {LISTING_REPORT_REASONS.map((r) => (
+            <button key={r} type="button" role="radio" aria-checked={reportReason === r}
+              className={`ap-report__reason ${reportReason === r ? 'is-on' : ''}`} onClick={() => setReportReason(r)}>
+              {t(`ap.report.reason.${r}`)}
+            </button>
+          ))}
+        </div>
+        <textarea className="ap-report__more" rows={2} value={reportMore} onChange={(e) => setReportMore(e.target.value)}
+          placeholder={t('ap.report.morePh')} aria-label={t('ap.report.morePh')} />
+      </Dialog>
 
       {/* Mobile sticky CTA (DESIGN.md §7.5) */}
       <div className="ap-cta-dock">
@@ -397,5 +444,7 @@ function AnimalProfile() {
     </div>
   );
 }
+
+const LISTING_REPORT_REASONS = ['fake', 'photos', 'selling', 'welfare', 'other'];
 
 export default AnimalProfile;

@@ -2151,7 +2151,7 @@ const AdminLegacy = ({ embedded = false, tabs = null, initialTab = 'users' }) =>
                     const isRole = log.action === 'UPDATE_ROLE';
                     const iconBg = isApprove ? 'var(--success-soft)' : isReject ? '#FEF2F2' : isRole ? 'var(--primary-soft)' : '#F3F4F6';
                     const iconColor = isApprove ? 'var(--success-fill)' : isReject ? '#DC2626' : isRole ? '#B45309' : '#4B5563';
-                    const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : log.action === 'BAN_USER' ? 'ระงับบัญชี' : log.action === 'UNBAN_USER' ? 'ยกเลิกระงับบัญชี' : log.action;
+                    const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : ({ BAN_USER: 'ระงับบัญชี', UNBAN_USER: 'ยกเลิกระงับบัญชี', RESOLVE_REPORT: 'จัดการรายงาน', HIDE_LISTING: 'ซ่อนประกาศ', CONFIRM_PROMPTPAY: 'ยืนยันเลขพร้อมเพย์', SUSPEND_PROMPTPAY: 'ระงับจากการเปลี่ยนพร้อมเพย์' })[log.action] || log.action;
 
                     return (
                       <div key={log.id} className="admin-timeline-item">

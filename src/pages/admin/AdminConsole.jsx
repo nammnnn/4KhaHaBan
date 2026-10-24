@@ -8,7 +8,8 @@ import { useI18n } from '../../i18n';
 import AdminOverview from './AdminOverview';
 import AdminUsers from './AdminUsers';
 import AdminFoundations from './AdminFoundations';
-import { SUPPORT_READ_KEY, useAdminSummary } from './useAdminSummary';
+import { useAdminSummary } from './useAdminSummary';
+import AdminInbox from './AdminInbox';
 import '../FoundationNeeds.css';
 import './Admin.css';
 
@@ -24,7 +25,6 @@ const SECTIONS = [
 
 // Which old tabs each not-yet-rebuilt section shows
 const LEGACY_TABS = {
-  inbox: ['support', 'reports'],
   records: ['incidents', 'donations', 'logs'],
 };
 
@@ -37,9 +37,6 @@ export default function AdminConsole() {
   const tab = params.get('tab');
 
   const go = (s, subTab) => {
-    if (s === 'inbox' && subTab === 'support') {
-      try { localStorage.setItem(SUPPORT_READ_KEY, new Date().toISOString()); } catch { /* ignore */ }
-    }
     setParams(subTab ? { s, tab: subTab } : { s });
     window.scrollTo({ top: 0 });
   };
@@ -84,6 +81,7 @@ export default function AdminConsole() {
 
       {section === 'overview' && <AdminOverview summary={summary} go={go} />}
       {section === 'foundations' && <AdminFoundations onChanged={summary.reload} />}
+      {section === 'inbox' && <AdminInbox tab={tab} setTab={(x) => setParams({ s: 'inbox', tab: x }, { replace: true })} onChanged={summary.reload} />}
       {section === 'users' && <AdminUsers />}
       {legacyTabs && (
         <Suspense fallback={<span className="fd-sk" style={{ display: 'block', height: 240, borderRadius: 16 }} />}>

@@ -1,5 +1,7 @@
 // Admin home: what needs attention first, then a few numbers about how the app is doing.
-import { AlertTriangle, Building2, CheckCircle2, ChevronRight, Flag, Heart, Home, MessageSquare, UserPlus, Users } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, Building2, CheckCircle2, ChevronRight, Clock, Flag, Heart, Home, MessageSquare, QrCode, UserPlus, Users } from 'lucide-react';
+import { PayoutChanges, StaleRequests } from './AdminWatch';
 import { LoadError } from '../../components/ui';
 import { useI18n } from '../../i18n';
 import { oldestAgeDays } from './useAdminSummary';
@@ -31,6 +33,7 @@ function Stat({ icon: Icon, value, label, sub }) {
 export default function AdminOverview({ summary, go }) {
   const { t } = useI18n();
   const { loading, error, data, reload } = summary;
+  const [watch, setWatch] = useState(null); // 'payout' | 'stale'
 
   if (loading && !data) {
     return (
@@ -52,6 +55,10 @@ export default function AdminOverview({ summary, go }) {
   };
 
   const tasks = [
+    data.payout?.length > 0 && (
+      <TaskRow key="pay" tone="danger" icon={QrCode} onClick={() => setWatch('payout')}
+        title={t('adm.task.payout', { n: data.payout.length })} text={t('adm.task.payoutSub')} />
+    ),
     data.staleIncidents.length > 0 && (
       <TaskRow key="inc" tone="danger" icon={AlertTriangle} onClick={() => go('records', 'incidents')}
         title={t('adm.task.incidents', { n: data.staleIncidents.length })} text={ageText(data.staleIncidents, 'created_at')} />
@@ -59,6 +66,10 @@ export default function AdminOverview({ summary, go }) {
     data.foundations.length > 0 && (
       <TaskRow key="fnd" tone="primary" icon={Building2} onClick={() => go('foundations')}
         title={t('adm.task.foundations', { n: data.foundations.length })} text={ageText(data.foundations, 'submitted_at')} />
+    ),
+    data.staleMatches.length > 0 && (
+      <TaskRow key="stale" icon={Clock} onClick={() => setWatch('stale')}
+        title={t('adm.task.stale', { n: data.staleMatches.length })} text={ageText(data.staleMatches, 'created_at')} />
     ),
     data.reports.length > 0 && (
       <TaskRow key="rep" icon={Flag} onClick={() => go('inbox', 'reports')}
@@ -92,6 +103,9 @@ export default function AdminOverview({ summary, go }) {
           <Stat icon={Heart} value={s.adopted} label={t('adm.stats.adopted')} />
         </div>
       </section>
+
+      {watch === 'payout' && <PayoutChanges items={data.payout} onClose={() => setWatch(null)} onDone={reload} />}
+      {watch === 'stale' && <StaleRequests items={data.staleMatches} onClose={() => setWatch(null)} />}
     </div>
   );
 }

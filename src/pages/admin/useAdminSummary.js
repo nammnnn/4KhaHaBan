@@ -4,14 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../services/supabaseClient';
 
 const DAY = 24 * 60 * 60 * 1000;
-export const SUPPORT_READ_KEY = 'admin_support_last_read';
+// When the admin last opened each support chat: { chatId: iso }
+const SEEN_KEY = 'admin_support_seen';
+export const readSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}'); } catch { return {}; } };
+export const markSeen = (id) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify({ ...readSeen(), [id]: new Date().toISOString() })); } catch { /* ignore */ } };
 
 const ok = (r) => { if (r.error) throw r.error; return r; };
 const count = (q) => q.then((r) => ok(r).count || 0);
-
-export function readSupportLastRead() {
-  try { return localStorage.getItem(SUPPORT_READ_KEY) || '1970-01-01T00:00:00Z'; } catch { return '1970-01-01T00:00:00Z'; }
-}
 
 export function useAdminSummary() {
   const [state, setState] = useState({ loading: true, error: false, data: null });
@@ -38,7 +37,14 @@ export function useAdminSummary() {
         count(supabase.from('animals').select('id', { count: 'exact', head: true }).eq('status', 'adopted')),
         count(supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
       ]);
-      const lastRead = readSupportLastRead();
+      // Optional extras: the payout-change table only exists after migration 030
+      const [payout, staleMatches] = await Promise.all([
+        supabase.from('foundation_payout_changes').select('*').is('reviewed_at', null).order('changed_at', { ascending: true })
+          .then((r) => (r.error ? null : r.data || [])),
+        supabase.from('matches').select('id, created_at, animal_id, user_id').eq('status', 'pending').lt('created_at', new Date(Date.now() - 3 * DAY).toISOString()).order('created_at', { ascending: true })
+          .then((r) => (r.error ? [] : r.data || [])),
+      ]);
+      const seen = readSeen();
       setState({
         loading: false,
         error: false,
@@ -48,7 +54,9 @@ export function useAdminSummary() {
           staleIncidents: (incidents || []).filter((i) => Date.now() - new Date(i.created_at) > DAY),
           reports: reports || [],
           support: support || [],
-          supportUnread: (support || []).filter((c) => c.updated_at > lastRead).length,
+          supportUnread: (support || []).filter((c) => c.updated_at > (seen[c.id] || '')).length,
+          payout, // null = migration 030 not run yet
+          staleMatches,
           stats: { users, newUsers, available, adopted, pendingMatches },
         },
       });
