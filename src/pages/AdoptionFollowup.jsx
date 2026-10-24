@@ -22,6 +22,8 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui';
 import { PET_PLACEHOLDER } from '../lib/avatar';
+import { FOLLOWUP_GROUPS, followupLabel, milestoneText, formatDate } from '../lib/followup';
+import { useI18n, localizeAge } from '../i18n';
 import { supabase } from '../services/supabaseClient';
 import { AdoptionFollowupSkeleton } from '../components/Skeletons';
 
@@ -30,6 +32,7 @@ export default function AdoptionFollowup() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+  const { t, lang } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -83,7 +86,7 @@ export default function AdoptionFollowup() {
     if (!files.length) return;
 
     if (photos.length + files.length > 5) {
-      toast('สามารถอัปโหลดได้สูงสุด 5 รูปภาพ', { tone: 'error' });
+      toast(t('fu.err.max'), { tone: 'error' });
       return;
     }
 
@@ -103,7 +106,7 @@ export default function AdoptionFollowup() {
     if (submitting) return;
 
     if (photos.length === 0) {
-      toast('กรุณาอัปโหลดรูปภาพน้องอย่างน้อย 1 รูป เพื่อยืนยันสุขภาวะ', { tone: 'error' });
+      toast(t('fu.err.photo'), { tone: 'error' });
       return;
     }
 
@@ -148,21 +151,13 @@ export default function AdoptionFollowup() {
 
     } catch (err) {
       console.error('Failed to submit followup:', err);
-      toast('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง', { tone: 'error' });
+      toast(t('fu.err.send'), { tone: 'error' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const formatThaiDate = (dateStr) => {
-    if (!dateStr) return '-';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatThaiDate = (dateStr) => formatDate(dateStr, lang, 'long');
 
   if (loading) {
     return <AdoptionFollowupSkeleton />;
@@ -170,15 +165,16 @@ export default function AdoptionFollowup() {
 
   const nextDue = followupInfo.nextDue;
   const isOverdue = nextDue?.isOverdue;
-  const daysInfo = isOverdue ? `(เกินกำหนด ${nextDue.daysOverdue} วัน)` : `(อีก ${nextDue?.daysRemaining || 0} วัน)`;
+  const daysInfo = isOverdue ? t('fu.overdueBy', { n: nextDue.daysOverdue }) : t('fu.inDays', { n: nextDue?.daysRemaining || 0 });
+  const nextLabel = milestoneText(nextDue?.milestoneIndex, t);
 
   // Facts come from the animal record (type/age/gender); nothing is filled in when missing
   const petImage = animal?.images?.[0] || PET_PLACEHOLDER;
-  const petName = animal?.name || 'น้อง';
+  const petName = animal?.name || t('fmc.pet');
   const petFacts = [
-    { dog: 'สุนัข', cat: 'แมว' }[animal?.type || animal?.species],
-    animal?.age ? `อายุ ${animal.age}` : null,
-    { male: 'เพศผู้', female: 'เพศเมีย' }[animal?.gender],
+    { dog: t('af.dog'), cat: t('af.cat') }[animal?.type || animal?.species],
+    animal?.age ? t('fu.age', { age: localizeAge(animal.age, lang) }) : null,
+    { male: t('af.male'), female: t('af.female') }[animal?.gender],
   ].filter(Boolean).join(' | ');
 
   return (
@@ -207,12 +203,12 @@ export default function AdoptionFollowup() {
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F9FAFB'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              aria-label="ย้อนกลับ"
+              aria-label={t('fnd.back')}
             >
               <ChevronLeft size={20} />
             </button>
             <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
-              ติดตามสถานะการรับเลี้ยง
+              {t('fu.title')}
             </h1>
           </div>
 
@@ -233,7 +229,7 @@ export default function AdoptionFollowup() {
               boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
             }}
           >
-            <History size={15} /> ประวัติ
+            <History size={15} /> {t('fu.history')}
           </Link>
         </div>
 
@@ -272,7 +268,7 @@ export default function AdoptionFollowup() {
               padding: '2px 8px',
               borderRadius: '6px'
             }}>
-              <CheckCircle2 size={12} /> อยู่กับเจ้าของแล้ว
+              <CheckCircle2 size={12} /> {t('fu.home')}
             </span>
           </div>
         </div>
@@ -302,10 +298,10 @@ export default function AdoptionFollowup() {
               <CheckCircle2 size={36} />
             </div>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
-              ส่งรายงานติดตามผลครบทุกงวดแล้ว
+              {t('fu.allDone')}
             </h2>
             <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6 }}>
-              ขอบพระคุณที่ดูแลน้องเป็นอย่างดี น้องมีครอบครัวที่อบอุ่นและเติบโตอย่างมีความสุขสมบูรณ์แบบแล้วครับ/ค่ะ
+              {t('fu.allDoneText')}
             </p>
             <Link
               to={`/adoption/timeline/${matchId}`}
@@ -322,7 +318,7 @@ export default function AdoptionFollowup() {
                 textDecoration: 'none'
               }}
             >
-              <History size={16} /> ดูประวัติการติดตามทั้งหมด
+              <History size={16} /> {t('fu.seeAll')}
             </Link>
           </div>
         ) : (!followupInfo?.isDueForSubmission && !bypassWait) ? (
@@ -351,7 +347,7 @@ export default function AdoptionFollowup() {
             </div>
 
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
-              ยังไม่ถึงรอบส่งอัปเดตสถานะ
+              {t('fu.notYet')}
             </h2>
 
             <div style={{
@@ -363,21 +359,21 @@ export default function AdoptionFollowup() {
               textAlign: 'left'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-                <span style={{ color: '#6B7280' }}>รอบส่งถัดไป:</span>
-                <strong style={{ color: '#111827' }}>{nextDue?.milestoneLabel || 'ครั้งที่ 1 (ครบ 2 เดือน)'}</strong>
+                <span style={{ color: '#6B7280' }}>{t('fu.next')}</span>
+                <strong style={{ color: '#111827' }}>{nextLabel}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-                <span style={{ color: '#6B7280' }}>วันที่กำหนดส่ง:</span>
+                <span style={{ color: '#6B7280' }}>{t('fu.dueDate')}</span>
                 <strong style={{ color: '#111827' }}>{formatThaiDate(nextDue?.dueDate)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: '#6B7280' }}>ระยะเวลาที่เหลือ:</span>
-                <span style={{ color: '#D97706', fontWeight: 700 }}>อีก {nextDue?.daysRemaining || 0} วัน</span>
+                <span style={{ color: '#6B7280' }}>{t('fu.left')}</span>
+                <span style={{ color: '#D97706', fontWeight: 700 }}>{t('fu.inDaysShort', { n: nextDue?.daysRemaining || 0 })}</span>
               </div>
             </div>
 
             <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6 }}>
-              ระบบจะเปิดให้ส่งแบบประเมินและรูปถ่ายเมื่อถึงกำหนดส่ง (เปิดส่งล่วงหน้า 7 วันก่อนครบกำหนด) เพื่อให้รายงานสุขภาพและพัฒนาการของน้องตรงตามช่วงเวลาจริงครับ/ค่ะ
+              {t('fu.opensText')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -397,7 +393,7 @@ export default function AdoptionFollowup() {
                   textDecoration: 'none'
                 }}
               >
-                <History size={16} /> ดูประวัติและกำหนดการไทม์ไลน์
+                <History size={16} /> {t('fu.seeTimeline')}
               </Link>
 
               {/* Testing shortcut: skips the 2-month wait. Dev builds only, never shown to adopters. */}
@@ -449,7 +445,7 @@ export default function AdoptionFollowup() {
                 </div>
                 <div>
                   <span style={{ fontSize: '0.78rem', color: isOverdue ? '#991B1B' : 'var(--success)', fontWeight: 600, display: 'block' }}>
-                    กำหนดส่งอัปเดตครั้งถัดไป ({nextDue?.milestoneLabel || 'รอบถัดไป'})
+                    {t('fu.nextDue', { label: nextLabel })}
                   </span>
                   <strong style={{ fontSize: '1rem', color: '#111827', display: 'block', marginTop: '2px' }}>
                     {formatThaiDate(nextDue?.dueDate)}
@@ -479,7 +475,7 @@ export default function AdoptionFollowup() {
           {/* Photo Upload Section */}
           <div style={{ marginBottom: '22px' }}>
             <label style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem', color: '#111827', marginBottom: '8px' }}>
-              อัปเดตรูปภาพและสถานะล่าสุด
+              {t('fu.photosTitle')}
             </label>
 
             {/* Photo Previews */}
@@ -506,7 +502,7 @@ export default function AdoptionFollowup() {
                         justifyContent: 'center',
                         cursor: 'pointer'
                       }}
-                      aria-label="ลบรูปภาพ"
+                      aria-label={t('fu.removePhoto')}
                     >
                       <X size={14} />
                     </button>
@@ -553,10 +549,10 @@ export default function AdoptionFollowup() {
                   <Camera size={24} />
                 </div>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
-                  อัปโหลดรูปภาพ
+                  {t('fu.upload')}
                 </span>
                 <span style={{ fontSize: '0.78rem', color: '#9CA3AF', marginTop: '2px' }}>
-                  (สูงสุด 5 รูป • ถ่ายภาพกิจกรรมความเป็นอยู่ของน้อง)
+                  {t('fu.uploadHint')}
                 </span>
                 <input
                   type="file"
@@ -580,7 +576,7 @@ export default function AdoptionFollowup() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
-              สถานะสุขภาพและการดูแล
+              {t('fu.healthTitle')}
             </h3>
 
             {/* Checklist items */}
@@ -594,14 +590,14 @@ export default function AdoptionFollowup() {
                       <Activity size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>สุขภาพทั่วไป</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{healthStatus}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.health')}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('health', healthStatus, lang)}</div>
                     </div>
                   </div>
                   <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['แข็งแรงดี', 'ป่วยเล็กน้อย/กำลังรักษา', 'ต้องพบสัตวแพทย์'].map(opt => (
+                  {FOLLOWUP_GROUPS.health.map(([opt, optEn]) => (
                     <button
                       key={opt}
                       type="button"
@@ -617,7 +613,7 @@ export default function AdoptionFollowup() {
                         cursor: 'pointer'
                       }}
                     >
-                      {opt}
+                      {lang === 'en' ? optEn : opt}
                     </button>
                   ))}
                 </div>
@@ -631,14 +627,14 @@ export default function AdoptionFollowup() {
                       <Syringe size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>วัคซีน</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{vaccineStatus}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.vaccine')}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('vaccine', vaccineStatus, lang)}</div>
                     </div>
                   </div>
                   <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['ครบแล้ว', 'รอตามนัดเข็มถัดไป', 'ยังไม่ได้รับ'].map(opt => (
+                  {FOLLOWUP_GROUPS.vaccine.map(([opt, optEn]) => (
                     <button
                       key={opt}
                       type="button"
@@ -654,7 +650,7 @@ export default function AdoptionFollowup() {
                         cursor: 'pointer'
                       }}
                     >
-                      {opt}
+                      {lang === 'en' ? optEn : opt}
                     </button>
                   ))}
                 </div>
@@ -668,14 +664,14 @@ export default function AdoptionFollowup() {
                       <Scissors size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>ทำหมัน</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{neuteredStatus}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.neutered')}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('neutered', neuteredStatus, lang)}</div>
                     </div>
                   </div>
                   <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['แล้ว', 'ยังไม่ถึงเกณฑ์วัย', 'ยังไม่ได้ทำ'].map(opt => (
+                  {FOLLOWUP_GROUPS.neutered.map(([opt, optEn]) => (
                     <button
                       key={opt}
                       type="button"
@@ -691,7 +687,7 @@ export default function AdoptionFollowup() {
                         cursor: 'pointer'
                       }}
                     >
-                      {opt}
+                      {lang === 'en' ? optEn : opt}
                     </button>
                   ))}
                 </div>
@@ -705,14 +701,14 @@ export default function AdoptionFollowup() {
                       <Utensils size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>อาหาร</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{foodStatus}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.food')}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('food', foodStatus, lang)}</div>
                     </div>
                   </div>
                   <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['กินอาหารเม็ด + อาหารเปียก', 'กินอาหารเม็ดอย่างเดียว', 'ปรุงเอง/บาร์ฟ', 'กินได้ปกติ'].map(opt => (
+                  {FOLLOWUP_GROUPS.food.map(([opt, optEn]) => (
                     <button
                       key={opt}
                       type="button"
@@ -728,7 +724,7 @@ export default function AdoptionFollowup() {
                         cursor: 'pointer'
                       }}
                     >
-                      {opt}
+                      {lang === 'en' ? optEn : opt}
                     </button>
                   ))}
                 </div>
@@ -742,14 +738,14 @@ export default function AdoptionFollowup() {
                       <Sparkles size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>พฤติกรรม</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{behaviorStatus}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.behavior')}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('behavior', behaviorStatus, lang)}</div>
                     </div>
                   </div>
                   <CheckCircle2 size={18} color="#059669" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['ปรับตัวได้ดี ร่าเริง', 'ขี้อ้อน คุ้นเคยแล้ว', 'ยังตื่นกลัวเล็กน้อย', 'ต้องปรับพฤติกรรม'].map(opt => (
+                  {FOLLOWUP_GROUPS.behavior.map(([opt, optEn]) => (
                     <button
                       key={opt}
                       type="button"
@@ -765,7 +761,7 @@ export default function AdoptionFollowup() {
                         cursor: 'pointer'
                       }}
                     >
-                      {opt}
+                      {lang === 'en' ? optEn : opt}
                     </button>
                   ))}
                 </div>
@@ -774,12 +770,12 @@ export default function AdoptionFollowup() {
               {/* Additional notes */}
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  บันทึกเพิ่มเติมถึงเจ้าหน้าที่มูลนิธิ
+                  {t('fu.notes')}
                 </label>
                 <textarea
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  placeholder="เช่น น้องชอบวิ่งเล่นในสวน ทานข้าวเก่งมาก..."
+                  placeholder={t('fu.notesPh')}
                   style={{
                     width: '100%',
                     height: '70px',
@@ -825,11 +821,11 @@ export default function AdoptionFollowup() {
           >
             {submitting ? (
               <>
-                <Loader2 size={20} className="spin" /> กำลังส่งข้อมูล...
+                <Loader2 size={20} className="spin" /> {t('fu.sending')}
               </>
             ) : (
               <>
-                <Camera size={20} /> อัปเดตสถานะน้อง
+                <Camera size={20} /> {t('fu.submit')}
               </>
             )}
           </button>
@@ -848,7 +844,7 @@ export default function AdoptionFollowup() {
               <Bell size={18} />
             </div>
             <p style={{ margin: 0, fontSize: '0.78rem', color: '#9A3412', lineHeight: 1.4 }}>
-              <strong>อย่าลืม!</strong> อัปเดตรูปและสถานะทุก 2 เดือน เพื่อความปลอดภัยและสวัสดิภาพที่ดีของน้อง
+              <strong>{t('fu.reminderStrong')}</strong> {t('fu.reminder')}
             </p>
           </div>
 
@@ -875,7 +871,7 @@ export default function AdoptionFollowup() {
             fontWeight: 600,
             zIndex: 9999
           }}>
-            <Check size={18} /> ส่งรายงานสถานะน้องเรียบร้อยแล้ว
+            <Check size={18} /> {t('fu.sent')}
           </div>
         )}
 
