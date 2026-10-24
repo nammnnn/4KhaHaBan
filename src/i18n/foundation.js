@@ -31,6 +31,7 @@ const ROWS = [
   ['login.fe.foundationName', 'กรอกชื่อมูลนิธิ', 'Enter the foundation name'],
   ['login.fe.phone', 'กรอกเบอร์โทรติดต่อ', 'Enter a contact phone number'],
   ['login.fe.phoneFormat', 'เบอร์โทรไม่ครบ', 'That phone number is too short'],
+  ['splash.loading', 'กำลังโหลด', 'Loading'],
   // Errors (shared by every page)
   ['err.load.title', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load this"],
   ['err.load.text', 'อาจเป็นที่อินเทอร์เน็ตหรือระบบขัดข้องชั่วคราว ลองอีกครั้งได้เลย', 'Your connection or our server may be having a moment. Please try again.'],

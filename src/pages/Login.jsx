@@ -6,7 +6,7 @@ import {
   X, Shield, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LoginSkeleton } from '../components/Skeletons';
+import { AppSplash } from '../components/Skeletons';
 import { Button, Dialog } from '../components/ui';
 import BrandMark from '../components/BrandMark';
 import './Login.css';
@@ -82,7 +82,7 @@ const Login = () => {
 
   // ถ้ากำลังโหลดข้อมูล auth อยู่ ให้แสดง Skeleton
   if (authLoading) {
-    return <LoginSkeleton />;
+    return <AppSplash />;
   }
 
   // ถ้าล็อกอินแล้วให้ข้ามไปหน้า Feed เลย
