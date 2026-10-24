@@ -14,6 +14,7 @@ import { ChatRoomSkeleton } from '../components/Skeletons';
 import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { initialsAvatar } from '../lib/avatar';
 import { MessageItem, dayLabel } from '../components/chat/ChatParts';
+import { PetScene } from '../components/motion/PetScene';
 import { useI18n } from '../i18n';
 import './FoundationChatRoom.css';
 
@@ -395,8 +396,7 @@ function ChatRoom() {
     return (
       <div className="chat-room-container fcr fcr--empty">
         <EmptyState
-          icon={PawPrint}
-          motion="sniff"
+          art={<PetScene variant="search" />}
           title={t('fcr.notFound.title')}
           text={t('cr.notFound.text')}
           action={<Button onClick={() => navigate('/matches')}>{t('fcr.notFound.back')}</Button>}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertTriangle, Compass, Home, PawPrint, RotateCw } from 'lucide-react';
+import { Home, RotateCw } from 'lucide-react';
+import { PetScene } from './motion/PetScene';
 import { Button, EmptyState, LoadError } from './ui';
 import { useI18n } from '../i18n';
 
@@ -15,9 +16,7 @@ function CrashScreen() {
   return (
     <div className="err-screen" role="alert">
       <EmptyState
-        icon={AlertTriangle}
-        tone="danger"
-        motion="shake"
+        art={<PetScene variant="crash" />}
         title={t('err.crash.title')}
         text={t('err.crash.text')}
         action={(
@@ -76,16 +75,11 @@ export function NotFound() {
   return (
     <div className="err-screen">
       <EmptyState
-        icon={Compass}
-        motion="search"
+        art={<PetScene variant="search" />}
         title={t('err.nf.title')}
         text={t('err.nf.text')}
         action={<Link to="/" className="ui-btn ui-btn--primary"><Home size={16} /> {t('err.home')}</Link>}
-      >
-        <span className="err-trail" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => <span key={i}><PawPrint size={14} /></span>)}
-        </span>
-      </EmptyState>
+      />
     </div>
   );
 }
@@ -101,8 +95,7 @@ export function AdoptionUnavailable({ state, onRetry }) {
         <LoadError onRetry={onRetry} />
       ) : (
         <EmptyState
-          icon={PawPrint}
-          motion="sniff"
+          art={<PetScene variant="search" />}
           title={t('err.adoptionGone')}
           action={<Link to={chats} className="ui-btn ui-btn--primary">{t('err.toChats')}</Link>}
         />

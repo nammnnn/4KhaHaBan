@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
-import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, PawPrint, Search } from 'lucide-react';
+import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { AnimalFormSkeleton } from '../components/Skeletons';
 import { Button, Dialog, EmptyState, LoadError, useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
+import { PetScene } from '../components/motion/PetScene';
 import { useI18n } from '../i18n';
 import './AnimalForm.css';
 
@@ -464,8 +465,7 @@ const AnimalForm = () => {
         {header}
         {loadState === 'notFound' ? (
           <EmptyState
-            icon={PawPrint}
-            motion="sniff"
+            art={<PetScene variant="search" />}
             title={t('af.err.notFound')}
             action={<Button onClick={() => navigate('/foundation/animals', { replace: true })}>{t('err.toList')}</Button>}
           />
