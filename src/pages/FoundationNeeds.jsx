@@ -23,29 +23,25 @@ import { api } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { FoundationNeedsSkeleton } from '../components/Skeletons';
 import { Button, Dialog, useToast } from '../components/ui';
+import { useI18n } from '../i18n';
 
-const URGENCY_LEVELS = [
-  { id: 'critical', label: 'วิกฤต (ด่วนที่สุด)', bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
-  { id: 'high', label: 'ด่วนมาก', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
-  { id: 'normal', label: 'เปิดรับเรื่อยๆ', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
-  { id: 'sufficient', label: 'มีเพียงพอแล้ว', bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' }
+// Labels: fn.urg.<id>, fn.cat.<id>, fn.preset.<index>.name / .note
+const URGENCY_BASE = [
+  { id: 'critical', bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' },
+  { id: 'high', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
+  { id: 'normal', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
+  { id: 'sufficient', bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' }
 ];
 
-const CATEGORIES = [
-  { id: 'food', label: 'อาหารสัตว์' },
-  { id: 'medical', label: 'ยาและเวชภัณฑ์' },
-  { id: 'hygiene', label: 'สุขอนามัย/ทำความสะอาด' },
-  { id: 'equipment', label: 'อุปกรณ์และของใช้' },
-  { id: 'other', label: 'อื่นๆ' }
-];
+const CATEGORY_IDS = ['food', 'medical', 'hygiene', 'equipment', 'other'];
 
-const QUICK_PRESETS = [
-  { name: 'อาหารเม็ดสุนัขโต', category: 'food', urgency: 'critical', note: 'สูตรโภชนาการสุนัขโตทุกสายพันธุ์' },
-  { name: 'อาหารเปียกและนมลูกแมว', category: 'food', urgency: 'high', note: 'สำหรับลูกสัตว์และสัตว์ป่วยพักฟื้น' },
-  { name: 'แผ่นรองซับสิ่งขับถ่าย Size L', category: 'hygiene', urgency: 'high', note: 'ชนิดซึมซับไว' },
-  { name: 'ทรายแมวเต้าหู้หรือเบนโทไนท์', category: 'hygiene', urgency: 'normal', note: 'สูตรไร้ฝุ่น' },
-  { name: 'ยาป้องกันพยาธิหัวใจและเห็บหมัด', category: 'medical', urgency: 'high', note: 'ชนิดหยดหลังคอหรือชนิดเคี้ยว' },
-  { name: 'น้ำยาฆ่าเชื้อทำความสะอาดกรง', category: 'hygiene', urgency: 'normal', note: 'สูตรปลอดภัยต่อสัตว์เลี้ยง' }
+const PRESET_BASE = [
+  { category: 'food', urgency: 'critical' },
+  { category: 'food', urgency: 'high' },
+  { category: 'hygiene', urgency: 'high' },
+  { category: 'hygiene', urgency: 'normal' },
+  { category: 'medical', urgency: 'high' },
+  { category: 'hygiene', urgency: 'normal' }
 ];
 
 export default function FoundationNeeds() {
@@ -67,6 +63,10 @@ export default function FoundationNeeds() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [toDelete, setToDelete] = useState(null);
   const toast = useToast();
+  const { t } = useI18n();
+  const URGENCY_LEVELS = URGENCY_BASE.map((u) => ({ ...u, label: t(`fn.urg.${u.id}`) }));
+  const CATEGORIES = CATEGORY_IDS.map((id) => ({ id, label: t(`fn.cat.${id}`) }));
+  const QUICK_PRESETS = PRESET_BASE.map((p, i) => ({ ...p, name: t(`fn.preset.${i}.name`), note: t(`fn.preset.${i}.note`) }));
 
   useEffect(() => {
     fetchData();
@@ -159,7 +159,7 @@ export default function FoundationNeeds() {
       setShowAddModal(false);
     } catch (err) {
       console.error('Error saving need item:', err);
-      toast('บันทึกไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+      toast(t('fn.toast.saveFail'), { tone: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -171,10 +171,10 @@ export default function FoundationNeeds() {
     try {
       await api.deleteFoundationNeed(item.id);
       setNeeds(prev => prev.filter(n => n.id !== item.id));
-      toast(`ลบ "${item.item_name}" แล้ว`, { tone: 'success' });
+      toast(t('fn.toast.deleted', { name: item.item_name }), { tone: 'success' });
     } catch (err) {
       console.error('Error deleting need item:', err);
-      toast('ลบรายการไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+      toast(t('fn.toast.delFail'), { tone: 'error' });
     } finally {
       setToDelete(null);
     }
@@ -188,7 +188,7 @@ export default function FoundationNeeds() {
     } catch (err) {
       console.error('Error updating urgency:', err);
       setNeeds(before);
-      toast('เปลี่ยนความเร่งด่วนไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+      toast(t('fn.toast.urgFail'), { tone: 'error' });
     }
   };
 
@@ -247,10 +247,10 @@ export default function FoundationNeeds() {
             </Link>
             <div>
               <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                ของที่ต้องการรับบริจาค
+                {t('fn.title')}
               </h1>
               <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '4px 0 0 0' }}>
-                ระบุรายการสิ่งของหรือเวชภัณฑ์ที่ศูนย์พักพิงกำลังขาดแคลน เพื่อให้ผู้ใจบุญส่งของมาช่วยได้ตรงจุด
+                {t('fn.sub')}
               </p>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function FoundationNeeds() {
             }}
           >
             <Plus size={18} />
-            เพิ่มสิ่งของที่ต้องการ
+            {t('fn.add')}
           </button>
         </motion.div>
 
@@ -307,7 +307,7 @@ export default function FoundationNeeds() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-              <strong style={{ fontSize: '0.92rem', color: '#111827' }}>ที่อยู่จัดส่งพัสดุและข้อมูลรับบริจาคที่ผู้ใช้งานจะมองเห็น</strong>
+              <strong style={{ fontSize: '0.92rem', color: '#111827' }}>{t('fn.ship.title')}</strong>
               <Link
                 to="/profile?modal=foundation"
                 style={{
@@ -320,19 +320,19 @@ export default function FoundationNeeds() {
                   gap: '4px'
                 }}
               >
-                <span>แก้ไขที่อยู่ & พร้อมเพย์</span>
+                <span>{t('fn.ship.edit')}</span>
                 <ExternalLink size={12} />
               </Link>
             </div>
             <p style={{ fontSize: '0.85rem', color: '#4B5563', margin: '0 0 4px 0', lineHeight: 1.5 }}>
-              <strong>ผู้รับ:</strong> {foundationInfo?.contact_person || foundationInfo?.foundation_name || 'เจ้าหน้าที่มูลนิธิ'} 
-              {foundationInfo?.contact_phone ? ` (โทร. ${foundationInfo.contact_phone})` : ''}
+              <strong>{t('fn.ship.recipient')}</strong> {foundationInfo?.contact_person || foundationInfo?.foundation_name || t('fn.ship.staff')}
+              {foundationInfo?.contact_phone ? t('fn.ship.tel', { phone: foundationInfo.contact_phone }) : ''}
             </p>
             <p style={{ fontSize: '0.85rem', color: '#4B5563', margin: '0 0 4px 0', lineHeight: 1.5 }}>
-              <strong>พร้อมเพย์ (PromptPay):</strong> {foundationInfo?.promptpay_number || 'ยังไม่ได้ระบุ (คลิกแก้ไขเพื่อเพิ่ม)'}
+              <strong>{t('fn.ship.promptpay')}</strong> {foundationInfo?.promptpay_number || t('fn.ship.noPromptpay')}
             </p>
             <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: 0, lineHeight: 1.5 }}>
-              <strong>ที่อยู่จัดส่ง:</strong> {foundationInfo?.address || 'สามารถอัปเดตที่อยู่จัดส่งได้ที่เมนูโปรไฟล์มูลนิธิ'}
+              <strong>{t('fn.ship.address')}</strong> {foundationInfo?.address || t('fn.ship.noAddress')}
             </p>
           </div>
         </motion.div>
@@ -343,7 +343,7 @@ export default function FoundationNeeds() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
             <Sparkles size={16} color="#D97706" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>กดเลือกของใช้ยอดนิยมอย่างรวดเร็ว:</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{t('fn.quick')}</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {QUICK_PRESETS.map((preset, idx) => (
@@ -404,7 +404,7 @@ export default function FoundationNeeds() {
               whiteSpace: 'nowrap'
             }}
           >
-            ทั้งหมด ({needs.length})
+            {t('fn.all', { n: needs.length })}
           </button>
           {CATEGORIES.map(cat => {
             const count = needs.filter(n => n.category === cat.id).length;
@@ -445,10 +445,10 @@ export default function FoundationNeeds() {
           >
             <Package size={44} color="#9CA3AF" style={{ margin: '0 auto 12px' }} />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#111827', margin: '0 0 6px 0' }}>
-              ยังไม่มีรายการสิ่งของในหมวดหมู่นี้
+              {t('fn.empty.title')}
             </h3>
             <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0 0 20px 0' }}>
-              กดปุ่มด้านล่างเพื่อเพิ่มสิ่งของหรืออาหารสัตว์ที่มูลนิธิกำลังเปิดรับบริจาค
+              {t('fn.empty.text')}
             </p>
             <button
               onClick={handleOpenAdd}
@@ -463,7 +463,7 @@ export default function FoundationNeeds() {
                 cursor: 'pointer'
               }}
             >
-              เพิ่มสิ่งของแรก
+              {t('fn.empty.add')}
             </button>
           </motion.div>
         ) : (
@@ -521,7 +521,7 @@ export default function FoundationNeeds() {
                       </div>
                       {item.note && (
                         <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: '4px 0 0 0' }}>
-                          หมายเหตุ: {item.note}
+                          {t('fn.note', { note: item.note })}
                         </p>
                       )}
                     </div>
@@ -553,7 +553,7 @@ export default function FoundationNeeds() {
 
                     <button
                       onClick={() => handleOpenEdit(item)}
-                      title="แก้ไขข้อมูล"
+                      title={t('fn.editItem')}
                       style={{
                         width: '34px',
                         height: '34px',
@@ -572,7 +572,7 @@ export default function FoundationNeeds() {
 
                     <button
                       onClick={() => setToDelete(item)}
-                      title="ลบรายการ"
+                      title={t('fn.deleteItem')}
                       style={{
                         width: '34px',
                         height: '34px',
@@ -620,19 +620,19 @@ export default function FoundationNeeds() {
             boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
           }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: '0 0 16px 0' }}>
-              {editingId ? 'แก้ไขสิ่งของที่เปิดรับ' : 'เพิ่มสิ่งของที่ต้องการรับบริจาค'}
+              {editingId ? t('fn.form.titleEdit') : t('fn.form.titleNew')}
             </h3>
 
             <form onSubmit={handleSubmit}>
               {/* Item Name */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  ชื่อสิ่งของ / อาหาร / เวชภัณฑ์ *
+                  {t('fn.form.name')}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="เช่น อาหารเม็ดสุนัขโต, แผ่นรองซับ Size L"
+                  placeholder={t('fn.form.namePh')}
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   style={{
@@ -651,7 +651,7 @@ export default function FoundationNeeds() {
               {/* Category */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  หมวดหมู่
+                  {t('fn.form.category')}
                 </label>
                 <select
                   value={category}
@@ -677,7 +677,7 @@ export default function FoundationNeeds() {
               {/* Urgency Level */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  ระดับความต้องการ
+                  {t('fn.form.urgency')}
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {URGENCY_LEVELS.map(u => (
@@ -706,11 +706,11 @@ export default function FoundationNeeds() {
               {/* Note */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  หมายเหตุเพิ่มเติม (ถ้ามี)
+                  {t('fn.form.note')}
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น ยี่ห้อใดก็ได้, ขนาด 10 กก. ขึ้นไป, ต้องการสูตรโรคตับ"
+                  placeholder={t('fn.form.notePh')}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   style={{
@@ -743,7 +743,7 @@ export default function FoundationNeeds() {
                     cursor: 'pointer'
                   }}
                 >
-                  ยกเลิก
+                  {t('fn.form.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -763,7 +763,7 @@ export default function FoundationNeeds() {
                   }}
                 >
                   {submitting && <Loader className="spin" size={16} />}
-                  บันทึกรายการ
+                  {t('fn.form.save')}
                 </button>
               </div>
             </form>
@@ -771,11 +771,11 @@ export default function FoundationNeeds() {
         </div>
       )}
 
-      <Dialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={toDelete ? `ลบ "${toDelete.item_name}"?` : ''}>
-        <p>ผู้ใช้จะไม่เห็นรายการนี้ในหน้าบริจาคอีก ถ้าได้ของครบแล้วก็ลบได้เลย</p>
+      <Dialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={toDelete ? t('fn.del.title', { name: toDelete.item_name }) : ''}>
+        <p>{t('fn.del.text')}</p>
         <div className="ui-dialog__actions">
-          <Button variant="secondary" onClick={() => setToDelete(null)}>ย้อนกลับ</Button>
-          <Button variant="danger" onClick={handleDelete}>ลบรายการ</Button>
+          <Button variant="secondary" onClick={() => setToDelete(null)}>{t('fnd.back')}</Button>
+          <Button variant="danger" onClick={handleDelete}>{t('fn.del.confirm')}</Button>
         </div>
       </Dialog>
     </div>

@@ -8,12 +8,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationDashboardSkeleton } from '../components/Skeletons';
+import { useI18n } from '../i18n';
 import './FoundationDashboard.css';
 
 // Same labels as the needs page (FoundationNeeds URGENCY_LEVELS)
 const NEED_URGENCY = {
-  critical: { label: 'วิกฤต', tone: 'danger' },
-  high: { label: 'ด่วนมาก', tone: 'warn' },
+  critical: { labelKey: 'fd.urg.critical', tone: 'danger' },
+  high: { labelKey: 'fd.urg.high', tone: 'warn' },
 };
 
 function TodoRow({ to, tone = 'default', icon: Icon, title, text }) {
@@ -41,6 +42,7 @@ function Stat({ to, icon: Icon, tone, value, unit, label }) {
 
 const FoundationDashboard = () => {
   const { user, profile } = useAuth();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [fp, setFp] = useState(null);
   const [stats, setStats] = useState({ available: 0, adopted: 0, pendingMatches: 0, needs: 0, pendingIncidents: 0, criticalIncidents: 0 });
@@ -80,8 +82,8 @@ const FoundationDashboard = () => {
           ]);
           requests = requests.map((r) => ({
             ...r,
-            person: people?.find((p) => p.id === r.user_id)?.full_name || 'ผู้ขอรับเลี้ยง',
-            pet: pets?.find((p) => p.id === r.animal_id)?.name || 'น้อง',
+            person: people?.find((p) => p.id === r.user_id)?.full_name || null,
+            pet: pets?.find((p) => p.id === r.animal_id)?.name || null,
           }));
         }
 
@@ -101,39 +103,40 @@ const FoundationDashboard = () => {
 
   if (loading) return <FoundationDashboardSkeleton />;
 
-  const name = fp?.foundation_name || profile?.full_name || 'มูลนิธิของคุณ';
+  const name = fp?.foundation_name || profile?.full_name || t('fd.ourFoundation');
   const hasPromptPay = Boolean(fp?.promptpay_number);
   const hasLocation = fp?.latitude != null && fp?.longitude != null;
   const otherIncidents = stats.pendingIncidents - stats.criticalIncidents;
 
   const requestText = newRequests.length
-    ? `${newRequests[0].person} ขอรับ${newRequests[0].pet}${stats.pendingMatches > 1 ? ` และอีก ${stats.pendingMatches - 1} รายการ` : ''}`
+    ? t('fd.requestText', { person: newRequests[0].person || t('fd.adopter'), pet: newRequests[0].pet || t('fd.pet') })
+      + (stats.pendingMatches > 1 ? t('fd.requestMore', { n: stats.pendingMatches - 1 }) : '')
     : '';
 
   const todos = [
     stats.criticalIncidents > 0 && (
       <TodoRow key="crit" to="/foundation/incidents" tone="danger" icon={AlertTriangle}
-        title={`เคสวิกฤตรอคนช่วย ${stats.criticalIncidents} เคส`} text="สัตว์บาดเจ็บหรือป่วยหนัก ควรรีบรับเคส" />
+        title={t('fd.todo.crit', { n: stats.criticalIncidents })} text={t('fd.todo.critText')} />
     ),
     stats.pendingMatches > 0 && (
       <TodoRow key="req" to="/foundation/matches" tone="primary" icon={MessageCircle}
-        title={`คำขอรับเลี้ยงใหม่ ${stats.pendingMatches} รายการ`} text={requestText} />
+        title={t('fd.todo.req', { n: stats.pendingMatches })} text={requestText} />
     ),
     otherIncidents > 0 && (
       <TodoRow key="inc" to="/foundation/incidents" icon={AlertTriangle}
-        title={`เหตุแจ้งรอคนช่วย ${otherIncidents} เคส`} text="ดูพิกัดและรับเคสที่อยู่ใกล้คุณ" />
+        title={t('fd.todo.inc', { n: otherIncidents })} text={t('fd.todo.incText')} />
     ),
     !hasPromptPay && (
       <TodoRow key="pp" to="/profile?modal=foundation" icon={QrCode}
-        title="ตั้งค่าพร้อมเพย์" text="ผู้ใช้จะบริจาคเงินให้มูลนิธิได้ทันที" />
+        title={t('fd.todo.pp')} text={t('fd.todo.ppText')} />
     ),
     !hasLocation && (
       <TodoRow key="gps" to="/profile?editLocation=true" icon={MapPin}
-        title="ปักหมุดที่ตั้งศูนย์" text="ใช้คำนวณระยะทางให้ผู้ที่สนใจรับเลี้ยง" />
+        title={t('fd.todo.gps')} text={t('fd.todo.gpsText')} />
     ),
     stats.available + stats.adopted === 0 && (
       <TodoRow key="first" to="/foundation/animals/new" icon={PlusCircle}
-        title="ลงประกาศน้องตัวแรก" text="ใส่รูปและนิสัยน้อง แล้วผู้ใช้จะเห็นในหน้าปัด" />
+        title={t('fd.todo.first')} text={t('fd.todo.firstText')} />
     ),
   ].filter(Boolean);
 
@@ -142,36 +145,36 @@ const FoundationDashboard = () => {
       <header className="fd-header">
         <div className="fd-header__text">
           <h1 className="fd-header__name">{name}</h1>
-          <span className="fd-verified"><ShieldCheck size={14} aria-hidden="true" /> ได้รับการรับรอง</span>
+          <span className="fd-verified"><ShieldCheck size={14} aria-hidden="true" /> {t('fd.verified')}</span>
         </div>
         <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary fd-header__cta">
-          <PlusCircle size={18} aria-hidden="true" /> เพิ่มสัตว์หาบ้าน
+          <PlusCircle size={18} aria-hidden="true" /> {t('fnd.addAnimal')}
         </Link>
       </header>
 
       <section className="fd-card fd-todo" aria-labelledby="fd-todo-title">
-        <h2 id="fd-todo-title" className="fd-card__title">ต้องทำวันนี้</h2>
+        <h2 id="fd-todo-title" className="fd-card__title">{t('fd.todo.title')}</h2>
         {todos.length ? (
           <div className="fd-todo__list">{todos}</div>
         ) : (
           <p className="fd-todo__done">
-            <CheckCircle2 size={20} aria-hidden="true" /> ไม่มีงานค้าง ทุกคำขอและทุกเคสได้รับการดูแลแล้ว
+            <CheckCircle2 size={20} aria-hidden="true" /> {t('fd.todo.none')}
           </p>
         )}
       </section>
 
-      <section className="fd-stats" aria-label="ภาพรวม">
-        <Stat to="/foundation/animals" icon={Home} tone="primary" value={stats.available} unit="ตัว" label="กำลังหาบ้าน" />
-        <Stat to="/foundation/animals" icon={Heart} tone="success" value={stats.adopted} unit="ตัว" label="ได้บ้านแล้ว" />
-        <Stat to="/foundation/matches" icon={MessageCircle} tone="primary" value={stats.pendingMatches} unit="รายการ" label="คำขอรอตอบ" />
-        <Stat to="/foundation/needs" icon={Package} tone="neutral" value={stats.needs} unit="รายการ" label="ของที่ต้องการ" />
+      <section className="fd-stats" aria-label={t('fd.overview')}>
+        <Stat to="/foundation/animals" icon={Home} tone="primary" value={stats.available} unit={t('fnd.unit.animals')} label={t('fd.stat.available')} />
+        <Stat to="/foundation/animals" icon={Heart} tone="success" value={stats.adopted} unit={t('fnd.unit.animals')} label={t('fd.stat.adopted')} />
+        <Stat to="/foundation/matches" icon={MessageCircle} tone="primary" value={stats.pendingMatches} unit={t('fnd.unit.items')} label={t('fd.stat.pending')} />
+        <Stat to="/foundation/needs" icon={Package} tone="neutral" value={stats.needs} unit={t('fnd.unit.items')} label={t('fd.stat.needs')} />
       </section>
 
       <div className="fd-grid">
         <section className="fd-card" aria-labelledby="fd-needs-title">
           <div className="fd-card__head">
-            <h2 id="fd-needs-title" className="fd-card__title">ของที่ต้องการ</h2>
-            <Link to="/foundation/needs" className="fd-card__action">จัดการ</Link>
+            <h2 id="fd-needs-title" className="fd-card__title">{t('fd.needs.title')}</h2>
+            <Link to="/foundation/needs" className="fd-card__action">{t('fd.manage')}</Link>
           </div>
           {needs.length ? (
             <ul className="fd-list">
@@ -180,40 +183,40 @@ const FoundationDashboard = () => {
                 return (
                   <li key={n.id} className="fd-list__row">
                     <span className="fd-list__name">{n.item_name}</span>
-                    {u && <span className={`fd-pill fd-pill--${u.tone}`}>{u.label}</span>}
+                    {u && <span className={`fd-pill fd-pill--${u.tone}`}>{t(u.labelKey)}</span>}
                   </li>
                 );
               })}
             </ul>
           ) : (
             <div className="fd-empty">
-              <p>ยังไม่ได้ระบุของที่ต้องการ ผู้ใช้จะเห็นรายการนี้ในหน้าบริจาค</p>
-              <Link to="/foundation/needs" className="ui-btn ui-btn--secondary ui-btn--sm">เพิ่มรายการ</Link>
+              <p>{t('fd.needs.empty')}</p>
+              <Link to="/foundation/needs" className="ui-btn ui-btn--secondary ui-btn--sm">{t('fd.needs.add')}</Link>
             </div>
           )}
         </section>
 
         <section className="fd-card" aria-labelledby="fd-info-title">
           <div className="fd-card__head">
-            <h2 id="fd-info-title" className="fd-card__title">ข้อมูลศูนย์</h2>
-            <Link to="/profile?modal=foundation" className="fd-card__action">แก้ไข</Link>
+            <h2 id="fd-info-title" className="fd-card__title">{t('fd.info.title')}</h2>
+            <Link to="/profile?modal=foundation" className="fd-card__action">{t('fd.edit')}</Link>
           </div>
           <ul className="fd-list">
             <li className="fd-list__row fd-list__row--info">
               <MapPin size={18} aria-hidden="true" />
               <span className="fd-list__text">
-                <span className="fd-list__label">ที่ตั้งศูนย์</span>
+                <span className="fd-list__label">{t('fd.info.location')}</span>
                 <span className={hasLocation ? 'fd-list__value' : 'fd-list__value is-missing'}>
-                  {hasLocation ? (fp?.address || 'ปักหมุดแล้ว') : 'ยังไม่ได้ปักหมุด'}
+                  {hasLocation ? (fp?.address || t('fd.info.pinned')) : t('fd.info.notPinned')}
                 </span>
               </span>
             </li>
             <li className="fd-list__row fd-list__row--info">
               <QrCode size={18} aria-hidden="true" />
               <span className="fd-list__text">
-                <span className="fd-list__label">พร้อมเพย์รับบริจาค</span>
+                <span className="fd-list__label">{t('fd.info.promptpay')}</span>
                 <span className={hasPromptPay ? 'fd-list__value' : 'fd-list__value is-missing'}>
-                  {hasPromptPay ? fp.promptpay_number : 'ยังไม่ได้ตั้งค่า'}
+                  {hasPromptPay ? fp.promptpay_number : t('fd.info.notSet')}
                 </span>
               </span>
             </li>
@@ -222,11 +225,11 @@ const FoundationDashboard = () => {
       </div>
 
       <section className="fd-card fd-tips" aria-labelledby="fd-tips-title">
-        <h2 id="fd-tips-title" className="fd-card__title"><Sparkles size={18} aria-hidden="true" /> เคล็ดลับให้น้องได้บ้านเร็วขึ้น</h2>
+        <h2 id="fd-tips-title" className="fd-card__title"><Sparkles size={18} aria-hidden="true" /> {t('fd.tips.title')}</h2>
         <ul>
-          <li>ใช้รูปแสงธรรมชาติที่เห็นหน้าและดวงตาชัด รูปแรกคือรูปหน้าปก</li>
-          <li>เล่านิสัยและประวัติสุขภาพสั้นๆ ให้ผู้สนใจนึกภาพออก</li>
-          <li>เลือกแท็กให้ครบ เช่น "เข้ากับเด็กได้" "ฝึกขับถ่ายแล้ว" เพื่อให้คนที่เหมาะเจอน้องง่ายขึ้น</li>
+          <li>{t('fd.tips.1')}</li>
+          <li>{t('fd.tips.2')}</li>
+          <li>{t('fd.tips.3')}</li>
         </ul>
       </section>
     </div>

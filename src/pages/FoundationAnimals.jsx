@@ -9,23 +9,21 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { FoundationAnimalsSkeleton } from '../components/Skeletons';
 import { Button, Dialog, useToast } from '../components/ui';
+import { useI18n, localizeAge } from '../i18n';
 import './FoundationAnimals.css';
 
-const STATUSES = [
-  { id: 'available', label: 'กำลังหาบ้าน', hint: 'แสดงในหน้าปัดหาบ้าน' },
-  { id: 'adopted', label: 'ได้บ้านแล้ว', hint: 'ไม่แสดงในหน้าปัดแล้ว' },
-  { id: 'hidden', label: 'ซ่อนไว้', hint: 'ซ่อนชั่วคราว ข้อมูลยังอยู่ครบ' },
-];
+// Labels: fa.status.<id>, fa.statusHint.<id>, fa.sort.<id>, fa.filter.<key>
+const STATUSES = ['available', 'adopted', 'hidden'];
 const SORTS = [
-  { id: 'newest', label: 'ลงประกาศล่าสุด', fn: (a, b) => new Date(b.created_at) - new Date(a.created_at) },
-  { id: 'oldest', label: 'รอบ้านนานที่สุด', fn: (a, b) => new Date(a.created_at) - new Date(b.created_at) },
-  { id: 'requests', label: 'คำขอรับเลี้ยงมากสุด', fn: null }, // needs the request counts, set below
-  { id: 'name', label: 'ชื่อ ก–ฮ', fn: (a, b) => (a.name || '').localeCompare(b.name || '', 'th') },
+  { id: 'newest', fn: (a, b) => new Date(b.created_at) - new Date(a.created_at) },
+  { id: 'oldest', fn: (a, b) => new Date(a.created_at) - new Date(b.created_at) },
+  { id: 'requests', fn: null }, // needs the request counts, set below
+  { id: 'name', fn: (a, b) => (a.name || '').localeCompare(b.name || '', 'th') },
 ];
 const FILTER_GROUPS = [
-  { key: 'type', label: 'ประเภท', options: [['dog', 'สุนัข'], ['cat', 'แมว']] },
-  { key: 'gender', label: 'เพศ', options: [['male', 'เพศผู้'], ['female', 'เพศเมีย']] },
-  { key: 'size', label: 'ขนาดตัว', options: [['small', 'เล็ก'], ['medium', 'กลาง'], ['large', 'ใหญ่']] },
+  { key: 'type', options: [['dog', 'animal.dog'], ['cat', 'animal.cat']] },
+  { key: 'gender', options: [['male', 'fa.male'], ['female', 'fa.female']] },
+  { key: 'size', options: [['small', 'fa.small'], ['medium', 'fa.medium'], ['large', 'fa.large']] },
 ];
 const NO_FILTERS = { type: null, gender: null, size: null, hasRequests: false };
 const VIEW_KEY = '4kh_fa_view';
@@ -75,23 +73,24 @@ function usePopover() {
 
 // Status pill that opens the app's own menu (native <select> lists can't be styled)
 function StatusMenu({ animal, onChange }) {
+  const { t } = useI18n();
   const { open, setOpen, ref } = usePopover();
-  const current = STATUSES.find((s) => s.id === animal.status) || STATUSES[0];
+  const current = STATUSES.includes(animal.status) ? animal.status : STATUSES[0];
   return (
     <div className="fa-pop" ref={ref}>
-      <button type="button" className={`fa-status fa-status--${current.id}`} aria-haspopup="menu" aria-expanded={open}
-        aria-label={`สถานะของ${animal.name}: ${current.label}`} onClick={() => setOpen((v) => !v)}>
-        <span className="fa-status__dot" aria-hidden="true" /> {current.label} <ChevronDown size={15} aria-hidden="true" />
+      <button type="button" className={`fa-status fa-status--${current}`} aria-haspopup="menu" aria-expanded={open}
+        aria-label={t('fa.statusOf', { name: animal.name, status: t(`fa.status.${current}`) })} onClick={() => setOpen((v) => !v)}>
+        <span className="fa-status__dot" aria-hidden="true" /> {t(`fa.status.${current}`)} <ChevronDown size={15} aria-hidden="true" />
       </button>
       {open && (
         <div className="fa-menu__panel fa-menu__panel--left" role="menu">
           {STATUSES.map((s) => (
-            <button key={s.id} role="menuitemradio" aria-checked={s.id === current.id} type="button"
-              className={`fa-menu__item fa-menu__item--status ${s.id === current.id ? 'is-on' : ''}`}
-              onClick={() => { setOpen(false); if (s.id !== current.id) onChange(s.id); }}>
-              <span className={`fa-status__dot fa-status__dot--${s.id}`} aria-hidden="true" />
-              <span className="fa-menu__text"><span>{s.label}</span><small>{s.hint}</small></span>
-              {s.id === current.id && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
+            <button key={s} role="menuitemradio" aria-checked={s === current} type="button"
+              className={`fa-menu__item fa-menu__item--status ${s === current ? 'is-on' : ''}`}
+              onClick={() => { setOpen(false); if (s !== current) onChange(s); }}>
+              <span className={`fa-status__dot fa-status__dot--${s}`} aria-hidden="true" />
+              <span className="fa-menu__text"><span>{t(`fa.status.${s}`)}</span><small>{t(`fa.statusHint.${s}`)}</small></span>
+              {s === current && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
             </button>
           ))}
         </div>
@@ -101,19 +100,20 @@ function StatusMenu({ animal, onChange }) {
 }
 
 function SortMenu({ value, onChange }) {
+  const { t } = useI18n();
   const { open, setOpen, ref } = usePopover();
   const current = SORTS.find((s) => s.id === value) || SORTS[0];
   return (
     <div className="fa-pop" ref={ref}>
       <button type="button" className="fa-tool" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <ArrowUpDown size={16} aria-hidden="true" /> <span className="fa-tool__label">{current.label}</span>
+        <ArrowUpDown size={16} aria-hidden="true" /> <span className="fa-tool__label">{t(`fa.sort.${current.id}`)}</span>
       </button>
       {open && (
         <div className="fa-menu__panel" role="menu">
           {SORTS.map((s) => (
             <button key={s.id} role="menuitemradio" aria-checked={s.id === value} type="button"
               className={`fa-menu__item ${s.id === value ? 'is-on' : ''}`} onClick={() => { setOpen(false); onChange(s.id); }}>
-              <span className="fa-menu__text"><span>{s.label}</span></span>
+              <span className="fa-menu__text"><span>{t(`fa.sort.${s.id}`)}</span></span>
               {s.id === value && <Check size={16} className="fa-menu__check" aria-hidden="true" />}
             </button>
           ))}
@@ -122,9 +122,9 @@ function SortMenu({ value, onChange }) {
     </div>
   );
 }
-const FILTERS = [{ id: 'all', label: 'ทั้งหมด' }, ...STATUSES];
-const TYPE_LABEL = { dog: 'สุนัข', cat: 'แมว' };
-const GENDER_LABEL = { male: 'เพศผู้', female: 'เพศเมีย' };
+const FILTERS = ['all', ...STATUSES];
+const TYPE_KEY = { dog: 'animal.dog', cat: 'animal.cat' };
+const GENDER_KEY = { male: 'fa.male', female: 'fa.female' };
 
 function AnimalPhoto({ src }) {
   const [ok, setOk] = useState(true);
@@ -135,20 +135,21 @@ function AnimalPhoto({ src }) {
 
 // ⋯ menu: view as adopters see it, edit, hide, delete
 function RowMenu({ animal, onHide, onDelete }) {
+  const { t } = useI18n();
   const { open, setOpen, ref } = usePopover();
   return (
     <div className="fa-menu" ref={ref}>
-      <button type="button" className="fa-icon-btn" aria-label={`ตัวเลือกเพิ่มเติมของ${animal.name}`} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button type="button" className="fa-icon-btn" aria-label={t('fa.more', { name: animal.name })} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <MoreHorizontal size={20} />
       </button>
       {open && (
         <div className="fa-menu__panel" role="menu">
-          <Link role="menuitem" to={`/animal/${animal.id}`} className="fa-menu__item"><ExternalLink size={16} aria-hidden="true" /> ดูหน้าที่ผู้ใช้เห็น</Link>
-          <Link role="menuitem" to={`/foundation/animals/${animal.id}/edit`} className="fa-menu__item"><Edit2 size={16} aria-hidden="true" /> แก้ไขข้อมูล</Link>
+          <Link role="menuitem" to={`/animal/${animal.id}`} className="fa-menu__item"><ExternalLink size={16} aria-hidden="true" /> {t('fa.menu.view')}</Link>
+          <Link role="menuitem" to={`/foundation/animals/${animal.id}/edit`} className="fa-menu__item"><Edit2 size={16} aria-hidden="true" /> {t('fa.menu.edit')}</Link>
           {animal.status !== 'hidden' && (
-            <button role="menuitem" type="button" className="fa-menu__item" onClick={() => { setOpen(false); onHide(); }}><EyeOff size={16} aria-hidden="true" /> ซ่อนจากหน้าปัด</button>
+            <button role="menuitem" type="button" className="fa-menu__item" onClick={() => { setOpen(false); onHide(); }}><EyeOff size={16} aria-hidden="true" /> {t('fa.menu.hide')}</button>
           )}
-          <button role="menuitem" type="button" className="fa-menu__item fa-menu__item--danger" onClick={() => { setOpen(false); onDelete(); }}><Trash2 size={16} aria-hidden="true" /> ลบ</button>
+          <button role="menuitem" type="button" className="fa-menu__item fa-menu__item--danger" onClick={() => { setOpen(false); onDelete(); }}><Trash2 size={16} aria-hidden="true" /> {t('fa.menu.delete')}</button>
         </div>
       )}
     </div>
@@ -157,6 +158,7 @@ function RowMenu({ animal, onHide, onDelete }) {
 
 const FoundationAnimals = () => {
   const { user } = useAuth();
+  const { t, lang } = useI18n();
   const toast = useToast();
   const [animals, setAnimals] = useState([]);
   const [requests, setRequests] = useState({}); // animal_id -> open request count
@@ -187,7 +189,7 @@ const FoundationAnimals = () => {
         setRequests((open || []).reduce((acc, m) => ({ ...acc, [m.animal_id]: (acc[m.animal_id] || 0) + 1 }), {}));
       } catch (error) {
         console.error('[Animals] Error fetching animals:', error);
-        toast('โหลดรายการน้องไม่สำเร็จ ลองรีเฟรชหน้า', { tone: 'error' });
+        toast(t('fa.toast.loadFail'), { tone: 'error' });
       } finally {
         setLoading(false);
       }
@@ -201,7 +203,7 @@ const FoundationAnimals = () => {
     if (error) {
       console.error('[Animals] Error updating status:', error);
       setAnimals(before);
-      toast('เปลี่ยนสถานะไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+      toast(t('fa.toast.statusFail'), { tone: 'error' });
     }
   };
 
@@ -212,11 +214,11 @@ const FoundationAnimals = () => {
     setDeleting(false);
     if (error) {
       console.error('[Animals] Error deleting animal:', error);
-      toast('ลบไม่สำเร็จ กรุณาลองใหม่', { tone: 'error' });
+      toast(t('fa.toast.delFail'), { tone: 'error' });
       return;
     }
     setAnimals((prev) => prev.filter((a) => a.id !== toDelete.id));
-    toast(`ลบ${toDelete.name}แล้ว`, { tone: 'success' });
+    toast(t('fa.toast.deleted', { name: toDelete.name }), { tone: 'success' });
     setToDelete(null);
   };
 
@@ -241,11 +243,11 @@ const FoundationAnimals = () => {
     <div className="fa-page">
       <header className="fa-header">
         <div>
-          <h1 className="fa-header__title">สัตว์ในดูแล</h1>
-          <p className="fa-header__sub">{animals.length} ตัว · กำลังหาบ้าน {counts.available || 0} ตัว</p>
+          <h1 className="fa-header__title">{t('fa.title')}</h1>
+          <p className="fa-header__sub">{t('fa.sub', { total: animals.length, available: counts.available || 0 })}</p>
         </div>
         <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary fa-header__cta">
-          <PlusCircle size={18} aria-hidden="true" /> เพิ่มสัตว์หาบ้าน
+          <PlusCircle size={18} aria-hidden="true" /> {t('fnd.addAnimal')}
         </Link>
       </header>
 
@@ -254,19 +256,19 @@ const FoundationAnimals = () => {
           <div className="fa-toolbar__row">
             <label className="fa-search">
               <Search size={18} aria-hidden="true" />
-              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อน้อง" aria-label="ค้นหาชื่อน้อง" />
+              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('fa.search')} aria-label={t('fa.search')} />
             </label>
             <button type="button" className={`fa-tool ${showFilters || activeFilters ? 'is-on' : ''}`} aria-expanded={showFilters}
               aria-controls="fa-filter-panel" onClick={() => setShowFilters((v) => !v)}>
-              <SlidersHorizontal size={16} aria-hidden="true" /> <span className="fa-tool__label">ตัวกรอง</span>
+              <SlidersHorizontal size={16} aria-hidden="true" /> <span className="fa-tool__label">{t('fa.filter')}</span>
               {activeFilters > 0 && <span className="fa-tool__count">{activeFilters}</span>}
             </button>
             <SortMenu value={sort} onChange={setSort} />
-            <div className="fa-view" role="group" aria-label="รูปแบบการแสดง">
-              <button type="button" className={view === 'grid' ? 'is-on' : ''} aria-pressed={view === 'grid'} aria-label="แสดงเป็นการ์ดรูป" title="การ์ดรูป" onClick={() => chooseView('grid')}>
+            <div className="fa-view" role="group" aria-label={t('fa.view')}>
+              <button type="button" className={view === 'grid' ? 'is-on' : ''} aria-pressed={view === 'grid'} aria-label={t('fa.view.grid')} title={t('fa.view.grid')} onClick={() => chooseView('grid')}>
                 <LayoutGrid size={18} aria-hidden="true" />
               </button>
-              <button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} aria-label="แสดงเป็นรายการ" title="รายการ" onClick={() => chooseView('list')}>
+              <button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} aria-label={t('fa.view.list')} title={t('fa.view.list')} onClick={() => chooseView('list')}>
                 <List size={18} aria-hidden="true" />
               </button>
             </div>
@@ -274,44 +276,44 @@ const FoundationAnimals = () => {
           {showFilters && (
             <div id="fa-filter-panel" className="fa-fpanel">
               {FILTER_GROUPS.map((g) => (
-                <div key={g.key} className="fa-fpanel__group" role="group" aria-label={g.label}>
-                  <span className="fa-fpanel__label">{g.label}</span>
+                <div key={g.key} className="fa-fpanel__group" role="group" aria-label={t(`fa.filter.${g.key}`)}>
+                  <span className="fa-fpanel__label">{t(`fa.filter.${g.key}`)}</span>
                   <div className="fa-fpanel__opts">
-                    {g.options.map(([id, label]) => (
+                    {g.options.map(([id, labelKey]) => (
                       <button key={id} type="button" aria-pressed={filters[g.key] === id}
                         className={`fa-chip ${filters[g.key] === id ? 'is-on' : ''}`} onClick={() => setFilter(g.key, id)}>
-                        {filters[g.key] === id && <Check size={14} aria-hidden="true" />} {label}
+                        {filters[g.key] === id && <Check size={14} aria-hidden="true" />} {t(labelKey)}
                       </button>
                     ))}
                   </div>
                 </div>
               ))}
-              <div className="fa-fpanel__group" role="group" aria-label="คำขอรับเลี้ยง">
-                <span className="fa-fpanel__label">คำขอรับเลี้ยง</span>
+              <div className="fa-fpanel__group" role="group" aria-label={t('fa.filter.requests')}>
+                <span className="fa-fpanel__label">{t('fa.filter.requests')}</span>
                 <div className="fa-fpanel__opts">
                   <button type="button" aria-pressed={filters.hasRequests}
                     className={`fa-chip ${filters.hasRequests ? 'is-on' : ''}`} onClick={() => setFilters((f) => ({ ...f, hasRequests: !f.hasRequests }))}>
-                    {filters.hasRequests && <Check size={14} aria-hidden="true" />} มีคนขอรับเลี้ยง
+                    {filters.hasRequests && <Check size={14} aria-hidden="true" />} {t('fa.filter.hasRequests')}
                   </button>
                 </div>
               </div>
               <div className="fa-fpanel__foot">
-                <button type="button" className="fa-link" onClick={() => setFilters(NO_FILTERS)} disabled={!activeFilters}>ล้างตัวกรอง</button>
-                <Button size="sm" onClick={() => setShowFilters(false)}>ดู {filtered.length} ตัว</Button>
+                <button type="button" className="fa-link" onClick={() => setFilters(NO_FILTERS)} disabled={!activeFilters}>{t('fa.filter.clear')}</button>
+                <Button size="sm" onClick={() => setShowFilters(false)}>{t('fa.filter.show', { n: filtered.length })}</Button>
               </div>
             </div>
           )}
-          <div className="fa-filters" role="tablist" aria-label="กรองตามสถานะ">
+          <div className="fa-filters" role="tablist" aria-label={t('fa.filterStatus')}>
             {FILTERS.map((f) => (
               <button
-                key={f.id}
+                key={f}
                 type="button"
                 role="tab"
-                aria-selected={statusFilter === f.id}
-                className={`fa-filter ${statusFilter === f.id ? 'is-on' : ''}`}
-                onClick={() => setStatusFilter(f.id)}
+                aria-selected={statusFilter === f}
+                className={`fa-filter ${statusFilter === f ? 'is-on' : ''}`}
+                onClick={() => setStatusFilter(f)}
               >
-                {f.label} <span>{f.id === 'all' ? animals.length : counts[f.id] || 0}</span>
+                {f === 'all' ? t('fa.all') : t(`fa.status.${f}`)} <span>{f === 'all' ? animals.length : counts[f] || 0}</span>
               </button>
             ))}
           </div>
@@ -321,28 +323,28 @@ const FoundationAnimals = () => {
       {animals.length === 0 ? (
         <div className="fa-empty">
           <span className="fa-empty__icon" aria-hidden="true"><PawPrint size={32} /></span>
-          <h2>ยังไม่มีน้องในดูแล</h2>
-          <p>ลงประกาศน้องตัวแรก ใส่รูปและนิสัย แล้วผู้ใช้จะเห็นน้องในหน้าปัดหาบ้าน</p>
-          <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary">เพิ่มสัตว์หาบ้าน</Link>
+          <h2>{t('fa.empty.title')}</h2>
+          <p>{t('fa.empty.text')}</p>
+          <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary">{t('fnd.addAnimal')}</Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="fa-none">
-          <p>ไม่พบน้องที่ตรงกับการค้นหาหรือตัวกรอง</p>
-          <button type="button" className="fa-link" onClick={clearAll}><X size={14} aria-hidden="true" /> ล้างทั้งหมด</button>
+          <p>{t('fa.none')}</p>
+          <button type="button" className="fa-link" onClick={clearAll}><X size={14} aria-hidden="true" /> {t('fa.clearAll')}</button>
         </div>
       ) : (
         <ul className={`fa-grid fa-grid--${view}`}>
           {filtered.map((animal) => {
             const open = requests[animal.id] || 0;
-            const meta = [TYPE_LABEL[animal.type] || animal.type, animal.age, GENDER_LABEL[animal.gender]].filter(Boolean).join(' · ');
+            const meta = [TYPE_KEY[animal.type] ? t(TYPE_KEY[animal.type]) : animal.type, localizeAge(animal.age, lang), GENDER_KEY[animal.gender] && t(GENDER_KEY[animal.gender])].filter(Boolean).join(' · ');
             return (
               <li key={animal.id} className={`fa-card fa-card--${animal.status}`}>
-                <Link to={`/foundation/animals/${animal.id}/edit`} className="fa-card__media" aria-label={`แก้ไขข้อมูล${animal.name}`}>
+                <Link to={`/foundation/animals/${animal.id}/edit`} className="fa-card__media" aria-label={t('fa.editOf', { name: animal.name })}>
                   <AnimalPhoto src={animal.images?.[0]} />
                 </Link>
                 {open > 0 && view === 'grid' && (
-                  <Link to="/foundation/matches" className="fa-requests fa-requests--badge" aria-label={`คำขอรับเลี้ยง ${open} รายการ`} title={`คำขอรับเลี้ยง ${open} รายการ`}>
-                    <MessageCircle size={14} aria-hidden="true" /> {open} คำขอ
+                  <Link to="/foundation/matches" className="fa-requests fa-requests--badge" aria-label={t('fa.requests', { n: open })} title={t('fa.requests', { n: open })}>
+                    <MessageCircle size={14} aria-hidden="true" /> {t(open === 1 ? 'fa.requestsBadgeOne' : 'fa.requestsBadge', { n: open })}
                   </Link>
                 )}
                 <div className="fa-card__body">
@@ -354,7 +356,7 @@ const FoundationAnimals = () => {
                   <div className="fa-card__foot">
                     <StatusMenu animal={animal} onChange={(st) => handleStatusChange(animal.id, st)} />
                     {open > 0 && view === 'list' && (
-                      <Link to="/foundation/matches" className="fa-requests" aria-label={`คำขอรับเลี้ยง ${open} รายการ`} title={`คำขอรับเลี้ยง ${open} รายการ`}>
+                      <Link to="/foundation/matches" className="fa-requests" aria-label={t('fa.requests', { n: open })} title={t('fa.requests', { n: open })}>
                         <MessageCircle size={15} aria-hidden="true" /> {open}
                       </Link>
                     )}
@@ -366,14 +368,14 @@ const FoundationAnimals = () => {
         </ul>
       )}
 
-      <Dialog open={Boolean(toDelete)} onClose={() => !deleting && setToDelete(null)} title={toDelete ? `ลบ${toDelete.name}?` : ''}>
+      <Dialog open={Boolean(toDelete)} onClose={() => !deleting && setToDelete(null)} title={toDelete ? t('fa.del.title', { name: toDelete.name }) : ''}>
         <div className="fa-delete">
-          <p>ข้อมูลและรูปของน้องจะถูกลบถาวร{deleteRequests > 0 ? ` รวมถึงคำขอรับเลี้ยงและแชทที่ค้างอยู่ ${deleteRequests} รายการ` : ''}</p>
-          <p className="fa-delete__hint">ถ้าแค่ไม่อยากให้คนเห็นชั่วคราว เลือก "ซ่อนไว้" แทนได้ ข้อมูลยังอยู่ครบ</p>
+          <p>{toDelete && t('fa.del.text', { name: toDelete.name })}{deleteRequests > 0 ? t('fa.del.withRequests', { n: deleteRequests }) : ''}{lang === 'en' ? '.' : ''}</p>
+          <p className="fa-delete__hint">{t('fa.del.hint')}</p>
         </div>
         <div className="ui-dialog__actions">
-          <Button variant="secondary" onClick={() => { const a = toDelete; setToDelete(null); handleStatusChange(a.id, 'hidden'); }} disabled={deleting}>ซ่อนไว้แทน</Button>
-          <Button variant="danger" loading={deleting} onClick={handleDelete}>ลบถาวร</Button>
+          <Button variant="secondary" onClick={() => { const a = toDelete; setToDelete(null); handleStatusChange(a.id, 'hidden'); }} disabled={deleting}>{t('fa.del.hide')}</Button>
+          <Button variant="danger" loading={deleting} onClick={handleDelete}>{t('fa.del.confirm')}</Button>
         </div>
       </Dialog>
     </div>

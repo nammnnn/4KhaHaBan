@@ -6,15 +6,9 @@ import { supabase } from '../services/supabaseClient';
 import { ChevronDown, MessageCircle, PawPrint, Search, ShieldCheck } from 'lucide-react';
 import { ChatListSkeleton } from '../components/Skeletons';
 import FoundationChatRoom from './FoundationChatRoom';
+import { useI18n } from '../i18n';
 import './MatchChat.css';
 import './FoundationMatchChat.css';
-
-const GROUP_TITLES = {
-  pending: 'คำขอใหม่ · รอคุณตอบ',
-  active: 'กำลังคุย',
-  adopted: 'ส่งมอบแล้ว',
-  rejected: 'ปฏิเสธแล้ว',
-};
 
 function groupOf(status) {
   if (status === 'pending') return 'pending';
@@ -23,21 +17,23 @@ function groupOf(status) {
   return 'active';
 }
 
-// "14:05" today, "เมื่อวาน", weekday this week, otherwise "12 ต.ค."
-function whenLabel(iso) {
+// "14:05" today, "เมื่อวาน" / "Yesterday", weekday this week, otherwise "12 ต.ค." / "12 Oct"
+function whenLabel(iso, t, lang) {
   if (!iso) return '';
   const d = new Date(iso);
   const now = new Date();
   const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400000);
-  if (days <= 0) return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-  if (days === 1) return 'เมื่อวาน';
-  if (days < 7) return d.toLocaleDateString('th-TH', { weekday: 'short' });
-  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  const locale = lang === 'en' ? 'en-GB' : 'th-TH';
+  if (days <= 0) return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  if (days === 1) return t('fmc.yesterday');
+  if (days < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
 // Adopter initials + a small photo of the pet they asked for (no third-party avatar service)
 function RequestRow({ match, animal, active, onOpen }) {
-  const name = match.userData?.full_name || 'ผู้ขอรับเลี้ยง';
+  const { t, lang } = useI18n();
+  const name = match.userData?.full_name || t('fmc.adopter');
   const [photoOk, setPhotoOk] = useState(true);
   const [petOk, setPetOk] = useState(true);
   const photo = match.userData?.avatar_url;
@@ -46,7 +42,7 @@ function RequestRow({ match, animal, active, onOpen }) {
   const waitingForYou = group === 'active' && match.lastSender === 'user';
 
   let preview = match.lastMessage || '';
-  if (group === 'pending') preview = 'ส่งใบสมัครแล้ว รอคุณพิจารณา';
+  if (group === 'pending') preview = t('fmc.pendingPreview');
 
   return (
     <li>
@@ -68,14 +64,14 @@ function RequestRow({ match, animal, active, onOpen }) {
           <span className="mc-row__top">
             <span className="mc-row__name">
               {name}
-              {match.userData?.status === 'verified' && <ShieldCheck size={14} className="fmc-verified" aria-label="ยืนยันตัวตนแล้ว" />}
+              {match.userData?.status === 'verified' && <ShieldCheck size={14} className="fmc-verified" aria-label={t('fmc.verified')} />}
             </span>
-            <span className="mc-row__time">{whenLabel(match.created_at)}</span>
+            <span className="mc-row__time">{whenLabel(match.created_at, t, lang)}</span>
           </span>
-          <span className="fmc-pet">ขอรับ <strong>{animal?.name || 'น้อง'}</strong></span>
+          <span className="fmc-pet">{t('fmc.asks')} <strong>{animal?.name || t('fmc.pet')}</strong></span>
           <span className="mc-row__preview">{preview}</span>
         </span>
-        {(group === 'pending' || waitingForYou) && <span className="mc-row__dot" aria-label="รอคุณตอบ" />}
+        {(group === 'pending' || waitingForYou) && <span className="mc-row__dot" aria-label={t('fmc.waiting')} />}
       </button>
     </li>
   );
@@ -83,6 +79,7 @@ function RequestRow({ match, animal, active, onOpen }) {
 
 function FoundationMatchChat() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [matches, setMatches] = useState([]);
   const [animalData, setAnimalData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -187,9 +184,9 @@ function FoundationMatchChat() {
   const renderGroup = (key, items) => items.length > 0 && (
     <section className="mc-group" aria-labelledby={`fmc-${key}`} key={key}>
       <h2 id={`fmc-${key}`} className="mc-group__title">
-        {GROUP_TITLES[key]} <span>{items.length}</span>
+        {t(`fmc.group.${key}`)} <span>{items.length}</span>
       </h2>
-      {key === 'pending' && <p className="mc-group__hint">อ่านใบสมัครแล้วกด "อนุมัติ" หรือ "ปฏิเสธ" ในแชท</p>}
+      {key === 'pending' && <p className="mc-group__hint">{t('fmc.pendingHint')}</p>}
       <ul className="mc-list">
         {items.map((m) => (
           <RequestRow key={m.id} match={m} animal={animalData[m.animalId]} active={m.id === matchId} onOpen={() => openMatch(m)} />
@@ -204,7 +201,7 @@ function FoundationMatchChat() {
     <div className="match-page matches-split-view mc">
       <div className={`matches-list-panel ${matchId ? 'hidden-on-mobile' : ''}`}>
         <div className="mc-header">
-          <h1 className="mc-header__title">แชท</h1>
+          <h1 className="mc-header__title">{t('fmc.title')}</h1>
           {matches.length > 0 && (
             <div className="fmc-filters">
               <label className="mc-search">
@@ -213,8 +210,8 @@ function FoundationMatchChat() {
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ค้นหาชื่อผู้ขอ หรือชื่อน้อง"
-                  aria-label="ค้นหาแชท"
+                  placeholder={t('fmc.search')}
+                  aria-label={t('fmc.searchAria')}
                 />
               </label>
               {animalOptions.length > 1 && (
@@ -222,9 +219,9 @@ function FoundationMatchChat() {
                   className="fmc-animal"
                   value={selectedAnimalId}
                   onChange={(e) => setSelectedAnimalId(e.target.value)}
-                  aria-label="กรองตามน้อง"
+                  aria-label={t('fmc.filterAnimal')}
                 >
-                  <option value="all">น้องทุกตัว</option>
+                  <option value="all">{t('fmc.allAnimals')}</option>
                   {animalOptions.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.count})</option>)}
                 </select>
               )}
@@ -236,15 +233,15 @@ function FoundationMatchChat() {
           {matches.length === 0 ? (
             <div className="mc-how">
               <span className="mc-how__icon" aria-hidden="true"><MessageCircle size={34} /></span>
-              <h2 className="mc-how__title">ยังไม่มีคำขอรับเลี้ยง</h2>
-              <p className="mc-how__lead">เมื่อมีคนกดขอรับเลี้ยงน้อง ใบสมัครและแชทจะมาอยู่ที่นี่</p>
-              <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary mc-how__cta">เพิ่มสัตว์หาบ้าน</Link>
+              <h2 className="mc-how__title">{t('fmc.empty.title')}</h2>
+              <p className="mc-how__lead">{t('fmc.empty.lead')}</p>
+              <Link to="/foundation/animals/new" className="ui-btn ui-btn--primary mc-how__cta">{t('fnd.addAnimal')}</Link>
             </div>
           ) : nothing ? (
             <div className="mc-empty-note">
-              ไม่พบแชทที่ตรงกับการค้นหา
+              {t('fmc.noMatch')}
               {(selectedAnimalId !== 'all' || q) && (
-                <div><button type="button" className="fmc-clear" onClick={() => { setSelectedAnimalId('all'); setSearchQuery(''); }}>ล้างการค้นหา</button></div>
+                <div><button type="button" className="fmc-clear" onClick={() => { setSelectedAnimalId('all'); setSearchQuery(''); }}>{t('fmc.clear')}</button></div>
               )}
             </div>
           ) : (
@@ -260,7 +257,7 @@ function FoundationMatchChat() {
                     aria-expanded={showRejected}
                     onClick={() => setShowRejected((v) => !v)}
                   >
-                    ปฏิเสธแล้ว ({groups.rejected.length}) <ChevronDown size={16} aria-hidden="true" />
+                    {t('fmc.rejectedToggle', { n: groups.rejected.length })} <ChevronDown size={16} aria-hidden="true" />
                   </button>
                   {showRejected && renderGroup('rejected', groups.rejected)}
                 </div>
@@ -276,7 +273,7 @@ function FoundationMatchChat() {
           <FoundationChatRoom />
         ) : (
           <div className="mc-panel-empty">
-            <p className="mc-empty-note">เลือกแชทจากรายการ เพื่ออ่านใบสมัครและคุยกับผู้ขอรับเลี้ยง</p>
+            <p className="mc-empty-note">{t('fmc.pick')}</p>
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ import { FormPageSkeleton } from '../components/Skeletons';
 import { useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
+import { useI18n } from '../i18n';
 import './AnimalForm.css';
 
 // Card photos fill ~900px-wide screens; anything much smaller looks blurry (DESIGN.md §5)
@@ -19,6 +20,7 @@ const AnimalForm = () => {
   const isEditMode = !!id;
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { t } = useI18n();
   
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +113,7 @@ const AnimalForm = () => {
       setPreviewImages(data.images || []);
     } catch (error) {
       console.error('[AnimalForm] Error fetching:', error);
-      setErrorMsg('ไม่พบข้อมูลสัตว์ หรือคุณไม่มีสิทธิ์แก้ไข');
+      setErrorMsg(t('af.err.notFound'));
     } finally {
       setLoading(false);
     }
@@ -148,11 +150,11 @@ const AnimalForm = () => {
         }));
         setLocationSearchQuery(resolvedAddress);
       } else {
-        setErrorMsg('ไม่พบพิกัดจากสถานที่นี้ กรุณาระบุชื่อตำบล อำเภอ หรือคลิกปักหมุดบนแผนที่ได้โดยตรง');
+        setErrorMsg(t('af.err.noCoords'));
       }
     } catch (e) {
       console.warn('Geocoding error:', e);
-      setErrorMsg('เกิดข้อผิดพลาดในการค้นหาพิกัด');
+      setErrorMsg(t('af.err.search'));
     } finally {
       setIsSearchingLocation(false);
     }
@@ -177,7 +179,7 @@ const AnimalForm = () => {
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setErrorMsg('เบราว์เซอร์ของคุณไม่รองรับการดึงพิกัด GPS');
+      setErrorMsg(t('af.err.noGps'));
       return;
     }
     setIsGettingLocation(true);
@@ -209,7 +211,7 @@ const AnimalForm = () => {
       },
       (err) => {
         console.warn('Geolocation error:', err);
-        setErrorMsg('ไม่สามารถเข้าถึงพิกัด GPS ได้ กรุณากรอกพิกัดด้วยตนเอง หรือค้นหาจากชื่อสถานที่');
+        setErrorMsg(t('af.err.gps'));
         setIsGettingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -227,11 +229,11 @@ const AnimalForm = () => {
     // กรองเฉพาะรูปภาพและจำกัดขนาด 5MB
     const validFiles = files.filter(f => {
       if (!f.type.startsWith('image/')) {
-        toast(`${f.name} ไม่ใช่ไฟล์รูปภาพ เลือกไฟล์ JPG หรือ PNG`, { tone: 'error' });
+        toast(t('af.err.notImage', { file: f.name }), { tone: 'error' });
         return false;
       }
       if (f.size > 5 * 1024 * 1024) {
-        toast(`${f.name} ใหญ่เกิน 5MB ลองเลือกรูปที่เล็กลง`, { tone: 'error' });
+        toast(t('af.err.tooBig', { file: f.name }), { tone: 'error' });
         return false;
       }
       return true;
@@ -270,7 +272,7 @@ const AnimalForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setErrorMsg('กรุณากรอกชื่อสัตว์เลี้ยง');
+      setErrorMsg(t('af.err.name'));
       return;
     }
     
@@ -353,14 +355,14 @@ const AnimalForm = () => {
         if (error) throw error;
       }
 
-      setSuccessMsg('บันทึกข้อมูลสัตว์เลี้ยงเรียบร้อยแล้ว');
+      setSuccessMsg(t('af.saved'));
       setTimeout(() => {
         navigate('/foundation/animals');
       }, 1200);
 
     } catch (error) {
       console.error('[AnimalForm] Submit error:', error);
-      setErrorMsg(error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      setErrorMsg(error.message || t('af.err.save'));
     } finally {
       setSubmitting(false);
     }
@@ -379,27 +381,27 @@ const AnimalForm = () => {
           type="button"
           className="af-back"
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/foundation/animals'))}
-          aria-label="ย้อนกลับ"
+          aria-label={t('fnd.back')}
         >
           <ChevronLeft size={22} />
         </button>
         <div>
-          <h1 className="af-header__title">{isEditMode ? 'แก้ไขข้อมูลน้อง' : 'เพิ่มสัตว์หาบ้าน'}</h1>
-          <p className="af-header__sub">ข้อมูลนี้แสดงบนการ์ดในหน้าปัดและหน้าประวัติของน้อง</p>
+          <h1 className="af-header__title">{isEditMode ? t('af.titleEdit') : t('af.titleNew')}</h1>
+          <p className="af-header__sub">{t('af.sub')}</p>
         </div>
       </header>
 
       <form id="animal-form" onSubmit={handleSubmit} className="af-form" noValidate={false}>
         {/* 1. Photos */}
         <section className="af-section" aria-labelledby="af-s1">
-          <h2 id="af-s1" className="af-section__title"><span>1</span> รูปภาพ</h2>
-          <p className="af-hint">รูปแรกคือรูปหน้าปกบนการ์ด แนะนำรูปแนวตั้ง กว้างอย่างน้อย {MIN_SHARP_WIDTH}px</p>
+          <h2 id="af-s1" className="af-section__title"><span>1</span> {t('af.s1')}</h2>
+          <p className="af-hint">{t('af.s1.hint', { px: MIN_SHARP_WIDTH })}</p>
           <div className="af-photos">
             {previewImages.map((src, idx) => (
               <div key={src} className="af-photo">
                 <img
                   src={src}
-                  alt={`รูปที่ ${idx + 1}`}
+                  alt={t('af.photoN', { n: idx + 1 })}
                   onLoad={(e) => {
                     const w = e.currentTarget.naturalWidth;
                     setSmallImages((prev) => {
@@ -409,67 +411,67 @@ const AnimalForm = () => {
                     });
                   }}
                 />
-                {idx === 0 && <span className="af-photo__tag af-photo__tag--cover">รูปปก</span>}
-                {smallImages[src] && <span className="af-photo__tag af-photo__tag--small" title={`รูปกว้าง ${smallImages[src]}px อาจไม่ชัดบนการ์ด`}>รูปเล็ก</span>}
-                <button type="button" className="af-photo__remove" onClick={() => removeImage(idx)} aria-label={`ลบรูปที่ ${idx + 1}`}>
+                {idx === 0 && <span className="af-photo__tag af-photo__tag--cover">{t('af.cover')}</span>}
+                {smallImages[src] && <span className="af-photo__tag af-photo__tag--small" title={t('af.smallTitle', { px: smallImages[src] })}>{t('af.small')}</span>}
+                <button type="button" className="af-photo__remove" onClick={() => removeImage(idx)} aria-label={t('af.removePhoto', { n: idx + 1 })}>
                   <X size={14} />
                 </button>
               </div>
             ))}
             <label className="af-photo af-photo--add">
               <Upload size={22} aria-hidden="true" />
-              <span>{previewImages.length ? 'เพิ่มรูป' : 'เลือกรูปน้อง'}</span>
+              <span>{previewImages.length ? t('af.addPhoto') : t('af.pickPhoto')}</span>
               <input type="file" multiple accept="image/*" onChange={handleImageSelect} />
             </label>
           </div>
           {previewImages.some((src) => smallImages[src]) && (
             <p role="note" className="af-note">
               <AlertCircle size={18} aria-hidden="true" />
-              <span>รูปที่มีป้าย "รูปเล็ก" กว้างไม่ถึง {MIN_SHARP_WIDTH}px อาจดูเบลอ แนะนำรูปที่ถ่ายจากมือถือโดยตรง (รูปที่แคปหน้าจอหรือส่งผ่านแชทมักถูกย่อ)</span>
+              <span>{t('af.smallNote', { px: MIN_SHARP_WIDTH })}</span>
             </p>
           )}
         </section>
 
         {/* 2. About */}
         <section className="af-section" aria-labelledby="af-s2">
-          <h2 id="af-s2" className="af-section__title"><span>2</span> ข้อมูลน้อง</h2>
+          <h2 id="af-s2" className="af-section__title"><span>2</span> {t('af.s2')}</h2>
           <div className="af-field">
-            <label htmlFor="af-name" className="af-label">ชื่อน้อง <span className="af-req">*</span></label>
+            <label htmlFor="af-name" className="af-label">{t('af.name')} <span className="af-req">*</span></label>
             <input id="af-name" type="text" required className="af-input" value={formData.name}
-              onChange={(e) => handleFieldChange('name', e.target.value)} placeholder="เช่น ถุงทอง, เจ้าหลง" />
+              onChange={(e) => handleFieldChange('name', e.target.value)} placeholder={t('af.namePh')} />
           </div>
-          <Segmented label="ประเภท" value={formData.type} onChange={(v) => handleFieldChange('type', v)}
-            options={[['dog', 'สุนัข'], ['cat', 'แมว'], ['other', 'อื่นๆ']]} />
-          <Segmented label="เพศ" value={formData.gender} onChange={(v) => handleFieldChange('gender', v)}
-            options={[['male', 'เพศผู้'], ['female', 'เพศเมีย'], ['unknown', 'ไม่ทราบ']]} />
+          <Segmented name="type" label={t('af.type')} value={formData.type} onChange={(v) => handleFieldChange('type', v)}
+            options={[['dog', t('af.dog')], ['cat', t('af.cat')], ['other', t('af.other')]]} />
+          <Segmented name="gender" label={t('af.gender')} value={formData.gender} onChange={(v) => handleFieldChange('gender', v)}
+            options={[['male', t('af.male')], ['female', t('af.female')], ['unknown', t('af.unknown')]]} />
           <div className="af-row">
             <div className="af-field">
-              <label htmlFor="af-age" className="af-label">อายุโดยประมาณ</label>
+              <label htmlFor="af-age" className="af-label">{t('af.age')}</label>
               <input id="af-age" type="text" className="af-input" value={formData.age}
-                onChange={(e) => handleFieldChange('age', e.target.value)} placeholder="เช่น 3 เดือน, 1 ปี 6 เดือน" />
+                onChange={(e) => handleFieldChange('age', e.target.value)} placeholder={t('af.agePh')} />
             </div>
-            <Segmented label="ขนาดตัว" value={formData.size} onChange={(v) => handleFieldChange('size', v)}
-              options={[['small', 'เล็ก', '< 10 กก.'], ['medium', 'กลาง', '10–25 กก.'], ['large', 'ใหญ่', '> 25 กก.']]} />
+            <Segmented name="size" label={t('af.size')} value={formData.size} onChange={(v) => handleFieldChange('size', v)}
+              options={['small', 'medium', 'large'].map((k) => [k, t(`af.${k}`), t(`af.kg.${k}`)])} />
           </div>
         </section>
 
         {/* 3. Personality */}
         <section className="af-section" aria-labelledby="af-s3">
-          <h2 id="af-s3" className="af-section__title"><span>3</span> นิสัยและเรื่องราว</h2>
-          <p className="af-hint">แตะเพื่อเลือก แท็กจะแสดงบนการ์ดทั้งภาษาไทยและอังกฤษ ช่วยให้คนที่เหมาะเจอน้องง่ายขึ้น</p>
+          <h2 id="af-s3" className="af-section__title"><span>3</span> {t('af.s3')}</h2>
+          <p className="af-hint">{t('af.s3.hint')}</p>
           <TagPicker ids={tagIds} custom={customTags} onChange={({ ids, custom }) => { setTagIds(ids); setCustomTags(custom); }} />
           <div className="af-field">
-            <label htmlFor="af-story" className="af-label">เรื่องราวของน้อง</label>
+            <label htmlFor="af-story" className="af-label">{t('af.story')}</label>
             <textarea id="af-story" className="af-input af-textarea" value={formData.story}
               onChange={(e) => handleFieldChange('story', e.target.value)}
-              placeholder="เล่าที่มา นิสัย สุขภาพ หรือสิ่งที่น้องชอบ" />
+              placeholder={t('af.storyPh')} />
           </div>
         </section>
 
         {/* 4. Location */}
         <section className="af-section" aria-labelledby="af-s4">
-          <h2 id="af-s4" className="af-section__title"><span>4</span> น้องอยู่ที่ไหน</h2>
-          <p className="af-hint">ใช้คำนวณระยะทางให้ผู้ที่สนใจในหน้าปัด</p>
+          <h2 id="af-s4" className="af-section__title"><span>4</span> {t('af.s4')}</h2>
+          <p className="af-hint">{t('af.s4.hint')}</p>
           <div className="af-loc-actions">
             {foundationCoords && (
               <button type="button" className="af-chip-btn" onClick={() => {
@@ -477,21 +479,21 @@ const AnimalForm = () => {
                 handleFieldChange('longitude', String(foundationCoords.longitude));
                 if (foundationCoords.foundation_name) setLocationSearchQuery(foundationCoords.foundation_name);
               }}>
-                <MapPin size={16} aria-hidden="true" /> ที่ตั้งมูลนิธิ
+                <MapPin size={16} aria-hidden="true" /> {t('af.useFoundation')}
               </button>
             )}
             <button type="button" className="af-chip-btn" onClick={handleGetCurrentLocation} disabled={isGettingLocation}>
               {isGettingLocation ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <MapPin size={16} aria-hidden="true" />}
-              {isGettingLocation ? 'กำลังหาตำแหน่ง…' : 'ตำแหน่งปัจจุบัน'}
+              {isGettingLocation ? t('af.locating') : t('af.current')}
             </button>
           </div>
           <div className="af-search">
             <input type="search" className="af-input" value={locationSearchQuery}
-              placeholder="ค้นหาสถานที่ เช่น อ.เมือง ขอนแก่น"
-              aria-label="ค้นหาสถานที่"
+              placeholder={t('af.searchPlace')}
+              aria-label={t('af.searchPlaceAria')}
               onChange={(e) => setLocationSearchQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchLocation(); } }} />
-            <button type="button" className="af-chip-btn" onClick={handleSearchLocation} disabled={isSearchingLocation || !locationSearchQuery.trim()} aria-label="ค้นหา">
+            <button type="button" className="af-chip-btn" onClick={handleSearchLocation} disabled={isSearchingLocation || !locationSearchQuery.trim()} aria-label={t('af.search')}>
               {isSearchingLocation ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Search size={16} aria-hidden="true" />}
             </button>
           </div>
@@ -504,8 +506,8 @@ const AnimalForm = () => {
           />
           <p className={`af-hint ${hasCoords ? 'af-hint--ok' : ''}`}>
             {hasCoords
-              ? <><CheckCircle2 size={14} aria-hidden="true" /> ปักหมุดแล้ว · ลากหมุดเพื่อปรับตำแหน่งได้</>
-              : 'แตะบนแผนที่หรือลากหมุดเพื่อเลือกตำแหน่ง'}
+              ? <><CheckCircle2 size={14} aria-hidden="true" /> {t('af.pinned')}</>
+              : t('af.tapMap')}
           </p>
         </section>
 
@@ -519,7 +521,7 @@ const AnimalForm = () => {
           )}
           <button type="submit" className="ui-btn ui-btn--primary af-savebar__btn" disabled={submitting}>
             {submitting ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Save size={18} aria-hidden="true" />}
-            {submitting ? 'กำลังบันทึก…' : isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกและประกาศหาบ้าน'}
+            {submitting ? t('af.saving') : isEditMode ? t('af.saveEdit') : t('af.saveNew')}
           </button>
         </div>
       </form>
@@ -528,14 +530,14 @@ const AnimalForm = () => {
 };
 
 // Two or three choices as tap targets instead of a dropdown
-function Segmented({ label, value, onChange, options }) {
+function Segmented({ name, label, value, onChange, options }) {
   return (
     <fieldset className="af-field af-seg">
       <legend className="af-label">{label}</legend>
       <div className="af-seg__opts">
         {options.map(([id, text, sub]) => (
           <label key={id} className={`af-seg__opt ${value === id ? 'is-on' : ''}`}>
-            <input type="radio" name={label} value={id} checked={value === id} onChange={() => onChange(id)} />
+            <input type="radio" name={`af-${name}`} value={id} checked={value === id} onChange={() => onChange(id)} />
             <span>{text}</span>
             {sub && <small>{sub}</small>}
           </label>

@@ -3,8 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import th from './th';
 import en from './en';
+import { foundationTh, foundationEn } from './foundation';
 
-const DICTS = { th, en };
+const DICTS = { th: { ...th, ...foundationTh }, en: { ...en, ...foundationEn } };
 export const LANGS = ['th', 'en'];
 const STORAGE_KEY = '4kh_lang';
 

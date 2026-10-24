@@ -1,12 +1,15 @@
 // Tap-to-select standard tags + optional custom tags, for the foundation's animal form.
-// DESIGN.md §7.19. Foundation pages are Thai-only for now, so labels here are Thai,
+// DESIGN.md §7.19. Labels follow the app language; custom tags take Thai plus optional English,
 // with a preview of what English-language adopters will see.
 import { useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { TAGS, TAG_GROUPS } from '../lib/tags';
+import { useI18n } from '../i18n';
 import './TagPicker.css';
 
 export function TagPicker({ ids, custom, onChange }) {
+  const { t, lang } = useI18n();
+  const en = lang === 'en';
   const [newTh, setNewTh] = useState('');
   const [newEn, setNewEn] = useState('');
   const selected = new Set(ids);
@@ -29,7 +32,7 @@ export function TagPicker({ ids, custom, onChange }) {
   const removeCustom = (th) => onChange({ ids, custom: custom.filter((c) => c.th !== th) });
 
   const englishPreview = [
-    ...TAGS.filter((t) => selected.has(t.id)).map((t) => t.en),
+    ...TAGS.filter((tag) => selected.has(tag.id)).map((tag) => tag.en),
     ...custom.map((c) => c.en).filter(Boolean),
   ];
   const untranslated = custom.filter((c) => !c.en).length;
@@ -37,14 +40,14 @@ export function TagPicker({ ids, custom, onChange }) {
   return (
     <div className="tag-picker">
       {TAG_GROUPS.map((group) => {
-        const tags = TAGS.filter((t) => t.group === group.id);
-        const count = tags.filter((t) => selected.has(t.id)).length;
+        const tags = TAGS.filter((tag) => tag.group === group.id);
+        const count = tags.filter((tag) => selected.has(tag.id)).length;
         const full = Boolean(group.max) && count >= group.max;
         return (
           <fieldset key={group.id} className="tag-picker__group">
             <legend>
-              {group.th}
-              {group.max && <span className="tag-picker__limit">เลือกได้สูงสุด {group.max} ({count}/{group.max})</span>}
+              {en ? group.en : group.th}
+              {group.max && <span className="tag-picker__limit">{t('tp.max', { max: group.max, count })}</span>}
             </legend>
             <div className="tag-picker__chips">
               {tags.map((tag) => {
@@ -57,10 +60,10 @@ export function TagPicker({ ids, custom, onChange }) {
                     aria-pressed={on}
                     disabled={!on && full}
                     onClick={() => toggle(tag, full)}
-                    title={tag.en}
+                    title={en ? tag.th : tag.en}
                   >
                     {on && <Check size={16} aria-hidden="true" />}
-                    {tag.th}
+                    {en ? tag.en : tag.th}
                   </button>
                 );
               })}
@@ -70,13 +73,13 @@ export function TagPicker({ ids, custom, onChange }) {
       })}
 
       <fieldset className="tag-picker__group">
-        <legend>แท็กอื่นๆ <span className="tag-picker__limit">ไม่บังคับ</span></legend>
+        <legend>{t('tp.other')} <span className="tag-picker__limit">{t('tp.optional')}</span></legend>
         {custom.length > 0 && (
           <div className="tag-picker__chips">
             {custom.map((c) => (
               <span key={c.th} className="ui-chip tag-picker__custom">
                 {c.th}{c.en && <span className="tag-picker__en"> · {c.en}</span>}
-                <button type="button" onClick={() => removeCustom(c.th)} aria-label={`ลบแท็ก ${c.th}`}>
+                <button type="button" onClick={() => removeCustom(c.th)} aria-label={t('tp.remove', { tag: c.th })}>
                   <X size={14} />
                 </button>
               </span>
@@ -89,29 +92,29 @@ export function TagPicker({ ids, custom, onChange }) {
             value={newTh}
             onChange={(e) => setNewTh(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
-            placeholder="แท็กภาษาไทย เช่น ชอบนอนกลางวัน"
-            aria-label="แท็กภาษาไทย"
+            placeholder={t('tp.thPh')}
+            aria-label={t('tp.thAria')}
           />
           <input
             className="ui-input"
             value={newEn}
             onChange={(e) => setNewEn(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
-            placeholder="English (ถ้ามี) เช่น Loves naps"
-            aria-label="แท็กภาษาอังกฤษ ไม่บังคับ"
+            placeholder={t('tp.enPh')}
+            aria-label={t('tp.enAria')}
             lang="en"
           />
           <button type="button" className="ui-btn ui-btn--secondary ui-btn--sm" onClick={addCustom} disabled={!newTh.trim()}>
-            <Plus size={16} aria-hidden="true" /> เพิ่ม
+            <Plus size={16} aria-hidden="true" /> {t('tp.add')}
           </button>
         </div>
       </fieldset>
 
       <p className="tag-picker__preview">
-        <strong>ผู้ใช้ภาษาอังกฤษจะเห็น:</strong>{' '}
+        <strong>{t('tp.preview')}</strong>{' '}
         {englishPreview.length ? englishPreview.join(', ') : '—'}
         {untranslated > 0 && (
-          <span className="tag-picker__warn"> (แท็กอื่นๆ {untranslated} แท็กที่ไม่มีคำแปลจะไม่แสดงในภาษาอังกฤษ)</span>
+          <span className="tag-picker__warn">{t('tp.untranslated', { n: untranslated })}</span>
         )}
       </p>
     </div>
