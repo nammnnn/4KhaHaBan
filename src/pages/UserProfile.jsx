@@ -333,10 +333,12 @@ export default function UserProfile() {
     }
   }, [role, user, searchParams]);
 
-  // Opened from the foundation home (?from=dashboard): closing the window goes back there
+  // Opened from another foundation page (?from=dashboard / needs): closing the window goes back there
+  const RETURN_TO = { dashboard: '/foundation', needs: '/foundation/needs' };
   const closeLocationModal = () => {
     setIsLocationModalOpen(false);
-    if (searchParams.get('from') === 'dashboard') navigate('/foundation');
+    const back = RETURN_TO[searchParams.get('from')];
+    if (back) navigate(back);
   };
 
   const fetchFoundationDocuments = async () => {

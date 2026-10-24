@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import '../pages/AnimalProfileBento.css';
 import '../pages/ServicePages.css';
 import '../pages/FoundationDashboard.css';
+import '../pages/FoundationNeeds.css';
 import '../pages/FoundationAnimals.css';
 import '../pages/FoundationIncidents.css';
 import '../pages/AnimalForm.css';
@@ -405,70 +406,35 @@ export const AdoptionFollowupSkeleton = () => (
   </div>
 );
 
-// 9. Foundation Needs Skeleton (FoundationNeeds)
-export const FoundationNeedsSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-    {[1, 2, 3, 4].map(i => (
-      <div
-        key={i}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 18px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '14px',
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
-          <div className="skeleton" style={{ width: '42px', height: '42px', borderRadius: '10px', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div className="skeleton skeleton-text" style={{ width: `${120 + (i % 3) * 30}px`, height: '18px' }} />
-              <div className="skeleton" style={{ width: '55px', height: '20px', borderRadius: '6px' }} />
-            </div>
-            <div className="skeleton skeleton-text" style={{ width: '180px', height: '13px' }} />
-          </div>
-        </div>
-        <div className="skeleton" style={{ width: '48px', height: '28px', borderRadius: '14px', flexShrink: 0 }} />
-      </div>
-    ))}
-  </div>
-);
-
+// 9. Foundation Needs Skeleton — mirrors FoundationNeeds: header, shipping row, one list card
 export const FoundationNeedsPageSkeleton = () => (
-  <div style={{ minHeight: '100dvh', backgroundColor: 'var(--background)', padding: '32px 16px 100px', boxSizing: 'border-box' }} aria-busy="true" aria-label="กำลังโหลด">
-    <div style={{ maxWidth: '840px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span className="fd-sk" style={{ width: 38, height: 38, borderRadius: 8 }} />
-          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span className="fd-sk" style={{ width: 200, height: 24 }} />
-            <span className="fd-sk" style={{ width: 'min(420px, 60vw)', height: 14 }} />
-          </span>
-        </div>
-        <span className="fd-sk" style={{ width: 170, height: 40, borderRadius: 8 }} />
-      </div>
-      <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--line-200)', padding: '16px 20px', marginBottom: 24, display: 'flex', gap: 14 }}>
-        <span className="fd-sk" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0 }} />
-        <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span className="fd-sk" style={{ width: '60%', height: 16 }} />
-          <span className="fd-sk" style={{ width: '45%', height: 13 }} />
-          <span className="fd-sk" style={{ width: '40%', height: 13 }} />
-          <span className="fd-sk" style={{ width: '70%', height: 13 }} />
-        </span>
-      </div>
-      <span className="fd-sk" style={{ display: 'block', width: 220, height: 14, marginBottom: 10 }} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-        {[120, 150, 140, 170, 190, 130].map((w, i) => <span key={i} className="fd-sk" style={{ width: w, height: 32, borderRadius: 999 }} />)}
-      </div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflow: 'hidden' }}>
-        {[80, 100, 120, 130, 110, 70].map((w, i) => <span key={i} className="fd-sk" style={{ width: w, height: 34, borderRadius: 8, flexShrink: 0 }} />)}
-      </div>
-      <FoundationNeedsSkeleton />
+  <div className="fn-page" aria-busy="true" aria-label="กำลังโหลด">
+    <div className="fn-header">
+      <span className="fd-sk" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+      <span className="fn-header__text" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span className="fd-sk" style={{ width: 220, height: 24 }} />
+        <span className="fd-sk" style={{ width: '80%', maxWidth: 360, height: 14 }} />
+      </span>
+      <span className="fd-sk fn-header__cta" style={{ height: 48, minWidth: 180, borderRadius: 999 }} />
     </div>
+    <div className="fn-ship">
+      <span className="fd-sk" style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0 }} />
+      <span className="fn-ship__text" style={{ gap: 6 }}>
+        <span className="fd-sk" style={{ width: 110, height: 12 }} />
+        <span className="fd-sk" style={{ width: '85%', height: 14 }} />
+      </span>
+    </div>
+    <ul className="fn-list">
+      {[150, 120, 180, 130].map((w, i) => (
+        <li key={i} className="fn-item" style={{ padding: '16px' }}>
+          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span className="fd-sk" style={{ width: w, height: 16 }} />
+            <span className="fd-sk" style={{ width: 110, height: 12 }} />
+          </span>
+          <span className="fd-sk" style={{ width: 84, height: 32, borderRadius: 999 }} />
+        </li>
+      ))}
+    </ul>
   </div>
 );
 
