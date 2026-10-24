@@ -42,6 +42,11 @@
   background: var(--surface); font: inherit; font-size: var(--text-body); color: var(--ink-900);
 }
 .af-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+.af-input.is-invalid { border-color: var(--danger); }
+.af-input.is-invalid:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+.af-error { display: flex; align-items: flex-start; gap: 6px; font-size: var(--text-label); color: var(--danger-strong); }
+.af-error svg { flex-shrink: 0; margin-top: 3px; }
+.af-section.is-invalid { box-shadow: var(--elev-raised), 0 0 0 2px var(--danger); }
 .af-textarea { height: auto; min-height: 120px; padding: 12px 14px; line-height: 1.6; resize: vertical; }
 .af-row { display: grid; gap: var(--space-4); }
 

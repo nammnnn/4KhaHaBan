@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { ChevronLeft, Save, Upload, X, Loader2, CheckCircle2, AlertCircle, MapPin, Search } from 'lucide-react';
 import { searchCoordinatesFromAddress, getAddressFromCoordinates, parseCoordinatesFromText } from '../lib/geo';
 import InteractiveLocationPicker from '../components/InteractiveLocationPicker';
 import { FormPageSkeleton } from '../components/Skeletons';
-import { useToast } from '../components/ui';
+import { Button, Dialog, useToast } from '../components/ui';
 import { TagPicker } from '../components/TagPicker';
 import { splitStoredTags, buildStoredTags } from '../lib/tags';
 import { useI18n } from '../i18n';
@@ -19,6 +19,9 @@ const AnimalForm = () => {
   const { id } = useParams(); // ถ้ามี id = แก้ไข, ถ้าไม่มี = สร้างใหม่
   const isEditMode = !!id;
   const navigate = useNavigate();
+  const location = useLocation();
+  // 'default' = this page was opened directly, so there's no in-app page to go back to
+  const backOrList = () => (location.key !== 'default' ? navigate(-1) : navigate('/foundation/animals'));
   const { user, profile } = useAuth();
   const { t } = useI18n();
   
@@ -26,6 +29,12 @@ const AnimalForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({}); // { name, photo }
+  const [leaveTo, setLeaveTo] = useState(null); // where to go once the user agrees to drop changes
+  const nameRef = useRef(null);
+  const photosRef = useRef(null);
+  const initialSnap = useRef(null);
+  const savedRef = useRef(false);
 
   const [foundationCoords, setFoundationCoords] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -220,6 +229,49 @@ const AnimalForm = () => {
 
   const handleFieldChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'name' && value.trim()) setFieldErrors((f) => ({ ...f, name: null }));
+  };
+
+  // Unsaved-changes check. Location is left out: a new form fills it in from the foundation profile.
+  const snapshot = JSON.stringify({ ...formData, latitude: null, longitude: null, previewImages, tagIds, customTags });
+  useEffect(() => {
+    if (!loading && initialSnap.current === null) initialSnap.current = snapshot;
+  }, [loading, snapshot]);
+  const dirty = !loading && initialSnap.current !== null && initialSnap.current !== snapshot && !savedRef.current;
+
+  // Closing or reloading the tab
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  // Links elsewhere in the app (menu, dock): ask first instead of dropping the form
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const onClick = (e) => {
+      const a = e.target.closest?.('a[href]');
+      if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveTo(url.pathname + url.search);
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [dirty]);
+
+  const goBack = () => {
+    if (dirty) { setLeaveTo('back'); return; }
+    backOrList();
+  };
+  const leaveNow = () => {
+    const to = leaveTo;
+    savedRef.current = true; // stop asking
+    setLeaveTo(null);
+    if (to === 'back') backOrList(); else navigate(to);
   };
 
   const handleImageSelect = (e) => {
@@ -271,11 +323,20 @@ const AnimalForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      setErrorMsg(t('af.err.name'));
+    // Check everything at once, then take the user to the first problem
+    const errs = {
+      photo: previewImages.length === 0 ? t('af.err.photo') : null,
+      name: !formData.name.trim() ? t('af.err.name') : null,
+    };
+    setFieldErrors(errs);
+    if (errs.photo || errs.name) {
+      setErrorMsg(t('af.err.fix'));
+      const first = errs.photo ? photosRef.current : nameRef.current;
+      first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (!errs.photo) nameRef.current?.focus({ preventScroll: true });
       return;
     }
-    
+
     setSubmitting(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -355,15 +416,16 @@ const AnimalForm = () => {
         if (error) throw error;
       }
 
+      // Keep the button locked until we leave, so a second tap can't post the animal twice
+      savedRef.current = true;
       setSuccessMsg(t('af.saved'));
       setTimeout(() => {
         navigate('/foundation/animals');
       }, 1200);
-
     } catch (error) {
+      // Raw database/storage errors are technical English; show a plain message instead
       console.error('[AnimalForm] Submit error:', error);
-      setErrorMsg(error.message || t('af.err.save'));
-    } finally {
+      setErrorMsg(error?.statusCode || error?.name === 'StorageApiError' ? t('af.err.upload') : t('af.err.save'));
       setSubmitting(false);
     }
   };
@@ -380,7 +442,7 @@ const AnimalForm = () => {
         <button
           type="button"
           className="af-back"
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/foundation/animals'))}
+          onClick={goBack}
           aria-label={t('fnd.back')}
         >
           <ChevronLeft size={22} />
@@ -391,9 +453,9 @@ const AnimalForm = () => {
         </div>
       </header>
 
-      <form id="animal-form" onSubmit={handleSubmit} className="af-form" noValidate={false}>
+      <form id="animal-form" onSubmit={handleSubmit} className="af-form" noValidate>
         {/* 1. Photos */}
-        <section className="af-section" aria-labelledby="af-s1">
+        <section ref={photosRef} className={`af-section ${fieldErrors.photo ? 'is-invalid' : ''}`} aria-labelledby="af-s1">
           <h2 id="af-s1" className="af-section__title"><span>1</span> {t('af.s1')}</h2>
           <p className="af-hint">{t('af.s1.hint', { px: MIN_SHARP_WIDTH })}</p>
           <div className="af-photos">
@@ -421,9 +483,10 @@ const AnimalForm = () => {
             <label className="af-photo af-photo--add">
               <Upload size={22} aria-hidden="true" />
               <span>{previewImages.length ? t('af.addPhoto') : t('af.pickPhoto')}</span>
-              <input type="file" multiple accept="image/*" onChange={handleImageSelect} />
+              <input type="file" multiple accept="image/*" onChange={(e) => { handleImageSelect(e); setFieldErrors((f) => ({ ...f, photo: null })); }} />
             </label>
           </div>
+          {fieldErrors.photo && <p className="af-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {fieldErrors.photo}</p>}
           {previewImages.some((src) => smallImages[src]) && (
             <p role="note" className="af-note">
               <AlertCircle size={18} aria-hidden="true" />
@@ -437,8 +500,10 @@ const AnimalForm = () => {
           <h2 id="af-s2" className="af-section__title"><span>2</span> {t('af.s2')}</h2>
           <div className="af-field">
             <label htmlFor="af-name" className="af-label">{t('af.name')} <span className="af-req">*</span></label>
-            <input id="af-name" type="text" required className="af-input" value={formData.name}
+            <input id="af-name" ref={nameRef} type="text" required className={`af-input ${fieldErrors.name ? 'is-invalid' : ''}`} value={formData.name}
+              aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'af-name-err' : undefined}
               onChange={(e) => handleFieldChange('name', e.target.value)} placeholder={t('af.namePh')} />
+            {fieldErrors.name && <p id="af-name-err" className="af-error"><AlertCircle size={15} aria-hidden="true" /> {fieldErrors.name}</p>}
           </div>
           <Segmented name="type" label={t('af.type')} value={formData.type} onChange={(v) => handleFieldChange('type', v)}
             options={[['dog', t('af.dog')], ['cat', t('af.cat')], ['other', t('af.other')]]} />
@@ -521,10 +586,18 @@ const AnimalForm = () => {
           )}
           <button type="submit" className="ui-btn ui-btn--primary af-savebar__btn" disabled={submitting}>
             {submitting ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Save size={18} aria-hidden="true" />}
-            {submitting ? t('af.saving') : isEditMode ? t('af.saveEdit') : t('af.saveNew')}
+            {successMsg ? t('af.saved') : submitting ? t('af.saving') : isEditMode ? t('af.saveEdit') : t('af.saveNew')}
           </button>
         </div>
       </form>
+
+      <Dialog open={Boolean(leaveTo)} onClose={() => setLeaveTo(null)} title={t('af.leave.title')}>
+        <p>{t('af.leave.text')}</p>
+        <div className="ui-dialog__actions">
+          <Button onClick={() => setLeaveTo(null)}>{t('af.leave.stay')}</Button>
+          <Button variant="secondary" onClick={leaveNow}>{t('af.leave.go')}</Button>
+        </div>
+      </Dialog>
     </div>
   );
 };

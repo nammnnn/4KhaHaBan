@@ -193,6 +193,13 @@ const ROWS = [
   ['af.err.notImage', '{file} ไม่ใช่ไฟล์รูปภาพ เลือกไฟล์ JPG หรือ PNG', '{file} is not an image. Choose a JPG or PNG.'],
   ['af.err.tooBig', '{file} ใหญ่เกิน 5MB ลองเลือกรูปที่เล็กลง', '{file} is over 5MB. Try a smaller photo.'],
   ['af.err.name', 'กรุณากรอกชื่อสัตว์เลี้ยง', 'Please enter a name.'],
+  ['af.err.photo', 'เพิ่มรูปน้องอย่างน้อย 1 รูป การ์ดในหน้าปัดต้องมีรูป', 'Add at least one photo. Cards in the feed need one.'],
+  ['af.err.fix', 'ยังบันทึกไม่ได้ แก้ช่องที่ขึ้นสีแดงก่อน', "Can't save yet. Fix the fields marked in red."],
+  ['af.err.upload', 'อัปโหลดรูปไม่สำเร็จ ลองใหม่หรือเลือกรูปที่เล็กลง', "Couldn't upload a photo. Try again or pick a smaller one."],
+  ['af.leave.title', 'ออกโดยไม่บันทึก?', 'Leave without saving?'],
+  ['af.leave.text', 'ข้อมูลที่กรอกไว้ในหน้านี้จะหายไป', "What you've entered on this page will be lost."],
+  ['af.leave.stay', 'อยู่ต่อ', 'Keep editing'],
+  ['af.leave.go', 'ออกและทิ้งข้อมูล', 'Leave and discard'],
   ['af.err.save', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', "Couldn't save. Please try again."],
 
   // Tag picker (animal form)
