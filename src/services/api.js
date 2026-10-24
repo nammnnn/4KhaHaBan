@@ -1279,6 +1279,31 @@ export const api = {
       }
     }
 
+    // 3.1 Close everyone else's open request for this animal and tell them why,
+    //     so nobody keeps waiting for an animal that already has a home
+    let closedOthers = 0;
+    if (animalId) {
+      try {
+        const { data: others } = await supabase
+          .from('matches')
+          .select('id')
+          .eq('animal_id', animalId)
+          .neq('id', matchId)
+          .in('status', ['pending', 'approved']);
+        for (const other of others || []) {
+          await this.updateMatchStatus(other.id, 'rejected');
+          await this.sendMessage(other.id, `[แจ้งผลคำขอรับเลี้ยง]
+━━━━━━━━━━━━━━━━━━
+ขอบคุณที่สนใจรับเลี้ยง ${petName} นะคะ/ครับ ตอนนี้${petName}ได้บ้านใหม่แล้ว จึงขอปิดคำขอนี้
+━━━━━━━━━━━━━━━━━━
+ยังมีน้องอีกหลายตัวที่รอบ้านอยู่ ลองดูในหน้าหาบ้านได้เลย`, 'shelter');
+          closedOthers += 1;
+        }
+      } catch (closeErr) {
+        console.warn('Could not close other requests for this animal:', closeErr);
+      }
+    }
+
     // 4. Automatically post system announcement in chat
     try {
       const announceText = `[ยืนยันการส่งมอบสัตว์เลี้ยงสำเร็จ]
@@ -1295,7 +1320,7 @@ export const api = {
       console.warn('Error sending handover announcement:', msgErr);
     }
 
-    return { success: true, handoverDate: finalHandoverDate };
+    return { success: true, handoverDate: finalHandoverDate, closedOthers };
   },
 
   /**

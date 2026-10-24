@@ -703,14 +703,8 @@ function FoundationChatRoom() {
       await api.updateMatchStatus(matchId, 'rejected');
       setMatch(prev => ({ ...prev, status: 'rejected' }));
 
-      // 1.1 If previously approved or reserved, ensure animal status is reverted back to 'available'
-      if (animal?.id && supabase) {
-        try {
-          await supabase.from('animals').update({ status: 'available' }).eq('id', animal.id);
-        } catch (animalErr) {
-          console.warn('Could not revert animal status:', animalErr);
-        }
-      }
+      // 1.1 Declining one person never changes the animal's status. It used to reset it to
+      //     'available', which put adopted or hidden animals back in the swipe feed.
 
       // 2. Send official notification message if enabled
       if (sendDeclineMessage) {
