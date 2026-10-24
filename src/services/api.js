@@ -716,6 +716,21 @@ export const api = {
   /**
    * Report a user
    */
+  /** Report a listing (an animal). Goes to the admin's report list with the animal attached. */
+  async reportListing(reporterId, animal, reason) {
+    if (!supabase) throw new Error('Supabase not connected');
+    const row = { reporter_id: reporterId, reported_id: animal.foundation_id, reason, status: 'pending', animal_id: animal.id };
+    let { error } = await supabase.from('reports').insert(row);
+    // Before migration 030 there is no animal_id column: keep the animal's name in the reason
+    if (error && /animal_id|column/i.test(error.message || '')) {
+      delete row.animal_id;
+      row.reason = `[${animal.name || animal.id}] ${reason}`;
+      ({ error } = await supabase.from('reports').insert(row));
+    }
+    if (error) throw error;
+    return { success: true };
+  },
+
   async reportUser(reporterId, reportedId, reason, imageUrl = null) {
     if (!supabase) throw new Error('Supabase not connected');
     const { data, error } = await supabase

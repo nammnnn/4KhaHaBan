@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, RotateCw } from 'lucide-react';
+import { Ban, Home, LogOut, MessageSquare, RotateCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { PetScene } from './motion/PetScene';
 import { Button, EmptyState, LoadError } from './ui';
 import { useI18n } from '../i18n';
@@ -100,6 +101,35 @@ export function AdoptionUnavailable({ state, onRetry }) {
           action={<Link to={chats} className="ui-btn ui-btn--primary">{t('err.toChats')}</Link>}
         />
       )}
+    </div>
+  );
+}
+
+// Shown instead of the app to a suspended account (profiles.is_banned). They can still reach
+// support to appeal, or sign out.
+export function SuspendedScreen() {
+  const { t, lang } = useI18n();
+  const { profile, logout } = useAuth();
+  const since = profile?.banned_at
+    ? new Date(profile.banned_at).toLocaleDateString(lang === 'en' ? 'en-GB' : 'th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+  return (
+    <div className="err-screen" style={{ minHeight: '100dvh' }}>
+      <div className="ui-empty">
+        <div className="ui-empty__icon ui-load-error__icon" aria-hidden="true"><Ban size={36} /></div>
+        <h1 className="ui-empty__title">{t('ban.title')}</h1>
+        <p className="ui-empty__text">{t('ban.text')}</p>
+        {(profile?.banned_reason || since) && (
+          <p className="ui-empty__text">
+            {profile?.banned_reason && <>{t('ban.reason', { reason: profile.banned_reason })}<br /></>}
+            {since && t('ban.since', { date: since })}
+          </p>
+        )}
+        <div className="ui-empty__action err-screen__actions">
+          <Link to="/support-chat" className="ui-btn ui-btn--primary"><MessageSquare size={16} /> {t('ban.contact')}</Link>
+          <Button variant="secondary" onClick={logout}><LogOut size={16} /> {t('ban.logout')}</Button>
+        </div>
+      </div>
     </div>
   );
 }

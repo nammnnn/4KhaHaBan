@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 import { Loader, Shield, User, Search, Filter, CheckCircle, AlertCircle, AlertTriangle, X, Users, Home, XCircle, FileText, FileEdit, Clock, ChevronDown, Gift, MessageSquare, Send, ArrowLeft, Image as ImageIcon, MapPin, Phone, ExternalLink, Dog, Cat, Heart, Compass, Navigation, CheckCircle2, Eye, Lock, RotateCcw, UserCheck, ShieldCheck, Sparkles, Building2, Star, Banknote, PiggyBank, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOTION } from '../lib/motion';
-import { initialsAvatar } from '../lib/avatar';
+import { MOTION } from '../../lib/motion';
+import { initialsAvatar } from '../../lib/avatar';
 
 const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,7 +75,9 @@ const CustomDropdown = ({ value, options, onChange, style, buttonStyle }) => {
   );
 };
 
-const AdminDashboard = () => {
+// The pre-redesign admin screens. AdminConsole embeds the tabs that haven't been rebuilt yet:
+// `tabs` lists which ones this instance shows, `embedded` hides the old header and stats.
+const AdminLegacy = ({ embedded = false, tabs = null, initialTab = 'users' }) => {
   const { user: currentUser } = useAuth();
   
   const [profiles, setProfiles] = useState([]);
@@ -96,7 +98,7 @@ const AdminDashboard = () => {
   const [supportChats, setSupportChats] = useState([]);
   const [selectedSupportChat, setSelectedSupportChat] = useState(null);
   const [unreadSupportCount, setUnreadSupportCount] = useState(0);
-  const activeTabRef = useRef('users'); // ref สำหรับ Realtime callback ให้อ่านค่า activeTab ล่าสุด
+  const activeTabRef = useRef(initialTab); // ref สำหรับ Realtime callback ให้อ่านค่า activeTab ล่าสุด
   const [supportMessages, setSupportMessages] = useState([]);
   const [loadingSupportMessages, setLoadingSupportMessages] = useState(false);
   const [supportInput, setSupportInput] = useState('');
@@ -109,7 +111,7 @@ const AdminDashboard = () => {
   // Search and Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'approvals' | 'logs'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'users' | 'approvals' | 'logs'
   
   // UI states for interactions
   const [toast, setToast] = useState(null);
@@ -665,9 +667,10 @@ const AdminDashboard = () => {
   });
 
   return (
-    <div className="admin-shell-container">
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        
+    <div className={embedded ? 'admin-legacy--embedded' : 'admin-shell-container'}>
+      <div style={embedded ? undefined : { maxWidth: '1000px', margin: '0 auto' }}>
+
+        {!embedded && (<>
         {/* Header Area with Live Pulse & Sync Action */}
         <motion.div
           className="admin-header-bar"
@@ -739,8 +742,10 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
         
+        </>)}
+
         {/* Action Tabs: Horizontal Scrollable Segmented Bar on Mobile, Grid on Desktop */}
-        <motion.div
+        {(!tabs || tabs.length > 1) && <motion.div
           className="admin-tab-nav"
         >
           {[
@@ -751,7 +756,7 @@ const AdminDashboard = () => {
             { id: 'support', label: 'แจ้งเรื่อง', icon: <MessageSquare size={17} />, badge: unreadSupportCount },
             { id: 'reports', label: 'รายงานผู้ใช้', icon: <AlertTriangle size={17} /> },
             { id: 'logs', label: 'กิจกรรม', icon: <Star size={17} /> }
-          ].map(tab => {
+          ].filter(tab => !tabs || tabs.includes(tab.id)).map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -804,7 +809,7 @@ const AdminDashboard = () => {
               </button>
             );
           })}
-        </motion.div>
+        </motion.div>}
 
       {loading ? (
         activeTab === 'users' ? <UsersTableSkeleton /> :
@@ -2146,7 +2151,7 @@ const AdminDashboard = () => {
                     const isRole = log.action === 'UPDATE_ROLE';
                     const iconBg = isApprove ? 'var(--success-soft)' : isReject ? '#FEF2F2' : isRole ? 'var(--primary-soft)' : '#F3F4F6';
                     const iconColor = isApprove ? 'var(--success-fill)' : isReject ? '#DC2626' : isRole ? '#B45309' : '#4B5563';
-                    const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : log.action;
+                    const actionLabel = isApprove ? 'อนุมัติมูลนิธิ' : isReject ? 'ปฏิเสธมูลนิธิ' : isRole ? 'ปรับเปลี่ยนสิทธิ์ผู้ใช้' : ({ BAN_USER: 'ระงับบัญชี', UNBAN_USER: 'ยกเลิกระงับบัญชี', RESOLVE_REPORT: 'จัดการรายงาน', HIDE_LISTING: 'ซ่อนประกาศ', CONFIRM_PROMPTPAY: 'ยืนยันเลขพร้อมเพย์', SUSPEND_PROMPTPAY: 'ระงับจากการเปลี่ยนพร้อมเพย์' })[log.action] || log.action;
 
                     return (
                       <div key={log.id} className="admin-timeline-item">
@@ -2740,4 +2745,4 @@ const ChatModalSkeleton = () => (
   </div>
 );
 
-export default AdminDashboard;
+export default AdminLegacy;
