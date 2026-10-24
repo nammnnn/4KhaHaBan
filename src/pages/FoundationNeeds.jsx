@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Package, 
@@ -51,6 +51,7 @@ export default function FoundationNeeds() {
   const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [foundationInfo, setFoundationInfo] = useState(null);
 
   // Form states
@@ -109,6 +110,13 @@ export default function FoundationNeeds() {
     setNote('');
     setShowAddModal(true);
   };
+
+  // "Add items" on the foundation home links here with ?add=1: open the add window straight away
+  useEffect(() => {
+    if (loading || searchParams.get('add') !== '1') return;
+    handleOpenAdd();
+    setSearchParams({}, { replace: true });
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyPreset = (preset) => {
     setItemName(preset.name);

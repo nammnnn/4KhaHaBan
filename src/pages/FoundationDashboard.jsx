@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, CheckCircle2, ChevronRight, Heart, Home, MapPin, MessageCircle,
-  Package, PlusCircle, QrCode, ShieldCheck,
+  Phone, PlusCircle, QrCode, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
@@ -41,6 +41,8 @@ function Stat({ to, icon: Icon, tone, value, unit, label }) {
   );
 }
 
+const EDIT_INFO = '/profile?modal=foundation&from=dashboard';
+
 const FoundationDashboard = () => {
   const { user, profile } = useAuth();
   const { t } = useI18n();
@@ -67,7 +69,7 @@ const FoundationDashboard = () => {
           { data: requestRows },
         ] = await Promise.all([
           // PromptPay, address and GPS live on foundation_profiles (not on profiles)
-          supabase.from('foundation_profiles').select('foundation_name, address, promptpay_number, latitude, longitude').eq('id', user.id).maybeSingle().then(ok),
+          supabase.from('foundation_profiles').select('foundation_name, address, promptpay_number, latitude, longitude, contact_phone').eq('id', user.id).maybeSingle().then(ok),
           count(supabase.from('animals').select('id', { count: 'exact', head: true }).eq('foundation_id', user.id).eq('status', 'available')),
           count(supabase.from('animals').select('id', { count: 'exact', head: true }).eq('foundation_id', user.id).eq('status', 'adopted')),
           // RLS only returns requests for this foundation's animals
@@ -120,6 +122,12 @@ const FoundationDashboard = () => {
   const name = fp?.foundation_name || profile?.full_name || t('fd.ourFoundation');
   const hasPromptPay = Boolean(fp?.promptpay_number);
   const hasLocation = fp?.latitude != null && fp?.longitude != null;
+  // What people see, and where. Each row opens the edit window, which comes back here when closed.
+  const infoRows = [
+    { key: 'pp', icon: QrCode, label: t('fd.info.promptpay'), value: fp?.promptpay_number || null, missing: t('fd.info.notSet'), hint: t('fd.info.promptpayHint') },
+    { key: 'pin', icon: MapPin, label: t('fd.info.location'), value: hasLocation ? t('fd.info.pinned') : null, missing: t('fd.info.notPinned'), hint: t('fd.info.locationHint') },
+    { key: 'phone', icon: Phone, label: t('fd.info.phone'), value: fp?.contact_phone || null, missing: t('fd.info.notSet'), hint: t('fd.info.phoneHint') },
+  ];
   const otherIncidents = stats.pendingIncidents - stats.criticalIncidents;
 
   const requestText = newRequests.length
@@ -141,11 +149,11 @@ const FoundationDashboard = () => {
         title={t('fd.todo.inc', { n: otherIncidents })} text={t('fd.todo.incText')} />
     ),
     !hasPromptPay && (
-      <TodoRow key="pp" to="/profile?modal=foundation" icon={QrCode}
+      <TodoRow key="pp" to={EDIT_INFO} icon={QrCode}
         title={t('fd.todo.pp')} text={t('fd.todo.ppText')} />
     ),
     !hasLocation && (
-      <TodoRow key="gps" to="/profile?editLocation=true" icon={MapPin}
+      <TodoRow key="gps" to="/profile?editLocation=true&from=dashboard" icon={MapPin}
         title={t('fd.todo.gps')} text={t('fd.todo.gpsText')} />
     ),
     stats.available + stats.adopted === 0 && (
@@ -181,31 +189,40 @@ const FoundationDashboard = () => {
         <Stat to="/foundation/animals" icon={Home} tone="primary" value={stats.available} unit={t('fnd.unit.animals')} label={t('fd.stat.available')} />
         <Stat to="/foundation/animals" icon={Heart} tone="success" value={stats.adopted} unit={t('fnd.unit.animals')} label={t('fd.stat.adopted')} />
         <Stat to="/foundation/matches" icon={MessageCircle} tone="primary" value={stats.pendingMatches} unit={t('fnd.unit.items')} label={t('fd.stat.pending')} />
-        <Stat to="/foundation/needs" icon={Package} tone="neutral" value={stats.needs} unit={t('fnd.unit.items')} label={t('fd.stat.needs')} />
       </section>
 
       <div className="fd-grid">
         <section className="fd-card" aria-labelledby="fd-needs-title">
           <div className="fd-card__head">
-            <h2 id="fd-needs-title" className="fd-card__title">{t('fd.needs.title')}</h2>
-            <Link to="/foundation/needs" className="fd-card__action">{t('fd.manage')}</Link>
+            <h2 id="fd-needs-title" className="fd-card__title">
+              {t('fd.needs.title')}{stats.needs > 0 && <span className="fd-card__count">{t('fd.needs.count', { n: stats.needs })}</span>}
+            </h2>
+            {needs.length > 0 && <Link to="/foundation/needs" className="fd-card__action">{t('fd.manage')}</Link>}
           </div>
           {needs.length ? (
-            <ul className="fd-list">
-              {needs.map((n) => {
-                const u = NEED_URGENCY[n.urgency];
-                return (
-                  <li key={n.id} className="fd-list__row">
-                    <span className="fd-list__name">{n.item_name}</span>
-                    {u && <span className={`fd-pill fd-pill--${u.tone}`}>{t(u.labelKey)}</span>}
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              <ul className="fd-list">
+                {needs.map((n) => {
+                  const u = NEED_URGENCY[n.urgency];
+                  return (
+                    <li key={n.id} className="fd-list__row">
+                      <span className="fd-list__name">{n.item_name}</span>
+                      {u && <span className={`fd-pill fd-pill--${u.tone}`}>{t(u.labelKey)}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="fd-card__foot">
+                {stats.needs > needs.length && (
+                  <Link to="/foundation/needs" className="fd-more">{t('fd.needs.more', { n: stats.needs - needs.length })}</Link>
+                )}
+                <Link to="/foundation/needs?add=1" className="fd-more fd-more--add"><PlusCircle size={16} aria-hidden="true" /> {t('fd.needs.add')}</Link>
+              </div>
+            </>
           ) : (
             <div className="fd-empty">
               <p>{t('fd.needs.empty')}</p>
-              <Link to="/foundation/needs" className="ui-btn ui-btn--secondary ui-btn--sm">{t('fd.needs.add')}</Link>
+              <Link to="/foundation/needs?add=1" className="ui-btn ui-btn--secondary ui-btn--sm"><PlusCircle size={16} aria-hidden="true" /> {t('fd.needs.add')}</Link>
             </div>
           )}
         </section>
@@ -213,27 +230,23 @@ const FoundationDashboard = () => {
         <section className="fd-card" aria-labelledby="fd-info-title">
           <div className="fd-card__head">
             <h2 id="fd-info-title" className="fd-card__title">{t('fd.info.title')}</h2>
-            <Link to="/profile?modal=foundation" className="fd-card__action">{t('fd.edit')}</Link>
           </div>
           <ul className="fd-list">
-            <li className="fd-list__row fd-list__row--info">
-              <MapPin size={18} aria-hidden="true" />
-              <span className="fd-list__text">
-                <span className="fd-list__label">{t('fd.info.location')}</span>
-                <span className={hasLocation ? 'fd-list__value' : 'fd-list__value is-missing'}>
-                  {hasLocation ? (fp?.address || t('fd.info.pinned')) : t('fd.info.notPinned')}
-                </span>
-              </span>
-            </li>
-            <li className="fd-list__row fd-list__row--info">
-              <QrCode size={18} aria-hidden="true" />
-              <span className="fd-list__text">
-                <span className="fd-list__label">{t('fd.info.promptpay')}</span>
-                <span className={hasPromptPay ? 'fd-list__value' : 'fd-list__value is-missing'}>
-                  {hasPromptPay ? fp.promptpay_number : t('fd.info.notSet')}
-                </span>
-              </span>
-            </li>
+            {infoRows.map((r) => (
+              <li key={r.key}>
+                <Link to={EDIT_INFO} className="fd-info-row">
+                  <span className="fd-info-row__icon" aria-hidden="true"><r.icon size={18} /></span>
+                  <span className="fd-list__text">
+                    <span className="fd-list__label">{r.label}</span>
+                    <span className={r.value ? 'fd-list__value' : 'fd-list__value is-missing'}>{r.value || r.missing}</span>
+                    <span className="fd-info-row__hint">{r.hint}</span>
+                  </span>
+                  {r.value
+                    ? <ChevronRight size={18} className="fd-info-row__go" aria-hidden="true" />
+                    : <span className="fd-info-row__set">{t('fd.info.set')}</span>}
+                </Link>
+              </li>
+            ))}
           </ul>
         </section>
       </div>

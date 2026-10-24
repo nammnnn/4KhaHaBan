@@ -217,7 +217,7 @@ export const FoundationDashboardSkeleton = () => (
       </div>
     </section>
     <section className="fd-stats">
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1, 2].map((i) => (
         <div key={i} className="fd-stat">
           <span className="fd-sk fd-stat__label" style={{ width: 80, height: 16 }} />
           <span className="fd-sk fd-stat__icon" />

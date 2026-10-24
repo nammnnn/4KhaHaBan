@@ -333,6 +333,12 @@ export default function UserProfile() {
     }
   }, [role, user, searchParams]);
 
+  // Opened from the foundation home (?from=dashboard): closing the window goes back there
+  const closeLocationModal = () => {
+    setIsLocationModalOpen(false);
+    if (searchParams.get('from') === 'dashboard') navigate('/foundation');
+  };
+
   const fetchFoundationDocuments = async () => {
     if (!user || !supabase) return [];
     setIsLoadingDocs(true);
@@ -585,9 +591,7 @@ export default function UserProfile() {
       }
 
       setLocationSuccessMsg('บันทึกที่ตั้งและพิกัดศูนย์พักพิงเรียบร้อยแล้ว');
-      setTimeout(() => {
-        setIsLocationModalOpen(false);
-      }, 1200);
+      setTimeout(closeLocationModal, 1200);
     } catch (err) {
       console.error('Failed to update foundation location:', err);
       setLocationErrorMsg(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -1536,7 +1540,7 @@ export default function UserProfile() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={MOTION.base}
-            onClick={() => setIsLocationModalOpen(false)}
+            onClick={closeLocationModal}
             style={{
               position: 'fixed',
               inset: 0,
@@ -1579,7 +1583,7 @@ export default function UserProfile() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsLocationModalOpen(false)}
+                  onClick={closeLocationModal}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-medium)', padding: '4px' }}
                 >
                   <X size={20} />
@@ -1754,7 +1758,7 @@ export default function UserProfile() {
                   <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
                     <button
                       type="button"
-                      onClick={() => setIsLocationModalOpen(false)}
+                      onClick={closeLocationModal}
                       style={{ flex: 1, height: '42px', borderRadius: '8px', border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text-dark)', fontWeight: 600, cursor: 'pointer' }}
                     >
                       ยกเลิก
