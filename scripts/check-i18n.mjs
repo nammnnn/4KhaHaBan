@@ -1,7 +1,9 @@
-// Checks that th.js and en.js have the same keys and placeholders, and that every t('key') used in src exists.
+// Checks that the Thai and English dictionaries (th.js/en.js + foundation.js) have the same keys and placeholders, and that every t('key') used in src exists.
 // Run: npm run check:i18n
-import th from '../src/i18n/th.js';
-import en from '../src/i18n/en.js';
+import thBase from '../src/i18n/th.js';
+import enBase from '../src/i18n/en.js';
+import { foundationTh, foundationEn } from '../src/i18n/foundation.js';
+const th = { ...thBase, ...foundationTh }, en = { ...enBase, ...foundationEn };
 import fs from 'fs'; import path from 'path';
 const kt=Object.keys(th), ke=Object.keys(en);
 console.log('th keys',kt.length,'en keys',ke.length);

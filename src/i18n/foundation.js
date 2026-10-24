@@ -260,7 +260,6 @@ const ROWS = [
   // Errors (shared by every page)
   ['err.load.title', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load this"],
   ['err.load.text', 'อาจเป็นที่อินเทอร์เน็ตหรือระบบขัดข้องชั่วคราว ลองอีกครั้งได้เลย', 'Your connection or our server may be having a moment. Please try again.'],
-  ['err.load.toast', 'โหลดข้อมูลไม่สำเร็จ', "Couldn't load the latest data"],
   ['err.retry', 'ลองอีกครั้ง', 'Try again'],
   ['err.nf.title', 'ไม่พบหน้านี้', "This page doesn't exist"],
   ['err.nf.text', 'ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว', 'The link may be mistyped, or the page has moved.'],
@@ -276,7 +275,6 @@ const ROWS = [
   ['fnd.unit.animals', 'ตัว', ''],
   ['fnd.unit.items', 'รายการ', ''],
   ['fnd.back', 'ย้อนกลับ', 'Back'],
-  ['fnd.tryAgain', 'กรุณาลองใหม่', 'Please try again.'],
 
   // Dashboard
   ['fd.ourFoundation', 'มูลนิธิของคุณ', 'Your foundation'],
@@ -394,7 +392,7 @@ const ROWS = [
   ['fa.menu.hide', 'ซ่อนจากหน้าปัด', 'Hide from the feed'],
   ['fa.menu.delete', 'ลบ', 'Delete'],
   ['fa.del.title', 'ลบ{name}?', 'Delete {name}?'],
-  ['fa.del.text', 'ข้อมูลและรูปของน้องจะถูกลบถาวร', "{name}'s details and photos will be deleted for good"],
+  ['fa.del.text', 'ข้อมูลและรูปของน้อง{name}จะถูกลบถาวร', "{name}'s details and photos will be deleted for good"],
   ['fa.del.withRequests', ' รวมถึงคำขอรับเลี้ยงและแชทที่ค้างอยู่ {n} รายการ', ', along with {n} open adoption request(s) and their chats'],
   ['fa.del.hint', 'ถ้าแค่ไม่อยากให้คนเห็นชั่วคราว เลือก "ซ่อนไว้" แทนได้ ข้อมูลยังอยู่ครบ', 'If you only want to keep them out of sight for now, choose "Hide instead". Nothing is lost.'],
   ['fa.del.hide', 'ซ่อนไว้แทน', 'Hide instead'],
@@ -798,7 +796,6 @@ const ROWS = [
   ['inc.photoAlt', 'รูปสัตว์ที่ได้รับแจ้ง', 'Photo of the reported animal'],
   ['inc.new', 'มีเหตุแจ้งเข้ามาใหม่', 'New report received'],
   ['inc.newCritical', 'มีเคสวิกฤตแจ้งเข้ามาใหม่', 'New critical case reported'],
-  ['inc.updated', 'อัปเดตแล้ว', 'Updated'],
   ['inc.updateFail', 'อัปเดตเคสไม่สำเร็จ กรุณาลองใหม่', "Couldn't update the case. Please try again."],
   ['inc.done.pending', 'ส่งต่อเคสแล้ว มูลนิธิอื่นรับต่อได้', 'Handed over. Another foundation can take it now.'],
   ['inc.done.in_progress', 'รับเคสแล้ว ขอให้เดินทางปลอดภัย', 'Case taken. Travel safely.'],

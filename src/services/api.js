@@ -151,25 +151,6 @@ export const api = {
   },
 
   /**
-   * Get total sum of donations
-   */
-  async getDonationTotal() {
-    if (!supabase) return 0;
-    
-    const { data, error } = await supabase
-      .from('donations')
-      .select('amount')
-      .eq('status', 'completed');
-      
-    if (error) {
-      console.error('Error fetching donation total:', error);
-      return 0;
-    }
-    
-    return data.reduce((sum, record) => sum + (record.amount || 0), 0) || 0;
-  },
-
-  /**
    * Get all approved foundations for donation
    */
   async getFoundations() {
@@ -209,20 +190,6 @@ export const api = {
       }
     } catch (err) {
       console.error('Error submitting swipe:', err);
-    }
-  },
-
-  /**
-   * Reset all swipes and matches for testing
-   */
-  async resetSwipes(userId) {
-    if (!userId || userId === '00000000-0000-0000-0000-000000000000' || !supabase) return;
-    try {
-      // Only delete swipes (left/right history) so animals show up again, 
-      // but keep matches so the chat doesn't disappear.
-      await supabase.from('swipes').delete().eq('user_id', userId);
-    } catch (err) {
-      console.error('Error resetting swipes:', err);
     }
   },
 
@@ -1034,21 +1001,6 @@ export const api = {
       console.error('Error uploading donation slip:', err);
       return null;
     }
-  },
-
-  /**
-   * Update donation verification status (approve/reject slip)
-   */
-  async updateDonationStatus(donationId, newStatus) {
-    if (!supabase) throw new Error('Supabase not connected');
-    const { data, error } = await supabase
-      .from('donations')
-      .update({ status: newStatus })
-      .eq('id', donationId)
-      .select();
-
-    if (error) throw error;
-    return data;
   },
 
   // A foundation's own open needs. Returns [] when there are none (or on error) so the page shows
