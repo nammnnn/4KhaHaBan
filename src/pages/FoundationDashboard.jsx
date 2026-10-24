@@ -44,12 +44,20 @@ function Stat({ to, icon: Icon, tone, value, unit, label }) {
 const TIPS_KEY = '4kh_fd_tips_hidden';
 const TIP_COUNT = 3;
 
-// One tip at a time in a slim strip; "next" cycles, × hides it for good on this device.
+// One tip at a time in a slim strip; "next" cycles, × hides it (remembered on this device).
 function TipStrip({ t }) {
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(TIPS_KEY) === '1'; } catch { return false; } });
   const [i, setI] = useState(0);
-  if (hidden) return null;
-  const hide = () => { setHidden(true); try { localStorage.setItem(TIPS_KEY, '1'); } catch { /* private mode */ } };
+  const save = (v) => { setHidden(v); try { localStorage.setItem(TIPS_KEY, v ? '1' : '0'); } catch { /* private mode */ } };
+  const hide = () => save(true);
+  // Hidden: a small link brings the tips back
+  if (hidden) {
+    return (
+      <button type="button" className="fd-tip-show" onClick={() => save(false)}>
+        <Sparkles size={14} aria-hidden="true" /> {t('fd.tips.show')}
+      </button>
+    );
+  }
   return (
     <aside className="fd-tip" aria-label={t('fd.tips.title')}>
       <Sparkles size={16} className="fd-tip__icon" aria-hidden="true" />

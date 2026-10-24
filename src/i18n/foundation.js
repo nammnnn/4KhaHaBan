@@ -93,6 +93,7 @@ const ROWS = [
   ['fd.tips.title', 'เคล็ดลับให้น้องได้บ้านเร็วขึ้น', 'Tips to find homes faster'],
   ['fd.tips.label', 'เคล็ดลับ', 'Tip'],
   ['fd.tips.next', 'เคล็ดลับถัดไป', 'Next tip'],
+  ['fd.tips.show', 'แสดงเคล็ดลับ', 'Show tips'],
   ['fd.tips.hide', 'ซ่อนเคล็ดลับ', 'Hide tips'],
   ['fd.tips.1', 'ใช้รูปแสงธรรมชาติที่เห็นหน้าและดวงตาชัด รูปแรกคือรูปหน้าปก', 'Use photos in natural light where the face and eyes are clear. The first photo is the cover.'],
   ['fd.tips.2', 'เล่านิสัยและประวัติสุขภาพสั้นๆ ให้ผู้สนใจนึกภาพออก', 'Describe personality and health in a few lines so people can picture life together.'],

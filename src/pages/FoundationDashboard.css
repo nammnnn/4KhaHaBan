@@ -129,6 +129,23 @@
   color: var(--ink-500, #78716C);
   cursor: pointer;
 }
+.fd-tip-show {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-full, 999px);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-label);
+  color: var(--ink-500, #78716C);
+  cursor: pointer;
+}
+.fd-tip-show:hover { background: var(--primary-wash, #FFFBEB); color: var(--primary-strong); }
+.fd-tip-show svg { color: var(--primary); }
 .fd-tip__btn:hover { background: rgba(180, 83, 9, 0.08); color: var(--ink-900); }
 
 @media (min-width: 768px) {
