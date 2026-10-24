@@ -43,11 +43,14 @@ export default function AdoptionFollowup() {
   // Form states
   const [photos, setPhotos] = useState([]);
   const [photoFiles, setPhotoFiles] = useState([]);
-  const [healthStatus, setHealthStatus] = useState('แข็งแรงดี');
-  const [vaccineStatus, setVaccineStatus] = useState('ครบแล้ว');
-  const [neuteredStatus, setNeuteredStatus] = useState('แล้ว');
-  const [foodStatus, setFoodStatus] = useState('กินอาหารเม็ด + อาหารเปียก');
-  const [behaviorStatus, setBehaviorStatus] = useState('ปรับตัวได้ดี ร่าเริง');
+  // Nothing is pre-selected: the foundation should only ever see answers the adopter chose
+  const [healthStatus, setHealthStatus] = useState('');
+  const [vaccineStatus, setVaccineStatus] = useState('');
+  const [neuteredStatus, setNeuteredStatus] = useState('');
+  const [foodStatus, setFoodStatus] = useState('');
+  const [behaviorStatus, setBehaviorStatus] = useState('');
+  const [triedSubmit, setTriedSubmit] = useState(false);
+  const healthRef = useRef(null);
   const [notes, setNotes] = useState('');
   const [successToast, setSuccessToast] = useState(false);
   const [bypassWait, setBypassWait] = useState(false);
@@ -107,6 +110,12 @@ export default function AdoptionFollowup() {
 
     if (photos.length === 0) {
       toast(t('fu.err.photo'), { tone: 'error' });
+      return;
+    }
+    if (![healthStatus, vaccineStatus, neuteredStatus, foodStatus, behaviorStatus].every(Boolean)) {
+      setTriedSubmit(true);
+      toast(t('fu.err.answers'), { tone: 'error' });
+      healthRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
@@ -575,9 +584,10 @@ export default function AdoptionFollowup() {
             marginBottom: '20px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+            <h3 ref={healthRef} style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 700, color: '#111827', scrollMarginTop: '16px' }}>
               {t('fu.healthTitle')}
             </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: 'var(--ink-600)' }}>{t('fu.healthHint')}</p>
 
             {/* Checklist items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -591,10 +601,10 @@ export default function AdoptionFollowup() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.health')}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('health', healthStatus, lang)}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: healthStatus ? 'var(--success-fill)' : triedSubmit ? 'var(--danger-strong)' : 'var(--ink-500)' }}>{healthStatus ? followupLabel('health', healthStatus, lang) : t('fu.pick')}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#059669" />
+                  {healthStatus && <CheckCircle2 size={18} color="#059669" />}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {FOLLOWUP_GROUPS.health.map(([opt, optEn]) => (
@@ -628,10 +638,10 @@ export default function AdoptionFollowup() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.vaccine')}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('vaccine', vaccineStatus, lang)}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: vaccineStatus ? 'var(--success-fill)' : triedSubmit ? 'var(--danger-strong)' : 'var(--ink-500)' }}>{vaccineStatus ? followupLabel('vaccine', vaccineStatus, lang) : t('fu.pick')}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#059669" />
+                  {vaccineStatus && <CheckCircle2 size={18} color="#059669" />}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {FOLLOWUP_GROUPS.vaccine.map(([opt, optEn]) => (
@@ -665,10 +675,10 @@ export default function AdoptionFollowup() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.neutered')}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('neutered', neuteredStatus, lang)}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: neuteredStatus ? 'var(--success-fill)' : triedSubmit ? 'var(--danger-strong)' : 'var(--ink-500)' }}>{neuteredStatus ? followupLabel('neutered', neuteredStatus, lang) : t('fu.pick')}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#059669" />
+                  {neuteredStatus && <CheckCircle2 size={18} color="#059669" />}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {FOLLOWUP_GROUPS.neutered.map(([opt, optEn]) => (
@@ -702,10 +712,10 @@ export default function AdoptionFollowup() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.food')}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('food', foodStatus, lang)}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: foodStatus ? 'var(--success-fill)' : triedSubmit ? 'var(--danger-strong)' : 'var(--ink-500)' }}>{foodStatus ? followupLabel('food', foodStatus, lang) : t('fu.pick')}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#059669" />
+                  {foodStatus && <CheckCircle2 size={18} color="#059669" />}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {FOLLOWUP_GROUPS.food.map(([opt, optEn]) => (
@@ -739,10 +749,10 @@ export default function AdoptionFollowup() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#111827' }}>{t('fu.g.behavior')}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--success-fill)', fontWeight: 500 }}>{followupLabel('behavior', behaviorStatus, lang)}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: behaviorStatus ? 'var(--success-fill)' : triedSubmit ? 'var(--danger-strong)' : 'var(--ink-500)' }}>{behaviorStatus ? followupLabel('behavior', behaviorStatus, lang) : t('fu.pick')}</div>
                     </div>
                   </div>
-                  <CheckCircle2 size={18} color="#059669" />
+                  {behaviorStatus && <CheckCircle2 size={18} color="#059669" />}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {FOLLOWUP_GROUPS.behavior.map(([opt, optEn]) => (
